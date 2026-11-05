@@ -14,6 +14,7 @@ The app uses:
 - `ConversationConfig` with `systemInstruction`, `initialMessages`, `maxOutputToken`, and `automaticToolCalling = false`.
 - `Message.user(...)` and `Message.model(...)` to reconstruct stored turns.
 - `Conversation.sendMessageAsync(text, maxOutputToken = ...)` for streaming generation.
+- `Message.toString()` to read each streamed chunk; the pinned `Message` class does not expose a `text` property.
 
 The pinned API defines `maxOutputToken` as a maximum output-token limit per decode step. NEXORA does not describe it as a guaranteed whole-session token budget.
 
@@ -21,7 +22,7 @@ The pinned API defines `maxOutputToken` as a maximum output-token limit per deco
 
 - SQLite transcripts are loaded when a conversation is selected.
 - When LiteRT-LM has no in-memory conversation for that ID, NEXORA replays the latest history through `ConversationConfig.initialMessages` before sending the new prompt.
-- Replay is bounded to the latest 16 messages and 12,000 characters. This is a character-based guard, not a tokenizer-aware context-window guarantee. If the oldest included message must be shortened, a visible marker is inserted into the replayed text.
+- Replay is bounded to the latest 16 messages and 12,000 characters. This is a character-based guard, not a tokenizer-aware context-window guarantee. If the oldest included message must be shortened, an explicit marker is inserted into the replayed model context; the saved transcript itself is not modified.
 - At most two native conversations are cached in an access-ordered map. Older cached conversations are closed and can be reconstructed from SQLite when selected again.
 - Deleting a conversation also closes its cached LiteRT-LM conversation.
 - The user can select 256, 512, 1,024, or 2,048 output tokens. The choice is stored in app-private SharedPreferences and defaults to 512.
