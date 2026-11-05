@@ -42,6 +42,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Add an Android lint step to the CI workflow and update README, roadmap, architecture, local-data, and runtime integration documentation.
 
 ### Files changed
+- `app/build.gradle.kts`
 - `.github/workflows/android-ci.yml`
 - `README.md`, `ROADMAP.md`
 - `app/src/main/java/com/nexora/ai/ai/ConversationHistoryPolicy.kt`
@@ -55,7 +56,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - `app/src/test/java/com/nexora/ai/ai/ConversationHistoryPolicyTest.kt`
 - `app/src/test/java/com/nexora/ai/ai/GenerationRequestTest.kt`
 - `app/src/test/java/com/nexora/ai/ai/GenerationSettingsTest.kt`
-- `docs/ARCHITECTURE.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`
+- `docs/ARCHITECTURE.md`, `docs/DAILY_PROGRESS.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`
 
 ### Verification actually performed
 - Inspected the pinned upstream Google LiteRT-LM `v0.18.1` Kotlin source for `ConversationConfig.initialMessages`, `maxOutputToken`, `automaticToolCalling`, `Message.user/model`, and the `sendMessageAsync` Flow overload.
@@ -74,4 +75,6 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Because configuration failed, Android lint and JVM unit-test steps were skipped. This run does not verify any application source compilation or tests.
 - Also corrected transcript loading to select the latest 500 messages and then restore chronological order, with `rowid` as a deterministic tie-breaker for equal timestamps.
 - The feature branch's latest recorded commit at this log update is [`79de529`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/79de52946cda462de11ae8cd575742f353010272); PR [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) remains draft. A new CI result for the compiler DSL fix was not yet available.
+- After the Kotlin compiler DSL fix, PR head commit [`5718a9e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/5718a9e9664e90730bb32fc2c479e0970839ed30) started GitHub Actions run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542). At this log update, debug APK assembly was still running; lint and unit tests were pending.
+- Final data review also confirmed that history loading selects the latest 500 stored messages and restores them in chronological order, with `rowid` used to break equal-timestamp ties.
 
