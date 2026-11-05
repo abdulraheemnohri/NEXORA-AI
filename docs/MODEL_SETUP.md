@@ -3,13 +3,17 @@
 ## Pinned model artifact
 
 - Repository: https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm
+- Revision: `7fa1d78473894f7e736a21d920c3aa80f950c0db`
 - File: `gemma-4-E2B-it.litertlm`
-- Published size: 2,583,085,056 bytes (about 2.58 GB)
+- Size: 2,583,085,056 bytes
+- SHA-256: `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`
 - Runtime: Google's LiteRT-LM Android Kotlin API
 - Download location: app-private `filesDir/models/`
 - Initial execution backend: CPU
 
-The app downloads the model separately from the APK. It checks available storage, follows HTTPS redirects, writes to a temporary file, checks the final byte count, flushes it, and only then renames it to the model filename. A failed or cancelled download is not treated as a valid model.
+The downloader uses a revision-pinned HTTPS URL. It checks available storage, follows HTTPS redirects, writes to a temporary file, verifies the exact byte count and SHA-256, flushes the file, and only then renames it to the model filename. Existing files are also re-hashed before being reused. A failed or cancelled download is not treated as a valid model.
+
+The pinned revision is intentional: model repository files can change. Updating to a newer model revision requires updating the URL, byte count, and checksum together after checking the publisher's file metadata.
 
 ## Android dependency and compiler compatibility
 
@@ -34,6 +38,6 @@ The persisted app transcript is not automatically injected into LiteRT-LM after 
 
 The model file alone is about 2.58 GB. Actual inference also needs memory for the runtime, KV cache, prompt/context, and Android. The Pixel 6 has 6 GB RAM, so NEXORA should start with conservative context/output limits, close other memory-heavy apps, and gracefully handle Android low-memory termination. Performance and stability on Pixel 6 are not yet device-verified. CPU is the baseline; GPU should be enabled only after testing driver compatibility and native library requirements.
 
-## Integrity and licensing
+## Licensing
 
-The downloader validates the published byte size, not a cryptographic checksum. Add a verified SHA-256 from the model publisher before calling this a cryptographically verified download. Gemma model terms apply independently of this app; review the model license and terms before distribution.
+The Hugging Face model card currently identifies the LiteRT Community artifact as Apache-2.0; the upstream Gemma model terms and any required notices must still be reviewed separately before distribution. LiteRT-LM library licensing is also governed by its own repository.
