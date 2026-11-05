@@ -1,12 +1,14 @@
 package com.nexora.ai.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexora.ai.ai.Gemma4E2BModelDownloader
 import com.nexora.ai.ai.GenerationEvent
 import com.nexora.ai.ai.GenerationHistoryMessage
 import com.nexora.ai.ai.GenerationRequest
+import com.nexora.ai.ai.GenerationSettings
 import com.nexora.ai.ai.LiteRtLocalModelRuntime
 import com.nexora.ai.data.ChatRepository
 import com.nexora.ai.data.LocalChatDatabase
@@ -36,6 +38,8 @@ data class NexoraUiState(
     val selectedConversationId: String? = null,
     val historyMenuExpanded: Boolean = false,
     val pendingDeleteConversationId: String? = null,
+    val showSettings: Boolean = false,
+    val maxOutputTokens: Int = GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS,
     val input: String = "",
     val conversationReady: Boolean = false,
     val modelReady: Boolean = false,
@@ -52,8 +56,16 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     private val downloader = Gemma4E2BModelDownloader(application)
     private val runtime = LiteRtLocalModelRuntime(File(application.cacheDir, "litertlm"))
     private var conversationId: String? = null
+    private val settingsPreferences = application.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+    private val initialMaxOutputTokens = runCatching {
+        GenerationSettings.requireSupportedOutputLimit(
+            settingsPreferences.getInt(KEY_MAX_OUTPUT_TOKENS, GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS)
+        )
+    }.getOrDefault(GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS)
 
-    private val mutableUiState = MutableStateFlow(NexoraUiState())
+    private val mutableUiState = MutableStateFlow(
+        NexoraUiState(maxOutputTokens = initialMaxOutputTokens)
+    )
     val uiState = mutableUiState.asStateFlow()
 
     init {
@@ -121,6 +133,22 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateInput(value: String) {
         mutableUiState.update { it.copy(input = value, error = null) }
+    }
+
+    fun openSettings() {
+        mutableUiState.update { it.copy(showSettings = true) }
+    }
+
+    fun dismissSettings() {
+        mutableUiState.update { it.copy(showSettings = false) }
+    }
+
+    fun setMaxOutputTokens(value: Int) {
+        val supported = runCatching {
+            GenerationSettings.requireSupportedOutputLimit(value)
+        }.getOrNull() ?: return
+        settingsPreferences.edit().putInt(KEY_MAX_OUTPUT_TOKENS, supported).apply()
+        mutableUiState.update { it.copy(maxOutputTokens = supported) }
     }
 
     fun toggleHistoryMenu() {
@@ -235,7 +263,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         conversationId = activeConversation,
                         prompt = prompt,
                         systemInstruction = "You are NEXORA AI, a helpful private on-device assistant. Be accurate, concise, and honest about uncertainty.",
-                        history = history
+                        history = history,
+                        maxOutputTokens = current.maxOutputTokens
                     )
                 ).collect { event ->
                     when (event) {
@@ -282,5 +311,10 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun shutdown() {
         viewModelScope.launch { runtime.unload() }
+    }
+
+    private companion object {
+        const val PREFERENCES_NAME = "nexora_generation_settings"
+        const val KEY_MAX_OUTPUT_TOKENS = "max_output_tokens"
     }
 }
