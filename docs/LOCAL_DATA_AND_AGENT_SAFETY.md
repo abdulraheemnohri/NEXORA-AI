@@ -4,7 +4,7 @@
 
 NEXORA stores conversations in the app-private SQLite database `nexora_local.db` through Android's `SQLiteOpenHelper`. No network transport is used by this data layer. Foreign keys are enabled and deleting a conversation cascades to its messages. The current schema is version 1.
 
-The chat screen restores the most recently updated conversation at launch and provides a history menu for switching between the 100 most recent conversations. Each conversation loads up to 500 messages into the UI. The first user prompt becomes a title (trimmed to 60 characters).
+The chat screen restores the most recently updated conversation at launch and provides a history menu for switching between the 100 most recent conversations. Each conversation loads the latest 500 messages in chronological order into the UI. The first user prompt becomes a title (trimmed to 60 characters).
 
 A user can delete a conversation from the history menu. NEXORA asks for confirmation, removes the SQLite conversation row and dependent messages, and closes the corresponding cached LiteRT-LM conversation. Deleting the active conversation switches to the most recent remaining conversation or creates a new empty one. This action is local and cannot be undone.
 
