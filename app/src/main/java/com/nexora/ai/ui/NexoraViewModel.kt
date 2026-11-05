@@ -14,6 +14,7 @@ import com.nexora.ai.data.ChatRepository
 import com.nexora.ai.data.LocalChatDatabase
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -179,15 +180,27 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         val targetId = mutableUiState.value.pendingDeleteConversationId ?: return
         if (mutableUiState.value.isGenerating) return
         viewModelScope.launch {
-            repository.deleteConversation(targetId)
-            runtime.forgetConversation(targetId)
-            refreshConversationList()
-            mutableUiState.update { it.copy(pendingDeleteConversationId = null) }
+            try {
+                val deleted = repository.deleteConversation(targetId)
+                check(deleted) { "This conversation is no longer available." }
+                runtime.forgetConversation(targetId)
+                refreshConversationList()
+                mutableUiState.update { it.copy(pendingDeleteConversationId = null) }
 
-            if (conversationId == targetId) {
-                val nextConversation = mutableUiState.value.conversations.firstOrNull()
-                if (nextConversation == null) createAndActivateConversation()
-                else activateConversation(nextConversation.id)
+                if (conversationId == targetId) {
+                    val nextConversation = mutableUiState.value.conversations.firstOrNull()
+                    if (nextConversation == null) createAndActivateConversation()
+                    else activateConversation(nextConversation.id)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        pendingDeleteConversationId = null,
+                        error = error.message ?: "Unable to delete this conversation."
+                    )
+                }
             }
         }
     }
