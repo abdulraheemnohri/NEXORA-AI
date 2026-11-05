@@ -2,7 +2,7 @@
 
 | Area | Status | Exit criteria |
 |---|---|---|
-| Android Gradle/Compose foundation | Source scaffolded; CI build not yet verified | CI build and lint pass |
+| Android Gradle/Compose foundation | Initial CI build exposed deprecated Kotlin target DSL; migrated to typed compilerOptions on feature branch; rerun pending | CI build and lint pass |
 | LiteRT-LM adapter | CPU adapter, bounded transcript replay, and per-request output limit implemented in source; compile/runtime unverified | Build succeeds and real Gemma output is verified |
 | Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
 | Chat and streaming | Compose chat and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
