@@ -4,9 +4,9 @@
 |---|---|---|
 | Android Gradle/Compose foundation | Source scaffolded; CI build not yet verified | CI build and unit tests pass |
 | LiteRT-LM adapter | Implemented in source; compile/runtime unverified | Build succeeds and real Gemma output is verified |
-| Model download and integrity | Revision-pinned downloader implemented; not device-tested | Download, SHA-256, cancellation, and storage checks pass on Android |
-| Chat and streaming | Runtime streaming API implemented; UI integration pending | Compose chat receives and renders real local tokens |
-| Local conversation storage | SQLite database/repository implemented; integration tests pending | Chat UI uses repository; migrations and delete behavior tested |
+| Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
+| Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
+| Local conversation storage | SQLite repository wired to current chat session; history browsing/replay pending | History list, replay, migrations, and delete behavior tested |
 | Agent tool permission system | Risk policy and unit tests added; test run pending | Tests pass and all tool side effects re-check approval |
 | Memory and retrieval | Pending | Indexed local recall tests |
 | Knowledge ingestion | Pending | PDF/TXT/MD/JSON extraction tests |
