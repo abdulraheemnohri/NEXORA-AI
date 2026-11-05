@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -108,6 +109,9 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 }
                 TextButton(onClick = viewModel::newConversation, enabled = !state.isGenerating) {
                     Text("New chat", color = Color(0xFFB9A2FF))
+                }
+                TextButton(onClick = viewModel::openSettings) {
+                    Text("Settings", color = Color(0xFFD4C8FF))
                 }
             }
 
@@ -207,6 +211,40 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             }
             Text("ON-DEVICE INFERENCE · NO CLOUD AI API", color = Color(0xFF70748C), style = MaterialTheme.typography.labelSmall)
         }
+    }
+
+    if (state.showSettings) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissSettings,
+            title = { Text("Generation settings") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Maximum output tokens", style = MaterialTheme.typography.titleSmall)
+                    listOf(256, 512, 1_024, 2_048).forEach { limit ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.maxOutputTokens == limit,
+                                onClick = { viewModel.setMaxOutputTokens(limit) }
+                            )
+                            Text("$limit tokens", color = Color.White)
+                        }
+                    }
+                    Text(
+                        "Saved only on this device. The selected limit is applied to each local response.",
+                        color = Color(0xFF9B9CB2),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissSettings) {
+                    Text("Done")
+                }
+            }
+        )
     }
 
     state.pendingDeleteConversationId?.let { pendingId ->
