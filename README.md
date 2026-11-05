@@ -22,7 +22,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 
 ## Honest project status
 
-The conversation history, replay, local deletion, and generation settings are implemented in source with focused JVM unit tests for replay bounds and settings validation. These changes still require a successful CI build/test run and Android runtime validation. The LiteRT-LM API surface was checked against Google's upstream v0.18.1 source, but source inspection is not a substitute for compiling against the resolved Android artifact.
+The conversation history, replay, local deletion, and generation settings are implemented in source with focused JVM unit tests for replay bounds and settings validation. The first PR CI attempt exposed an existing Kotlin 2.3.21 build-script error caused by the deprecated Android `kotlinOptions.jvmTarget` DSL; the feature branch now migrates to the typed `compilerOptions` DSL, and a rerun is pending. A successful build/test run and Android runtime validation are still required. The LiteRT-LM API surface was checked against Google's upstream v0.18.1 source, but source inspection is not a substitute for compiling against the resolved Android artifact.
 
 Real Gemma inference, download behavior on Android, offline operation, and Pixel 6 memory/thermal performance are not claimed as verified. No mock inference path is included.
 
