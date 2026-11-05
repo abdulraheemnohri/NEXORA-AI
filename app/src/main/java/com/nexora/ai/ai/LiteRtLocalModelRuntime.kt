@@ -78,7 +78,7 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
                         .map(GenerationHistoryMessage::toLiteRtMessage)
                     val created = activeEngine.createConversation(
                         ConversationConfig(
-                            systemInstruction = instruction?.let(Contents::of),
+                            systemInstruction = instruction?.let { Contents.of(it) },
                             initialMessages = replayMessages,
                             maxOutputToken = request.maxOutputTokens,
                             automaticToolCalling = false
@@ -103,7 +103,7 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
         emit(GenerationEvent.Failed(error.message ?: "Local generation failed."))
     }
 
-    override suspend fun forgetConversation(conversationId: String) = withContext(Dispatchers.IO) {
+    override suspend fun forgetConversation(conversationId: String): Unit = withContext(Dispatchers.IO) {
         generationMutex.withLock {
             lifecycleMutex.withLock {
                 conversations.remove(conversationId)?.let { conversation ->
@@ -111,6 +111,7 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
                 }
             }
         }
+        Unit
     }
 
     override suspend fun unload() = withContext(Dispatchers.IO) {
