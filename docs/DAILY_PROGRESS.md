@@ -78,3 +78,13 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - After the Kotlin compiler DSL fix, PR head commit [`5718a9e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/5718a9e9664e90730bb32fc2c479e0970839ed30) started GitHub Actions run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542). At this log update, debug APK assembly was still running; lint and unit tests were pending.
 - Final data review also confirmed that history loading selects the latest 500 stored messages and restores them in chronological order, with `rowid` used to break equal-timestamp ties.
 
+### Second CI failure and follow-up fixes — 2026-11-06
+- GitHub Actions run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542) reached Kotlin compilation, then failed on two source errors:
+  1. `LocalChatDatabase.kt` inferred an intersection type for a mixed SQLite bind-argument array.
+  2. `NexoraHome.kt` imported the internal Compose `weight` scope extension directly.
+- Fixed the SQLite bind array with an explicit `Array<Any>` type and removed the inaccessible Compose import.
+- Also changed model-download and generation coroutine handlers to rethrow `CancellationException` rather than swallowing lifecycle cancellation.
+- The next PR workflow run [#44](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42109293465) is running against the corrected source branch. At this log update, debug APK assembly is in progress; lint and JVM tests are pending.
+- These fixes are committed in [`7ec929f`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7ec929fbc4290925335d40fe1a4a6d29c3fada82), [`7047c53`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7047c53ce1b8987317f7ba088bbb0c0b10a7712c), and [`ab4f908`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ab4f90877336e1e31f28eabc2916d573e635c3a1).
+- No successful build, lint, or unit-test result is available yet; no Pixel 6 or real Gemma inference test was performed.
+
