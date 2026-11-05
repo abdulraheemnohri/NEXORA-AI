@@ -11,12 +11,12 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Risk-based agent tool approval policy.
 - Pinned LiteRT-LM Android dependency and compatible Kotlin/AGP toolchain.
 - LiteRT-LM CPU runtime adapter with streamed generation events.
-- Gemma 4 E2B model downloader with private storage, free-space checks, temporary-file handling, and final-size validation.
+- Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
 - GitHub Actions workflow for debug APK assembly and unit tests.
 
 ## Honest project status
 
-The runtime adapter and downloader are now present in source, but the complete app flow is not finished. The Compose UI is not yet connected to the database/runtime, conversation replay after process death is pending, and the model download/inference flow has not yet been built or tested on a Pixel 6. CI/build success and real-device inference are not claimed until verified.
+The database, permission policy, model downloader, and LiteRT-LM adapter now exist in source. They are not yet wired together into a complete chat workflow. The Compose UI is not yet connected to the database/runtime, conversation replay after process death is pending, and end-to-end model download/inference has not been run. CI/build success and real-device inference are not claimed until verified.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Open the project in Android Studio. The Gradle wrapper still needs to be generat
 
 ## Model
 
-See [Model Setup](docs/MODEL_SETUP.md). The model is approximately 2.58 GB and is downloaded separately from the APK into app-private storage. It is not committed to Git.
+See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximately 2.58 GB and is downloaded separately from the APK into app-private storage. It is not committed to Git.
 
 ## Documentation
 
