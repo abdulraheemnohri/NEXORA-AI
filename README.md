@@ -6,7 +6,8 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 
 ## Current implementation
 
-- Kotlin Android app foundation and Compose UI.
+- Kotlin Android app foundation and dark Jetpack Compose chat UI.
+- ViewModel orchestration for model installation, loading, streaming generation, and chat state.
 - Local SQLite conversation/message persistence.
 - Risk-based agent tool approval policy.
 - Pinned LiteRT-LM Android dependency and compatible Kotlin/AGP toolchain.
@@ -16,7 +17,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 
 ## Honest project status
 
-The database, permission policy, model downloader, and LiteRT-LM adapter now exist in source. They are not yet wired together into a complete chat workflow. The Compose UI is not yet connected to the database/runtime, conversation replay after process death is pending, and end-to-end model download/inference has not been run. CI/build success and real-device inference are not claimed until verified.
+The chat UI is now connected in source to the model downloader, runtime adapter, and SQLite repository. The project still needs a verified Android build and end-to-end run. Conversation history browsing/replay after process death, runtime sampling controls, and real-device memory/thermal validation remain pending. CI/build success and real-device inference are not claimed until verified.
 
 ## Requirements
 
