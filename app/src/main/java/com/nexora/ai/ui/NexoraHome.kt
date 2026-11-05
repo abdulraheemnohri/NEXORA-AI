@@ -220,7 +220,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             title = { Text("Generation settings") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Maximum output tokens", style = MaterialTheme.typography.titleSmall)
+                    Text("Output token limit", style = MaterialTheme.typography.titleSmall)
                     GenerationSettings.OUTPUT_TOKEN_LIMITS.forEach { limit ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -234,7 +234,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                         }
                     }
                     Text(
-                        "Saved only on this device. The selected limit is applied to each local response.",
+                        "Saved only on this device and passed to LiteRT-LM as its per-decode output limit. Model and context limits still apply.",
                         color = Color(0xFF9B9CB2),
                         style = MaterialTheme.typography.bodySmall
                     )
