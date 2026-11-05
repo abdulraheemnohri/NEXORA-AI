@@ -67,3 +67,11 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Obtain a real CI build/lint/test result for PR #1 and fix any compiler or test failures.
 - Then add Android instrumentation coverage for SQLite restore/delete lifecycle before attempting physical Pixel 6 inference and performance measurements.
 
+### CI result and corrective action — 2026-11-06
+- GitHub Actions run [#37](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108664411) completed with **failure** at the `Build debug APK` step.
+- The exact blocker was `app/build.gradle.kts:22`: Kotlin Gradle Plugin 2.3.21 treats `android.kotlinOptions.jvmTarget` as an error and requires the typed `compilerOptions` DSL.
+- Fixed in `app/build.gradle.kts` by importing `JvmTarget` and setting `kotlin { compilerOptions { jvmTarget = JvmTarget.fromTarget("17") } }`.
+- Because configuration failed, Android lint and JVM unit-test steps were skipped. This run does not verify any application source compilation or tests.
+- Also corrected transcript loading to select the latest 500 messages and then restore chronological order, with `rowid` as a deterministic tie-breaker for equal timestamps.
+- The feature branch's latest recorded commit at this log update is [`79de529`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/79de52946cda462de11ae8cd575742f353010272); PR [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) remains draft. A new CI result for the compiler DSL fix was not yet available.
+
