@@ -95,7 +95,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         val safeLimit = limit.coerceIn(1, 2000)
         val result = mutableListOf<StoredMessage>()
         readableDatabase.rawQuery(
-            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at ASC, rowid ASC LIMIT ?",
+            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at DESC, rowid DESC LIMIT ?",
             arrayOf(conversationId, safeLimit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) result += StoredMessage(
@@ -103,7 +103,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
                 cursor.getString(3), cursor.getLong(4)
             )
         }
-        return result
+        return result.asReversed()
     }
 
     fun deleteConversation(id: String): Boolean =
