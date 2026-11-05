@@ -21,5 +21,7 @@ jobs:
           gradle-version: "8.13"
       - name: Build debug APK
         run: gradle :app:assembleDebug
+      - name: Run Android lint
+        run: gradle :app:lintDebug
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest

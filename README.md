@@ -8,16 +8,23 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 
 - Kotlin Android app foundation and dark Jetpack Compose chat UI.
 - ViewModel orchestration for model installation, loading, streaming generation, and chat state.
-- Local SQLite conversation/message persistence.
-- Risk-based agent tool approval policy.
+- App-private SQLite conversation/message persistence.
+- Conversation history picker, conversation switching, and confirmation-gated local deletion.
+- Transcript replay into LiteRT-LM after a conversation is reopened or its native session is evicted.
+- Bounded runtime history replay: latest 16 messages and at most 12,000 characters.
+- Least-recently-used cache for at most two native LiteRT-LM conversations.
+- On-device generation settings for 256, 512, 1,024, or 2,048 output tokens (default 512).
+- Risk-based agent tool approval policy; automatic LiteRT-LM tool calling remains disabled and no app tools are registered.
 - Pinned LiteRT-LM Android dependency and compatible Kotlin/AGP toolchain.
 - LiteRT-LM CPU runtime adapter with streamed generation events.
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
-- GitHub Actions workflow for debug APK assembly and unit tests.
+- GitHub Actions workflow for debug APK assembly, lint, and unit tests.
 
 ## Honest project status
 
-The chat UI is now connected in source to the model downloader, runtime adapter, and SQLite repository. The project still needs a verified Android build and end-to-end run. Conversation history browsing/replay after process death, runtime sampling controls, and real-device memory/thermal validation remain pending. CI/build success and real-device inference are not claimed until verified.
+The conversation history, replay, local deletion, and generation settings are implemented in source with focused JVM unit tests for replay bounds and settings validation. PR CI run #37 exposed an existing Kotlin 2.3.21 build-script error caused by the deprecated Android `kotlinOptions.jvmTarget` DSL; the feature branch migrated to typed `compilerOptions`. Run #41 then reached Kotlin compilation and exposed a mixed SQLite bind-array type inference error and an inaccessible Compose `weight` import; both have been corrected. Run #44 is rechecking the corrected source, with lint and tests not yet reached. A successful build/test run and Android runtime validation are still required. The LiteRT-LM API surface was checked against Google's upstream v0.18.1 source, but source inspection is not a substitute for compiling against the resolved Android artifact.
+
+Real Gemma inference, download behavior on Android, offline operation, and Pixel 6 memory/thermal performance are not claimed as verified. No mock inference path is included.
 
 ## Requirements
 
@@ -28,7 +35,7 @@ The chat UI is now connected in source to the model downloader, runtime adapter,
 - Kotlin 2.3.21
 - Android minSdk 26
 
-Open the project in Android Studio. The Gradle wrapper still needs to be generated and committed; until then, use an installed Gradle 8.13 distribution.
+Open the project in Android Studio. The Gradle wrapper is not yet committed. GitHub Actions provisions Gradle 8.13 directly; local command-line builds currently require an installed Gradle 8.13 distribution.
 
 ## Model
 
@@ -42,6 +49,7 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 - [Local data and agent safety](docs/LOCAL_DATA_AND_AGENT_SAFETY.md)
 - [Security](docs/SECURITY.md)
 - [Roadmap](ROADMAP.md)
+- [Daily progress](docs/DAILY_PROGRESS.md)
 
 ## Licensing
 
