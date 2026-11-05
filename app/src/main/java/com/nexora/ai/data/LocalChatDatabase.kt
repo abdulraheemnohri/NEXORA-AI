@@ -95,7 +95,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         val safeLimit = limit.coerceIn(1, 2000)
         val result = mutableListOf<StoredMessage>()
         readableDatabase.rawQuery(
-            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT ?",
+            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at ASC, rowid ASC LIMIT ?",
             arrayOf(conversationId, safeLimit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) result += StoredMessage(
