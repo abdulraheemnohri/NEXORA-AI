@@ -50,6 +50,12 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertOrThrow("conversations", null, values)
     }
 
+    fun updateConversationTitle(id: String, title: String): Boolean {
+        val safeTitle = title.trim().take(60).ifEmpty { "New conversation" }
+        val values = ContentValues().apply { put("title", safeTitle) }
+        return writableDatabase.update("conversations", values, "id=?", arrayOf(id)) > 0
+    }
+
     fun addMessage(message: StoredMessage) {
         val values = ContentValues().apply {
             put("id", message.id)
