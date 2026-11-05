@@ -7,6 +7,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import java.io.File
+import java.util.LinkedHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,14 +19,14 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** LiteRT-LM CPU adapter. Conversations live in memory and must be replayed after process death. */
+/** LiteRT-LM CPU adapter. Stored transcripts are replayed when a conversation is recreated. */
 class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRuntime {
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.NotConfigured)
     override val state = mutableState.asStateFlow()
     private val lifecycleMutex = Mutex()
     private val generationMutex = Mutex()
     private var engine: Engine? = null
-    private val conversations = mutableMapOf<String, Conversation>()
+    private val conversations = LinkedHashMap<String, Conversation>(4, 0.75f, true)
 
     override suspend fun load(modelPath: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -68,19 +69,31 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
     }
 
     override fun generate(request: GenerationRequest): Flow<GenerationEvent> = flow {
-        require(request.prompt.isNotBlank()) { "Prompt cannot be empty." }
         generationMutex.withLock {
             val conversation = lifecycleMutex.withLock {
                 val activeEngine = checkNotNull(engine) { "Load a model before generating." }
-                conversations.getOrPut(request.conversationId) {
+                conversations[request.conversationId] ?: run {
                     val instruction = request.systemInstruction?.takeIf { it.isNotBlank() }
-                    if (instruction == null) activeEngine.createConversation()
-                    else activeEngine.createConversation(
-                        ConversationConfig(systemInstruction = Contents.of(instruction))
+                    val replayMessages = ConversationHistoryPolicy.select(request.history)
+                        .map(GenerationHistoryMessage::toLiteRtMessage)
+                    val created = activeEngine.createConversation(
+                        ConversationConfig(
+                            systemInstruction = instruction?.let(Contents::of),
+                            initialMessages = replayMessages,
+                            maxOutputToken = request.maxOutputTokens,
+                            automaticToolCalling = false
+                        )
                     )
+                    conversations[request.conversationId] = created
+                    evictLeastRecentlyUsedConversations()
+                    created
                 }
             }
-            conversation.sendMessageAsync(request.prompt).collect { message ->
+
+            conversation.sendMessageAsync(
+                request.prompt,
+                maxOutputToken = request.maxOutputTokens
+            ).collect { message ->
                 if (message.text.isNotEmpty()) emit(GenerationEvent.Token(message.text))
             }
             emit(GenerationEvent.Completed)
@@ -88,6 +101,16 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
     }.catch { error ->
         if (error is CancellationException) throw error
         emit(GenerationEvent.Failed(error.message ?: "Local generation failed."))
+    }
+
+    override suspend fun forgetConversation(conversationId: String) = withContext(Dispatchers.IO) {
+        generationMutex.withLock {
+            lifecycleMutex.withLock {
+                conversations.remove(conversationId)?.let { conversation ->
+                    runCatching { conversation.close() }
+                }
+            }
+        }
     }
 
     override suspend fun unload() = withContext(Dispatchers.IO) {
@@ -99,10 +122,23 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
         }
     }
 
+    private fun evictLeastRecentlyUsedConversations() {
+        while (conversations.size > MAX_CACHED_CONVERSATIONS) {
+            val oldestId = conversations.entries.iterator().next().key
+            conversations.remove(oldestId)?.let { conversation ->
+                runCatching { conversation.close() }
+            }
+        }
+    }
+
     private fun closeResources() {
         conversations.values.forEach { runCatching { it.close() } }
         conversations.clear()
         engine?.let { runCatching { it.close() } }
         engine = null
+    }
+
+    private companion object {
+        const val MAX_CACHED_CONVERSATIONS = 2
     }
 }
