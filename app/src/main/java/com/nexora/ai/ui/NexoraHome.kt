@@ -1,5 +1,6 @@
 package com.nexora.ai.ui
 
+import com.nexora.ai.ai.GenerationSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -220,7 +221,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Maximum output tokens", style = MaterialTheme.typography.titleSmall)
-                    listOf(256, 512, 1_024, 2_048).forEach { limit ->
+                    GenerationSettings.OUTPUT_TOKEN_LIMITS.forEach { limit ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
