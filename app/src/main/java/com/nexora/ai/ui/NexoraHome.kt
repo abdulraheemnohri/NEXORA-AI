@@ -2,6 +2,7 @@ package com.nexora.ai.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -52,6 +57,54 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("NEXORA AI", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("THINK LOCALLY · ACT INTELLIGENTLY", color = Color(0xFF9B9CB2), style = MaterialTheme.typography.labelSmall)
+                }
+                Box {
+                    TextButton(
+                        onClick = viewModel::toggleHistoryMenu,
+                        enabled = !state.isGenerating
+                    ) {
+                        Text("Chats · ${state.conversations.size}", color = Color(0xFF75D7E8))
+                    }
+                    DropdownMenu(
+                        expanded = state.historyMenuExpanded,
+                        onDismissRequest = viewModel::dismissHistoryMenu
+                    ) {
+                        if (state.conversations.isEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("No saved conversations") },
+                                onClick = viewModel::dismissHistoryMenu
+                            )
+                        } else {
+                            state.conversations.forEach { conversation ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(
+                                                conversation.title,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            if (conversation.id == state.selectedConversationId) {
+                                                Text(
+                                                    "CURRENT CHAT",
+                                                    color = Color(0xFF75D7E8),
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = { viewModel.openConversation(conversation.id) },
+                                    trailingIcon = {
+                                        TextButton(
+                                            onClick = { viewModel.requestDeleteConversation(conversation.id) }
+                                        ) {
+                                            Text("Delete", color = Color(0xFFFF9EAD))
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
                 TextButton(onClick = viewModel::newConversation, enabled = !state.isGenerating) {
                     Text("New chat", color = Color(0xFFB9A2FF))
@@ -154,5 +207,28 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             }
             Text("ON-DEVICE INFERENCE · NO CLOUD AI API", color = Color(0xFF70748C), style = MaterialTheme.typography.labelSmall)
         }
+    }
+
+    state.pendingDeleteConversationId?.let { pendingId ->
+        val title = state.conversations.firstOrNull { it.id == pendingId }?.title ?: "this conversation"
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDeleteConversation,
+            title = { Text("Delete conversation?") },
+            text = {
+                Text(
+                    "“$title” and its locally stored messages will be permanently deleted from this device."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmDeleteConversation) {
+                    Text("Delete", color = Color(0xFFFF9EAD))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelDeleteConversation) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
