@@ -227,6 +227,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         error = null
                     )
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 mutableUiState.update {
                     it.copy(
@@ -305,6 +307,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         else state.messages
                     )
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 mutableUiState.update { state ->
                     state.copy(
