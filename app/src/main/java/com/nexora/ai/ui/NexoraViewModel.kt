@@ -1,0 +1,188 @@
+package com.nexora.ai.ui
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.nexora.ai.ai.Gemma4E2BModelDownloader
+import com.nexora.ai.ai.GenerationEvent
+import com.nexora.ai.ai.GenerationRequest
+import com.nexora.ai.ai.LiteRtLocalModelRuntime
+import com.nexora.ai.data.ChatRepository
+import com.nexora.ai.data.LocalChatDatabase
+import java.io.File
+import java.util.UUID
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class ChatBubble(
+    val id: String,
+    val role: String,
+    val content: String
+)
+
+data class NexoraUiState(
+    val messages: List<ChatBubble> = emptyList(),
+    val input: String = "",
+    val conversationReady: Boolean = false,
+    val modelReady: Boolean = false,
+    val modelStatus: String = "Checking local model",
+    val isDownloading: Boolean = false,
+    val downloadProgress: Float = 0f,
+    val isGenerating: Boolean = false,
+    val error: String? = null
+)
+
+/** Application state holder; no network AI service or mock response path exists. */
+class NexoraViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = ChatRepository(LocalChatDatabase(application))
+    private val downloader = Gemma4E2BModelDownloader(application)
+    private val runtime = LiteRtLocalModelRuntime(File(application.cacheDir, "litertlm"))
+    private var conversationId: String? = null
+
+    private val mutableUiState = MutableStateFlow(NexoraUiState())
+    val uiState = mutableUiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            conversationId = repository.createConversation("New conversation")
+            mutableUiState.update { it.copy(conversationReady = true) }
+            val installedModel = File(
+                getApplication<Application>().filesDir,
+                "models/${Gemma4E2BModelDownloader.MODEL_FILE_NAME}"
+            )
+            if (installedModel.isFile && installedModel.length() > 0L) {
+                mutableUiState.update { it.copy(modelStatus = "Loading local Gemma model…") }
+                val result = runtime.load(installedModel.absolutePath)
+                mutableUiState.update {
+                    it.copy(
+                        modelReady = result.isSuccess,
+                        modelStatus = if (result.isSuccess) "Gemma 4 E2B · CPU ready"
+                        else "Model load failed",
+                        error = result.exceptionOrNull()?.message
+                    )
+                }
+            } else {
+                mutableUiState.update { it.copy(modelStatus = "Gemma model not installed") }
+            }
+        }
+    }
+
+    fun updateInput(value: String) {
+        mutableUiState.update { it.copy(input = value, error = null) }
+    }
+
+    fun installModel() {
+        if (mutableUiState.value.isDownloading || mutableUiState.value.modelReady) return
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isDownloading = true, downloadProgress = 0f, error = null, modelStatus = "Downloading Gemma 4 E2B…")
+            }
+            try {
+                val modelFile = downloader.download { progress ->
+                    mutableUiState.update { it.copy(downloadProgress = progress.fraction) }
+                }
+                mutableUiState.update { it.copy(modelStatus = "Verifying and loading model…") }
+                val result = runtime.load(modelFile.absolutePath)
+                result.getOrThrow()
+                mutableUiState.update {
+                    it.copy(
+                        modelReady = true,
+                        isDownloading = false,
+                        downloadProgress = 1f,
+                        modelStatus = "Gemma 4 E2B · CPU ready",
+                        error = null
+                    )
+                }
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        modelReady = false,
+                        modelStatus = "Model installation failed",
+                        error = error.message ?: "Unable to install the local model."
+                    )
+                }
+            }
+        }
+    }
+
+    fun sendMessage() {
+        val current = mutableUiState.value
+        val prompt = current.input.trim()
+        val activeConversation = conversationId
+        if (prompt.isEmpty() || !current.modelReady || current.isGenerating || activeConversation == null) return
+
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(
+                    input = "",
+                    isGenerating = true,
+                    error = null,
+                    messages = it.messages + ChatBubble(UUID.randomUUID().toString(), "user", prompt)
+                )
+            }
+            try {
+                repository.saveMessage(activeConversation, "user", prompt)
+                val assistantId = UUID.randomUUID().toString()
+                mutableUiState.update {
+                    it.copy(messages = it.messages + ChatBubble(assistantId, "assistant", ""))
+                }
+                val assistantText = StringBuilder()
+                runtime.generate(
+                    GenerationRequest(
+                        conversationId = activeConversation,
+                        prompt = prompt,
+                        systemInstruction = "You are NEXORA AI, a helpful private on-device assistant. Be accurate, concise, and honest about uncertainty."
+                    )
+                ).collect { event ->
+                    when (event) {
+                        is GenerationEvent.Token -> {
+                            assistantText.append(event.text)
+                            val partial = assistantText.toString()
+                            mutableUiState.update { state ->
+                                state.copy(messages = state.messages.map { bubble ->
+                                    if (bubble.id == assistantId) bubble.copy(content = partial) else bubble
+                                })
+                            }
+                        }
+                        GenerationEvent.Completed -> Unit
+                        is GenerationEvent.Failed -> error(event.reason)
+                    }
+                }
+                if (assistantText.isNotBlank()) {
+                    repository.saveMessage(activeConversation, "assistant", assistantText.toString())
+                }
+                mutableUiState.update { state ->
+                    state.copy(
+                        isGenerating = false,
+                        messages = if (assistantText.isBlank()) state.messages.filterNot { it.id == assistantId }
+                        else state.messages
+                    )
+                }
+            } catch (error: Exception) {
+                mutableUiState.update { state ->
+                    state.copy(
+                        isGenerating = false,
+                        messages = state.messages.filterNot { it.role == "assistant" && it.content.isBlank() },
+                        error = error.message ?: "Local generation failed."
+                    )
+                }
+            }
+        }
+    }
+
+    fun newConversation() {
+        if (mutableUiState.value.isGenerating) return
+        viewModelScope.launch {
+            conversationId = repository.createConversation("New conversation")
+            mutableUiState.update { it.copy(messages = emptyList(), error = null, conversationReady = true) }
+        }
+    }
+
+    fun shutdown() {
+        viewModelScope.launch { runtime.unload() }
+    }
+}
