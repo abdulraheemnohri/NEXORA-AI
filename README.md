@@ -2,29 +2,46 @@
 
 **Think Locally. Learn Continuously. Act Intelligently.**
 
-NEXORA AI is a native Android local-first autonomous intelligence project. Its target inference stack is Google's Gemma 4 E2B IT model running through Google's LiteRT-LM Android runtime, with a built-in Kotlin application backend.
+NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpack Compose. Its first model target is Gemma 4 E2B IT through Google's LiteRT-LM Android runtime.
 
-> Project status: foundation scaffold committed. The production LiteRT-LM adapter, model provisioning, database, agent execution and device validation are not yet complete. This repository does not pretend otherwise.
+## Current implementation
 
-## Product goals
-- On-device model inference; no mandatory cloud AI API.
-- Native Kotlin backend and Jetpack Compose interface.
-- Private local memory and document knowledge.
-- Permission-gated agent tools and task execution.
-- Validated skills, evaluation and rollback.
-- Pixel 6 (6 GB RAM) as the initial device target.
+- Kotlin Android app foundation and Compose UI.
+- Local SQLite conversation/message persistence.
+- Risk-based agent tool approval policy.
+- Pinned LiteRT-LM Android dependency and compatible Kotlin/AGP toolchain.
+- LiteRT-LM CPU runtime adapter with streamed generation events.
+- Gemma 4 E2B model downloader with private storage, free-space checks, temporary-file handling, and final-size validation.
+- GitHub Actions workflow for debug APK assembly and unit tests.
 
-## Build
-Open in Android Studio with JDK 17 and Android SDK 35 installed. The Gradle wrapper still needs to be generated and committed by an Android Studio or Gradle bootstrap environment.
+## Honest project status
+
+The runtime adapter and downloader are now present in source, but the complete app flow is not finished. The Compose UI is not yet connected to the database/runtime, conversation replay after process death is pending, and the model download/inference flow has not yet been built or tested on a Pixel 6. CI/build success and real-device inference are not claimed until verified.
+
+## Requirements
+
+- JDK 17
+- Android SDK 35
+- Android Gradle Plugin 8.13.2
+- Gradle 8.13
+- Kotlin 2.3.21
+- Android minSdk 26
+
+Open the project in Android Studio. The Gradle wrapper still needs to be generated and committed; until then, use an installed Gradle 8.13 distribution.
 
 ## Model
-See docs/MODEL_SETUP.md. Model weights are not included in the APK or repository. Use the official LiteRT-LM model artifact and verify its license and integrity before installation.
+
+See [Model Setup](docs/MODEL_SETUP.md). The model is approximately 2.58 GB and is downloaded separately from the APK into app-private storage. It is not committed to Git.
 
 ## Documentation
-- Architecture: docs/ARCHITECTURE.md
-- Model setup: docs/MODEL_SETUP.md
-- Security: docs/SECURITY.md
-- Roadmap: ROADMAP.md
 
-## License
-Project source licensing will be finalized before public release. Third-party model and runtime licenses remain governed by their respective owners.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Model setup](docs/MODEL_SETUP.md)
+- [LiteRT-LM integration](docs/LITERT_LM_INTEGRATION.md)
+- [Local data and agent safety](docs/LOCAL_DATA_AND_AGENT_SAFETY.md)
+- [Security](docs/SECURITY.md)
+- [Roadmap](ROADMAP.md)
+
+## Licensing
+
+Project source licensing must be finalized before public release. Gemma model terms and LiteRT-LM library licensing are separate and remain governed by their respective owners.
