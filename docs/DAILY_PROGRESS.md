@@ -198,7 +198,9 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Commit / PR
 - Feature branch: fix/litertlm-native-callback-lifecycle.
-- Commit and PR links: pending CI result and push verification.
+- Source commit: [7ff0a34](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7ff0a34c10804b24bd5dc83d66c21ffec6ad3c3b).
+- Draft PR: [#3 — Harden LiteRT-LM callback cancellation and lifecycle](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3).
+- Initial PR workflow [#65](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291255324) started for source commit 7ff0a34; the final PR head must be checked after this progress-log update.
 
 ### Blockers
 - Gradle wrapper and local Android SDK/build environment remain absent.
