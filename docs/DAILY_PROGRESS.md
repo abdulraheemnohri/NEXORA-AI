@@ -110,3 +110,44 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Select the first non-LLM task only after comparing official LiteRT sample models and licenses against Pixel 6 resource limits.
 
 - Added a GitHub Actions concurrency group keyed to workflow plus PR number/ref, with superseded runs cancelled automatically. This prevents one CI run per intermediate file commit from competing for resources; the newest PR head remains the authoritative verification target.
+
+## 2026-11-07 — Merge Android CI and LiteRT-LM compatibility baseline
+
+### Repository checkpoint
+- Rechecked repository metadata, default branch, branches, open pull requests/issues, recent main commits, and Actions runs.
+- `main` advanced from `7d384b6d6e3f9c242685bd84d01dd0bfebfbc7c3` to merge commit [143a8a6](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b).
+- PR [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2) was reviewed, marked ready, and squash-merged after its exact head passed CI.
+- PR #1 remains a draft. After the merge, its branch is 42 commits ahead and 9 behind `main`, and GitHub reports it as not mergeable. It is intentionally not merged or force-updated.
+
+### Delivered
+- Merged typed Kotlin compiler options for Kotlin 2.3.21 while keeping Android bytecode at JVM 17.
+- Merged JDK 21 CI runtime configuration for the pinned LiteRT-LM dependency.
+- Merged the LiteRT-LM streaming fix using `Message.toString()`.
+- Merged Android lint into the CI workflow and Google AI Edge guidance that keeps LiteRT-LM and non-LLM Compiled Model API workloads separate.
+- Confirmed the pinned LiteRT-LM v0.18.1 `Message.toString()` implementation returns `contents.toString()`; it is text extraction, not an assumed `Message.text` property.
+
+### Files included in merged PR #2
+- `.github/workflows/android-ci.yml`
+- `app/build.gradle.kts`
+- `app/src/main/java/com/nexora/ai/ai/LiteRtLocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `README.md`, `ROADMAP.md`
+- `docs/ARCHITECTURE.md`, `docs/GOOGLE_AI_EDGE_INTEGRATION.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification
+- GitHub Actions run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) on PR head `3f69ed7f9fcf03e7e3b3a469fe169b98232197fd`: **debug APK assembly passed, Android lint passed, JVM unit tests passed**.
+- Post-merge main workflow [#63](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42286720414) was triggered on merge commit `143a8a6586c44ecfe4a1da7907a34c07e9264d3b`; it was still in progress at this log checkpoint.
+- No local Gradle build was run: this environment has no project Gradle wrapper or installed Gradle/Android SDK.
+- No real Gemma download, inference, offline-after-download, instrumentation, or physical Pixel 6 memory/thermal verification was performed.
+- Reviewed the merged diff for secrets, model weights, mock inference, unsafe tool execution, and misleading device claims. No model weights or secrets were added; automatic LiteRT-LM tool calling remains disabled; Pixel 6 accelerator/performance claims remain explicitly unverified.
+
+### Commit / PR
+- Merge commit: [143a8a6586c44ecfe4a1da7907a34c07e9264d3b](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b)
+- Merged PR: [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2)
+- Follow-up documentation commit: pending.
+
+### Next priority
+- Reconcile PR #1 conversation-history and generation-settings changes against the new `main` without force-pushing or overwriting its existing branch.
+- Resolve overlap in the LiteRT-LM runtime, Compose UI, Gradle configuration, and CI workflow on a fresh feature branch; then rerun build, lint, and tests.
+- Keep the Gradle wrapper, Android instrumentation, real model inference, and Pixel 6 validation as explicit release gates.

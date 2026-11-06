@@ -29,9 +29,9 @@ See [Google AI Edge integration](docs/GOOGLE_AI_EDGE_INTEGRATION.md) for the run
 
 ## Honest project status
 
-The current main branch has a known CI failure: Kotlin 2.3.21 rejects the deprecated `android.kotlinOptions.jvmTarget` DSL. The focused fix branch migrates to typed `kotlin.compilerOptions`, uses JDK 21 for the LiteRT-LM test runtime, and reads streamed LiteRT-LM message content through the documented `Message.toString()` API. A subsequent CI run found two more Kotlin compile errors; fixes are now on the same review branch and awaiting another CI run.
+PR #2 merged the Android CI and LiteRT-LM compatibility fixes into `main` as commit [`143a8a6`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b). GitHub Actions run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) passed debug APK assembly, Android lint, and JVM unit tests on the reviewed PR head. A separate workflow was triggered on the merge commit; check its result before treating the merge commit itself as CI-verified.
 
-The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay, full instrumentation coverage, real-device model inference, offline behavior, and Pixel 6 memory/thermal validation remain release gates. CI/build success and real-device inference are not claimed until verified.
+The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay remains in separate draft PR #1 and is not yet integrated. Real Gemma download/loading/inference, offline-after-download behavior, Android instrumentation coverage, and Pixel 6 memory/thermal validation remain release gates. CI success does not prove device inference.
 
 ## Requirements
 
