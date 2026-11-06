@@ -80,7 +80,10 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
                     )
                 }
             }
-            conversation.sendMessageAsync(request.prompt).collect { message ->
+            conversation.sendMessageAsync(
+                request.prompt,
+                maxOutputToken = request.maxOutputTokens
+            ).collect { message ->
                 if (message.text.isNotEmpty()) emit(GenerationEvent.Token(message.text))
             }
             emit(GenerationEvent.Completed)
