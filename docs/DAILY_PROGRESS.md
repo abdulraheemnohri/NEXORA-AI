@@ -21,3 +21,14 @@
 
 ### Next engineering gate
 Run the Android CI workflow and resolve compiler/test failures before expanding the autonomous agent surface. Do not label the app production-ready until the build, model inference, offline behavior, and Pixel 6 memory/thermal behavior are verified.
+## 2026-11-06 — LiteRT-LM generation control
+
+### Added
+- Connected `GenerationRequest.maxOutputTokens` to LiteRT-LM `sendMessageAsync(..., maxOutputToken = ...)` using the documented Kotlin API.
+- Added request validation to keep the output budget within 1–4096 tokens; the app default remains 512.
+- Added unit tests for the default, a configured budget, and invalid bounds.
+- Updated LiteRT-LM integration notes and roadmap.
+
+### Verification
+- API signature cross-checked against current Google AI Edge LiteRT-LM Kotlin API documentation.
+- GitHub combined status must still be checked; no successful Android build or test run is claimed.
