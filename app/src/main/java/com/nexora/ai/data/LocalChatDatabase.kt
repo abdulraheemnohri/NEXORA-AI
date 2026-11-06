@@ -63,7 +63,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
             writableDatabase.insertOrThrow("messages", null, values)
             writableDatabase.execSQL(
                 "UPDATE conversations SET updated_at=? WHERE id=?",
-                arrayOf(message.createdAt, message.conversationId)
+                arrayOf<Any>(message.createdAt, message.conversationId)
             )
             writableDatabase.setTransactionSuccessful()
         } finally {
