@@ -7,7 +7,8 @@ NEXORA targets the official LiteRT-LM Kotlin API:
 - `Backend.CPU()`
 - `Engine.initialize()` and `Engine.close()`
 - `Engine.createConversation()`
-- `Conversation.sendMessageAsync(prompt): Flow<Message>`
+- `Conversation.sendMessageAsync(prompt, maxOutputToken = n): Flow<Message>`
+- `ConversationConfig.maxOutputToken` is also available for conversation-wide limits
 - `Message.text`
 - `Conversation.close()`
 
@@ -25,7 +26,7 @@ The Android Maven coordinate is pinned in the version catalog. The model is down
 ## Not yet delivered
 
 - Process-death transcript replay into the runtime.
-- User-configurable sampling/context settings.
+- User-configurable sampling and context settings (the per-request output token limit is now wired; a settings screen is still pending).
 - Model SHA-256 verification against a publisher-provided checksum.
 - GPU backend selection and device-specific profiling.
 - Pixel 6 thermal, memory-pressure, and long-session testing.
