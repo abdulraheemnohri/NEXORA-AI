@@ -84,7 +84,8 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
                 request.prompt,
                 maxOutputToken = request.maxOutputTokens
             ).collect { message ->
-                if (message.text.isNotEmpty()) emit(GenerationEvent.Token(message.text))
+                val chunk = message.toString()
+                if (chunk.isNotEmpty()) emit(GenerationEvent.Token(chunk))
             }
             emit(GenerationEvent.Completed)
         }
