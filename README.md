@@ -10,18 +10,20 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - ViewModel orchestration for model installation, loading, streaming generation, and chat state.
 - Local SQLite conversation/message persistence.
 - Risk-based agent tool approval policy.
-- Pinned LiteRT-LM Android dependency and compatible Kotlin/AGP toolchain.
-- LiteRT-LM CPU runtime adapter with streamed generation events.
+- Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
+- LiteRT-LM CPU runtime adapter with streamed generation events and per-request output-token limits.
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
-- GitHub Actions workflow for debug APK assembly and unit tests.
+- GitHub Actions workflow for debug APK assembly, Android lint, and JVM unit tests.
 
 ## Honest project status
 
-The chat UI is now connected in source to the model downloader, runtime adapter, and SQLite repository. The project still needs a verified Android build and end-to-end run. Conversation history browsing/replay after process death, runtime sampling controls, and real-device memory/thermal validation remain pending. CI/build success and real-device inference are not claimed until verified.
+The current main branch has a known CI failure: Kotlin 2.3.21 rejects the deprecated `android.kotlinOptions.jvmTarget` DSL. The focused fix branch migrates to typed `kotlin.compilerOptions`, uses JDK 21 for the LiteRT-LM test runtime, and reads streamed LiteRT-LM message content through the documented `Message.toString()` API. These changes are awaiting CI verification.
+
+The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay, full instrumentation coverage, real-device model inference, offline behavior, and Pixel 6 memory/thermal validation remain release gates. CI/build success and real-device inference are not claimed until verified.
 
 ## Requirements
 
-- JDK 17
+- JDK 21 for the current CI/test toolchain; app bytecode target remains Java 17.
 - Android SDK 35
 - Android Gradle Plugin 8.13.2
 - Gradle 8.13
