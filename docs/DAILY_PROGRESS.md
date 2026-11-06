@@ -62,29 +62,18 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Inspected the pinned upstream Google LiteRT-LM `v0.18.1` Kotlin source for `ConversationConfig.initialMessages`, `maxOutputToken`, `automaticToolCalling`, `Message.user/model`, and the `sendMessageAsync` Flow overload.
 - Corrected the adapter to use `Message.toString()` for streamed chunks; the pinned `Message` class does not define a `text` property.
 - Checked the local execution environment: JDK 21 is present, but Gradle is not installed and `ANDROID_HOME` / `ANDROID_SDK_ROOT` are unset. The repository also has no Gradle wrapper.
-- No Gradle build, lint, or JVM test command could be run locally. GitHub returned no workflow-run or status entries for the draft PR head at the time of this log. Pixel 6, download, offline, and real Gemma inference tests were not run.
+- No Gradle build, lint, or JVM test command could be run locally. Pixel 6, download, offline, and real Gemma inference tests were not run.
+
+### CI history and corrective actions
+- Run [#37](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108664411) failed during Gradle configuration because Kotlin Gradle Plugin 2.3.21 rejects the deprecated `android.kotlinOptions.jvmTarget` DSL. Migrated to typed `kotlin.compilerOptions` with JVM target 17.
+- Run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542) reached Kotlin compilation and exposed a SQLite bind-array type inference error and an inaccessible Compose `weight` import. Both were corrected. Coroutine cancellation is also now propagated rather than swallowed.
+- Run [#46](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42109522385) then completed **debug APK assembly successfully** and **Android lint successfully**, but the JVM test task failed: 15 tests completed, one failed. The failing test is `ConversationHistoryPolicyTest.mapsPersistedRolesToLiteRtLmMessageRoles`, with `UnsupportedClassVersionError` at the LiteRT-LM role-mapping assertion. Build and lint are verified for this PR merge ref; the unit-test suite is not green.
+- The workflow's test runtime was configured as JDK 17. The current investigation indicates the failing test loads the pinned LiteRT-LM dependency class at JVM test runtime. CI is moved to JDK 21 (while Android bytecode target remains Java 17) to test whether the dependency's class-file version is the cause. This is a targeted hypothesis, not yet confirmed.
+- The CI JDK change is committed as [`9ca88f1`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/9ca88f17768b520d9d411cfe9b6b4ce945441b2e). A new workflow result is pending.
+- No Gradle wrapper or Android instrumentation tests have been added in this increment. No physical Pixel 6 or real Gemma inference test was performed.
 
 ### Next priority
-- Obtain a real CI build/lint/test result for PR #1 and fix any compiler or test failures.
-- Then add Android instrumentation coverage for SQLite restore/delete lifecycle before attempting physical Pixel 6 inference and performance measurements.
-
-### CI result and corrective action — 2026-11-06
-- GitHub Actions run [#37](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108664411) completed with **failure** at the `Build debug APK` step.
-- The exact blocker was `app/build.gradle.kts:22`: Kotlin Gradle Plugin 2.3.21 treats `android.kotlinOptions.jvmTarget` as an error and requires the typed `compilerOptions` DSL.
-- Fixed in `app/build.gradle.kts` by importing `JvmTarget` and setting `kotlin { compilerOptions { jvmTarget = JvmTarget.fromTarget("17") } }`.
-- Because configuration failed, Android lint and JVM unit-test steps were skipped. This run does not verify any application source compilation or tests.
-- Also corrected transcript loading to select the latest 500 messages and then restore chronological order, with `rowid` as a deterministic tie-breaker for equal timestamps.
-- The feature branch's latest recorded commit at this log update is [`79de529`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/79de52946cda462de11ae8cd575742f353010272); PR [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) remains draft. A new CI result for the compiler DSL fix was not yet available.
-- After the Kotlin compiler DSL fix, PR head commit [`5718a9e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/5718a9e9664e90730bb32fc2c479e0970839ed30) started GitHub Actions run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542). At this log update, debug APK assembly was still running; lint and unit tests were pending.
-- Final data review also confirmed that history loading selects the latest 500 stored messages and restores them in chronological order, with `rowid` used to break equal-timestamp ties.
-
-### Second CI failure and follow-up fixes — 2026-11-06
-- GitHub Actions run [#41](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42108913542) reached Kotlin compilation, then failed on two source errors:
-  1. `LocalChatDatabase.kt` inferred an intersection type for a mixed SQLite bind-argument array.
-  2. `NexoraHome.kt` imported the internal Compose `weight` scope extension directly.
-- Fixed the SQLite bind array with an explicit `Array<Any>` type and removed the inaccessible Compose import.
-- Also changed model-download and generation coroutine handlers to rethrow `CancellationException` rather than swallowing lifecycle cancellation.
-- The next PR workflow run [#44](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42109293465) is running against the corrected source branch. At this log update, debug APK assembly is in progress; lint and JVM tests are pending.
-- These fixes are committed in [`7ec929f`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7ec929fbc4290925335d40fe1a4a6d29c3fada82), [`7047c53`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7047c53ce1b8987317f7ba088bbb0c0b10a7712c), and [`ab4f908`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ab4f90877336e1e31f28eabc2916d573e635c3a1).
-- No successful build, lint, or unit-test result is available yet; no Pixel 6 or real Gemma inference test was performed.
-
+- Confirm whether JDK 21 resolves the LiteRT-LM test runtime class-version failure. If not, isolate the mapping policy from dependency runtime loading or add a proper Android instrumentation test.
+- Add SQLite instrumentation tests after the unit-test baseline is green.
+- Generate and verify the official Gradle wrapper; do not handcraft or commit an unverified wrapper JAR.
+- Then verify Gemma inference, offline behavior, and Pixel 6 memory/thermal performance.
