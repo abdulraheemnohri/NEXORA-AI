@@ -15,7 +15,13 @@ data class GenerationRequest(
     val prompt: String,
     val systemInstruction: String? = null,
     val maxOutputTokens: Int = 512
-)
+) {
+    init {
+        require(maxOutputTokens in 1..4096) {
+            "maxOutputTokens must be between 1 and 4096."
+        }
+    }
+}
 
 sealed interface GenerationEvent {
     data class Token(val text: String) : GenerationEvent
