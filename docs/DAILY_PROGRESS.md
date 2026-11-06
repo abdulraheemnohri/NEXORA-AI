@@ -151,3 +151,61 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Reconcile PR #1 conversation-history and generation-settings changes against the new `main` without force-pushing or overwriting its existing branch.
 - Resolve overlap in the LiteRT-LM runtime, Compose UI, Gradle configuration, and CI workflow on a fresh feature branch; then rerun build, lint, and tests.
 - Keep the Gradle wrapper, Android instrumentation, real model inference, and Pixel 6 validation as explicit release gates.
+
+
+## 2026-11-07 — LiteRT-LM native callback lifecycle hardening
+
+### Repository checkpoint
+- Rechecked repository metadata, main, all branch heads, open issues, open PRs, recent commits, and recent Actions runs before editing.
+- Main was at 3e95c9d; no standalone open issues were returned. Draft PR [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) remains open on feature/chat-history-replay. The branch is 42 commits ahead and 10 behind main and compares as diverged; it was not force-updated or merged.
+- PR [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2) is merged. PR-head run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) and post-merge main run [#64](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42287012972) both passed debug APK assembly, Android lint, and JVM unit tests.
+
+### Delivered on fix/litertlm-native-callback-lifecycle
+- Replaced the LiteRT-LM Flow overload with the pinned v0.18.1 callback overload and an app-owned callbackFlow bridge.
+- Added a native completion gate. If a collector is cancelled, the UI stops receiving chunks, but the coroutine waits non-cancellably for onDone / onError before releasing the generation mutex. This prevents the runtime from reusing a conversation or unloading the engine while the native request is still active.
+- Moved generation and conversation creation off the main thread with flowOn(Dispatchers.IO).
+- Explicitly set automaticToolCalling = false for every created conversation.
+- Added a JVM regression test proving cancellation cleanup remains blocked until the native completion signal arrives.
+- Corrected LiteRT-LM documentation that still referenced the nonexistent Message.text property and the built-in Flow overload.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/ai/LiteRtLocalModelRuntime.kt
+- app/src/test/java/com/nexora/ai/ai/NativeInferenceCompletionTest.kt
+- README.md
+- ROADMAP.md
+- docs/ARCHITECTURE.md
+- docs/LITERT_LM_INTEGRATION.md
+- docs/DAILY_PROGRESS.md
+
+### API and source verification
+- Inspected Google LiteRT-LM v0.18.1 Conversation.kt, Engine.kt, Message.kt, and native runtime/conversation/conversation.h.
+- Confirmed the callback overload accepts MessageCallback and maxOutputToken; the pinned Message.toString() returns contents.toString().
+- Confirmed the v0.18.1 Flow overload has an empty awaitClose {} block (also tracked in upstream [issue #2718](https://github.com/google-ai-edge/LiteRT-LM/issues/2718)).
+- Confirmed the pinned native Conversation::CancelProcess() documentation warns that the session is poisoned and cannot safely be reused. The implementation therefore drains to callback completion rather than invoking native cancellation.
+- These are source/API checks, not physical-device inference evidence.
+
+### Verification actually run
+- Pre-change baseline: main Actions run [#64](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42287012972) passed debug APK assembly, Android lint, and JVM unit tests.
+- No local Gradle command was run: the repository has no Gradle wrapper and this execution environment has no installed Gradle or Android SDK.
+- The new regression test has been added but awaits the feature-branch CI run.
+- No Gemma download, real inference, offline verification, Android instrumentation, or physical Pixel 6 validation was run.
+
+### Review and safety
+- No new dependency, model weights, secrets, cloud inference, or external service was added.
+- Native cancellation is not advertised as supported; cancellation only stops downstream delivery and waits for native completion.
+- Automatic tool calling is explicitly disabled; no tool side effects were introduced.
+- No performance, RAM, thermal, or device-success claims were added.
+
+### Commit / PR
+- Feature branch: fix/litertlm-native-callback-lifecycle.
+- Commit and PR links: pending CI result and push verification.
+
+### Blockers
+- Gradle wrapper and local Android SDK/build environment remain absent.
+- Real Gemma inference and Pixel 6 measurements require the physical target device and the pinned model artifact.
+- PR #1 needs conflict-safe reconciliation; its existing branch was left untouched.
+
+### Next priority
+- Verify this callback-lifecycle change with branch CI.
+- Reconcile PR #1 history/persistence work onto a fresh branch from current main, preserving its existing branch and resolving overlapping runtime/UI changes deliberately.
+- Then add Android instrumentation for local database and model-runtime lifecycle before attempting real Pixel 6 inference.

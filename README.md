@@ -11,7 +11,9 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Local SQLite conversation/message persistence.
 - Risk-based agent tool approval policy.
 - Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
-- LiteRT-LM CPU runtime adapter with streamed generation events and per-request output-token limits.
+- LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
+- Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
+- Automatic LiteRT-LM tool calling is explicitly disabled; no model-generated app side effect is registered.
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
 - GitHub Actions workflow for debug APK assembly, Android lint, and JVM unit tests.
 
@@ -29,9 +31,9 @@ See [Google AI Edge integration](docs/GOOGLE_AI_EDGE_INTEGRATION.md) for the run
 
 ## Honest project status
 
-PR #2 merged the Android CI and LiteRT-LM compatibility fixes into `main` as commit [`143a8a6`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b). GitHub Actions run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) passed debug APK assembly, Android lint, and JVM unit tests on the reviewed PR head. A separate workflow was triggered on the merge commit; check its result before treating the merge commit itself as CI-verified.
+PR #2 merged the Android CI and LiteRT-LM compatibility fixes into `main` as commit [`143a8a6`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b). GitHub Actions run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) passed debug APK assembly, Android lint, and JVM unit tests on the reviewed PR head. Post-merge main workflow [#64](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42287012972) also passed debug APK assembly, Android lint, and JVM unit tests on commit `3e95c9d`.
 
-The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay remains in separate draft PR #1 and is not yet integrated. Real Gemma download/loading/inference, offline-after-download behavior, Android instrumentation coverage, and Pixel 6 memory/thermal validation remain release gates. CI success does not prove device inference.
+The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay remains in separate draft PR #1; that branch currently diverges from main and is not yet integrated. The callback bridge does not forcibly stop native inference: it waits for LiteRT-LM's terminal callback before releasing the generation lock. Immediate native cancellation is intentionally not exposed because the pinned native API warns that cancelProcess() leaves the conversation session poisoned. Real Gemma download/loading/inference, offline-after-download behavior, Android instrumentation coverage, and Pixel 6 memory/thermal validation remain release gates. CI success does not prove device inference.
 
 ## Requirements
 
