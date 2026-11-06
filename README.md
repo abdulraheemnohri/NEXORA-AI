@@ -14,6 +14,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
 - Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
 - Automatic LiteRT-LM tool calling is explicitly disabled; no model-generated app side effect is registered.
+- Callback lifecycle hardening is in draft PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3); PR-head run [#66](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291399653) passed debug APK assembly, Android lint, and JVM unit tests. Device inference and cancellation behavior remain unverified.
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
 - GitHub Actions workflow for debug APK assembly, Android lint, and JVM unit tests.
 

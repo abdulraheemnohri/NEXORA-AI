@@ -187,7 +187,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Verification actually run
 - Pre-change baseline: main Actions run [#64](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42287012972) passed debug APK assembly, Android lint, and JVM unit tests.
 - No local Gradle command was run: the repository has no Gradle wrapper and this execution environment has no installed Gradle or Android SDK.
-- The new regression test has been added but awaits the feature-branch CI run.
+- Final PR-head run [#66](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291399653) passed debug APK assembly, Android lint, and JVM unit tests, including the new cancellation-gate regression test.
 - No Gemma download, real inference, offline verification, Android instrumentation, or physical Pixel 6 validation was run.
 
 ### Review and safety
@@ -199,8 +199,9 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Feature branch: fix/litertlm-native-callback-lifecycle.
 - Source commit: [7ff0a34](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7ff0a34c10804b24bd5dc83d66c21ffec6ad3c3b).
+- Documentation commits: [767826f](https://github.com/abdulraheemnohri/NEXORA-AI/commit/767826f0085930d932410652a53f2c2f8840795d) and [b016134](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b016134aad097fb0b2adacedbafbc0180d2d8729).
 - Draft PR: [#3 — Harden LiteRT-LM callback cancellation and lifecycle](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3).
-- Initial PR workflow [#65](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291255324) started for source commit 7ff0a34; the final PR head must be checked after this progress-log update.
+- Initial run [#65](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291255324) built the source commit successfully but was superseded during lint by the documentation update. Final-head run [#66](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291399653) on b016134 completed successfully: debug APK assembly, Android lint, and JVM unit tests all passed.
 
 ### Blockers
 - Gradle wrapper and local Android SDK/build environment remain absent.
