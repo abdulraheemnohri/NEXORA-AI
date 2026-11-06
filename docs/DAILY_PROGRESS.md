@@ -108,3 +108,5 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Verify the next CI run on the latest PR head. Fix subsequent failures only from actual logs.
 - Once build passes, execute lint and JVM tests, then add SQLite instrumentation coverage.
 - Select the first non-LLM task only after comparing official LiteRT sample models and licenses against Pixel 6 resource limits.
+
+- Added a GitHub Actions concurrency group keyed to workflow plus PR number/ref, with superseded runs cancelled automatically. This prevents one CI run per intermediate file commit from competing for resources; the newest PR head remains the authoritative verification target.
