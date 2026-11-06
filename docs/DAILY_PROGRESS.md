@@ -66,7 +66,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Branch: `fix/main-ci-kotlin-compiler-options`.
 - Commits are visible in [the branch history](https://github.com/abdulraheemnohri/NEXORA-AI/commits/fix/main-ci-kotlin-compiler-options).
-- PR creation and CI result are pending at this log entry.
+- Opened draft PR [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2) from `fix/main-ci-kotlin-compiler-options` to `main` (head `bcb70b3fa75a9533a5d7e890a5636e1da9b62ff4`).
+- GitHub Actions run [#53](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42178675905) was queued for this PR head when checked. No build/lint/test result is available yet.
 
 ### Next priority
 - Open and run CI for this focused repair. Fix any next compiler or test failure from its actual logs.
