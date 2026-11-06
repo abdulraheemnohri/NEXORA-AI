@@ -73,3 +73,38 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Open and run CI for this focused repair. Fix any next compiler or test failure from its actual logs.
 - Keep PR #1 separate until its history/persistence changes can be rebased or reconciled safely against current main.
 - After a green CI baseline, add Android instrumentation coverage for SQLite restore/delete lifecycle, then verify actual Gemma inference and Pixel 6 performance.
+
+
+## 2026-11-06 — Google AI Edge integration and second CI repair
+
+### CI diagnosis
+- Inspected PR #2 Actions run [#54](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42178699161) and downloaded the failed build job log.
+- Gradle setup and Android resource processing completed. Kotlin compilation then failed on two source errors:
+  - `LocalChatDatabase.kt`: SQLite bind arguments inferred an intersection type; changed the argument array to `arrayOf<Any>(...)`.
+  - `NexoraHome.kt`: an explicit import attempted to access Compose's internal `weight` extension; removed the import and retained scope-resolved `weight` calls.
+- Because compilation failed, lint and unit-test steps were skipped. This is not a successful CI run.
+
+### Google AI Edge upstream audit
+- Inspected the LiteRT repository and its official sample agent-skill catalog.
+- Read the official Android LiteRT-LM skill, Compiled Model app scaffolding guidance, and on-device verification guidance.
+- Confirmed the intended split: LiteRT-LM serves `.litertlm` LLMs; the LiteRT Compiled Model API is for separate non-LLM tasks. The official app scaffolding guidance explicitly keeps LLM inference on the LiteRT-LM Engine.
+- Recorded lifecycle requirements for non-LLM task adapters: serial background dispatcher, deterministic model/buffer cleanup, model-specific preprocessing, reference-output parity, accelerator-residency inspection, and end-to-end readback timing.
+- The official Google Tensor NPU skill describes Pixel 10 / Pixel 11 targets; NEXORA therefore does not claim Pixel 6 NPU support. Pixel 6 CPU remains the baseline.
+- No new ML dependency or unverified ASR/vision model was added. A feature is not real until a licensed artifact, input/output contract, reference test, and Pixel 6 verification exist.
+
+### Changes on `fix/main-ci-kotlin-compiler-options`
+- Fixed both Kotlin compile errors found by run #54.
+- Added `docs/GOOGLE_AI_EDGE_INTEGRATION.md` with workload-to-runtime mapping, Pixel 6 accelerator policy, upstream references, and release gates.
+- Updated README, ROADMAP, and architecture docs to keep LiteRT-LM and Compiled Model API paths separate and define future ASR, vision, and embedding integration requirements.
+
+### Verification
+- Run #54 failed at Kotlin compilation before lint and unit tests.
+- Fixes and documentation have been pushed to the same PR branch; the resulting Actions run is pending.
+- No local Gradle build/lint/unit tests were run in this environment.
+- No optional non-LLM model was downloaded or integrated.
+- No real Gemma inference, offline-after-download, accelerator residency, or Pixel 6 performance measurement was performed.
+
+### Next priority
+- Verify the next CI run on the latest PR head. Fix subsequent failures only from actual logs.
+- Once build passes, execute lint and JVM tests, then add SQLite instrumentation coverage.
+- Select the first non-LLM task only after comparing official LiteRT sample models and licenses against Pixel 6 resource limits.
