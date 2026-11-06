@@ -3,7 +3,7 @@
 | Area | Status | Exit criteria |
 |---|---|---|
 | Android Gradle/Compose foundation | Source scaffolded; CI build not yet verified | CI build and unit tests pass |
-| LiteRT-LM adapter | Implemented in source; compile/runtime unverified | Build succeeds and real Gemma output is verified |
+| LiteRT-LM adapter | Per-request output-token budget wired; compile/runtime unverified | Build succeeds and real Gemma output is verified |
 | Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
 | Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
 | Local conversation storage | SQLite repository wired to current chat session; history browsing/replay pending | History list, replay, migrations, and delete behavior tested |
