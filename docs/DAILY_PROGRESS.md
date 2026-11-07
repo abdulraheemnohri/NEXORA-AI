@@ -255,3 +255,54 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Complete and review PR #5, then reconcile the conversation-history work from PR #4 against the wrapper-enabled main without force-pushing either existing branch.
 - Add Android instrumentation for database restore/order/cascade deletion and lifecycle behavior before claiming full conversation-history validation.
 - After those gates, verify actual Gemma 4 E2B download, loading, multi-turn inference, offline behavior, and Pixel 6 memory/thermal performance on the physical device.
+
+
+## 2026-11-08 — Gradle wrapper merged and repository status reconciled
+
+### Repository checkpoint
+- Re-inspected main, all branch heads, open issues, recent commits, open PRs, and available Actions/CI results before this update.
+- Main advanced from `b399c6a9c370a8dea98f2475f9ee021164c14d19` to merge commit [`0afe596`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0afe596566fb878e32f6aba4cc57aed687ffbf3f) through PR [#5](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5).
+- No standalone open issues were returned. Open PRs #1 and #4 remain; #5 is merged.
+- PR #4's prior head is `16bce03e3b5889b6fa39812a1ef66e4893c0cd56`. After the wrapper merge it is 31 commits ahead / 1 behind and GitHub reports it as not mergeable. This is a reconciliation blocker, not permission to force-push.
+- Original PR #1 remains 42 commits ahead / 12 behind and is preserved. All existing branches were retained.
+
+### Delivered
+- Completed the Gradle 8.13 wrapper increment in PR #5 and squash-merged it into main.
+- The wrapper pins the official Gradle 8.13 distribution checksum; CI validates the official wrapper JAR and invokes the checked-in wrapper for APK assembly, Android lint, and JVM unit tests.
+- Windows 10/11, Linux, macOS, and Android Studio build instructions are included in `docs/BUILDING.md`.
+- Updated this status record and aligned README/Roadmap with the merged state and next integration blocker.
+
+### Files delivered by merged PR #5
+- `.github/workflows/android-ci.yml`
+- `gradle/wrapper/gradle-wrapper.jar`
+- `gradle/wrapper/gradle-wrapper.properties`
+- `gradlew`
+- `gradlew.bat`
+- `docs/BUILDING.md`
+- `README.md`
+- `ROADMAP.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Latest exact PR-head Actions run [#80](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412475976) on `17cea7617a7c55cebf8f812be624b588dada3efd` completed successfully: wrapper validation, debug APK assembly, Android lint, and JVM unit tests all passed.
+- Earlier wrapper runs #78 and #79 also passed; run #77 exposed the malformed distribution URL and the correction was verified by later runs.
+- Post-merge combined status lookup for `0afe596` returned no status entries, and no PR-triggered workflow run was returned for the merge commit. This report therefore claims the exact PR-head CI pass, not an independently verified post-merge main CI pass.
+- No local Gradle build/lint/test commands were run because this environment has no local Gradle installation or Android SDK.
+- No Gemma model download/load/inference, offline-after-download test, Android instrumentation, or physical Pixel 6 memory/thermal validation was performed.
+
+### Review and safety
+- Reviewed the wrapper/CI/documentation scope. No application inference engine, model weights, secrets, permissions, cloud AI dependency, Firebase, Docker, Ollama, llama.cpp, or external inference server was added.
+- Wrapper JAR and distribution checksums are recorded in the build documentation.
+- PR #5 was marked ready after its exact head passed CI and was squash-merged; no force-push or branch deletion was performed.
+- The merged wrapper branch is retained rather than deleting any branch during this run.
+
+### Commit / PR
+- Merge commit: [`0afe596566fb878e32f6aba4cc57aed687ffbf3f`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0afe596566fb878e32f6aba4cc57aed687ffbf3f).
+- Merged PR: [#5 — Add verified Gradle 8.13 wrapper and reproducible build entrypoints](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5).
+- Documentation reconciliation branch: `docs/record-gradle-wrapper-merge` (this update).
+
+### Blockers and next priority
+- Port the conversation-history/replay implementation from PR #4 onto a fresh branch based on current main, preserving both PR #4 and original PR #1.
+- Add Android instrumentation for SQLite conversation restore, ordering, cascade deletion, and native-session lifecycle before claiming full history validation.
+- Then verify actual Gemma 4 E2B inference, offline operation, and Pixel 6 resource behavior on the physical device.
