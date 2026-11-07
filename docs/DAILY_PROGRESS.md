@@ -212,3 +212,70 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Verify this callback-lifecycle change with branch CI.
 - Reconcile PR #1 history/persistence work onto a fresh branch from current main, preserving its existing branch and resolving overlapping runtime/UI changes deliberately.
 - Then add Android instrumentation for local database and model-runtime lifecycle before attempting real Pixel 6 inference.
+
+
+## 2026-11-08 — Conflict-safe local conversation history integration
+
+### Repository checkpoint
+- Rechecked repository metadata, default branch, branch heads, open issues, open PRs, recent commits, and available Actions results before editing.
+- Main was at [b399c6a](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b399c6a9c370a8dea98f2475f9ee021164c14d19).
+- No standalone open issues were returned.
+- PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) is merged. Actions run [#67](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291721158) on its reviewed head completed successfully: debug APK assembly, Android lint, and JVM unit tests all passed.
+- PR [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) remains open and draft. Its branch compares as diverged: 42 commits ahead and 11 behind current main, and GitHub reports it as not mergeable. The existing branch and PR were not modified.
+- The latest main commit's combined status returned no status entries, and the commit-workflow lookup returned no PR-triggered runs for that merge commit. PR #3's successful head run is not represented as a post-merge main run; no latest-main CI pass is claimed.
+
+### Delivered on `integration/local-conversation-history`
+- Created a fresh integration branch from current main rather than force-updating or rebasing the user's diverged PR #1 branch.
+- Added `GenerationHistoryMessage` and a bounded history field to `GenerationRequest`, retaining main's existing 1–4,096 request validation ceiling.
+- Added `ConversationHistoryPolicy`: at most 16 recent messages and 12,000 characters, with a truncation marker for the oldest selected content.
+- Integrated replay into the existing callback-safe LiteRT-LM adapter using `ConversationConfig.initialMessages`, `Message.user/model`, and the configured output-token limit.
+- Preserved the merged callback completion gate and `automaticToolCalling = false`; no fallback to the older Flow adapter was introduced.
+- Added an access-ordered LRU cache capped at two native conversations and `forgetConversation` cleanup for user-confirmed deletion.
+- Added repository title updates and deterministic chronological ordering for messages with equal timestamps.
+- Ported startup restoration, history switching, title generation, confirmation-gated deletion, and local generation settings into the Compose UI and ViewModel.
+- Added JVM tests for history count/character bounds, truncation, LiteRT-LM role mapping, unsupported roles, and supported generation settings.
+- Added local data, architecture, runtime, README, and roadmap documentation for the integration.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ai/LocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/ai/ConversationHistoryPolicy.kt`
+- `app/src/main/java/com/nexora/ai/ai/GenerationSettings.kt`
+- `app/src/main/java/com/nexora/ai/ai/LiteRtLocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/data/ChatRepository.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/test/java/com/nexora/ai/ai/ConversationHistoryPolicyTest.kt`
+- `app/src/test/java/com/nexora/ai/ai/GenerationSettingsTest.kt`
+- `README.md`, `ROADMAP.md`
+- `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/DAILY_PROGRESS.md`
+
+### API research and review
+- Reviewed Google's Kotlin LiteRT-LM guide for `ConversationConfig.initialMessages` and callback-based streaming: [official Kotlin API guide](https://github.com/google-ai-edge/LiteRT-LM/blob/main/docs/api/kotlin/getting_started.md).
+- Reviewed Google's upstream configuration source for `initialMessages`, `maxOutputToken`, and `automaticToolCalling`: [Config.kt](https://github.com/google-ai-edge/LiteRT-LM/blob/main/kotlin/java/com/google/ai/edge/litertlm/Config.kt).
+- The dependency remains pinned to LiteRT-LM v0.18.1. No alternate inference engine, cloud AI API, Firebase, Docker, model weights, or secrets were introduced.
+- The replay path passes prior turns only; the current prompt remains a separate generation input.
+- The native callback completion gate from merged PR #3 was retained. No native hard-cancel claim was added.
+- Deletion remains confirmation-gated; SQLite foreign-key cascade and native-session cleanup are both retained.
+
+### Verification actually run
+- Repository and source/API inspection completed.
+- No local build, lint, or test command was run: this environment has Java but no installed Gradle, no repository Gradle wrapper, and no Android SDK.
+- New JVM tests are committed to the feature branch but have not yet been executed by CI.
+- No Android instrumentation, real Gemma download/load/inference, offline-after-download test, or physical Pixel 6 memory/thermal measurement was run.
+- PR #3 Actions run #67 passed all configured CI steps on the prior reviewed head; it does not validate this new branch.
+
+### CI, commit, and PR
+- Branch: `integration/local-conversation-history`, created from main commit `b399c6a9c370a8dea98f2475f9ee021164c14d19`.
+- This integration branch's CI result is pending until a pull request is opened and its final head completes the workflow.
+- Commit/PR link will be recorded after the final branch head is verified and the pull request is created.
+
+### Blockers
+- Local build execution is unavailable because Gradle and Android SDK are absent and the repository has no wrapper.
+- Android instrumentation needs an emulator/device workflow; no emulator or physical Pixel 6 is attached to this run.
+- Real Gemma inference, offline behavior, and device memory/thermal measurements remain unverified.
+
+### Next priority
+- Review the complete integration diff and run CI on the exact PR head; fix only failures demonstrated by the logs.
+- After green CI, add Android instrumentation for SQLite restore/order/delete cascade and process-restart behavior.
+- Then verify actual Gemma multi-turn replay and callback completion on Pixel 6 before marking the history/runtime work device-verified.
