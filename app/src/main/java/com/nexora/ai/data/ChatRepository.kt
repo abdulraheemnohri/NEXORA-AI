@@ -12,6 +12,9 @@ class ChatRepository(private val database: LocalChatDatabase) {
         id
     }
 
+    suspend fun updateConversationTitle(conversationId: String, title: String): Boolean =
+        withContext(Dispatchers.IO) { database.updateConversationTitle(conversationId, title) }
+
     suspend fun saveMessage(conversationId: String, role: String, content: String): StoredMessage =
         withContext(Dispatchers.IO) {
             require(content.isNotBlank()) { "Message cannot be empty" }

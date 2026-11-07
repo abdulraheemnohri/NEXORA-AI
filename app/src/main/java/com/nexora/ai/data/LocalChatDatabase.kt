@@ -50,6 +50,12 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertOrThrow("conversations", null, values)
     }
 
+    fun updateConversationTitle(id: String, title: String): Boolean {
+        val safeTitle = title.trim().take(60).ifEmpty { "New conversation" }
+        val values = ContentValues().apply { put("title", safeTitle) }
+        return writableDatabase.update("conversations", values, "id=?", arrayOf(id)) > 0
+    }
+
     fun addMessage(message: StoredMessage) {
         val values = ContentValues().apply {
             put("id", message.id)
@@ -89,7 +95,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         val safeLimit = limit.coerceIn(1, 2000)
         val result = mutableListOf<StoredMessage>()
         readableDatabase.rawQuery(
-            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT ?",
+            "SELECT id,conversation_id,role,content,created_at FROM messages WHERE conversation_id=? ORDER BY created_at DESC, rowid DESC LIMIT ?",
             arrayOf(conversationId, safeLimit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) result += StoredMessage(
@@ -97,7 +103,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
                 cursor.getString(3), cursor.getLong(4)
             )
         }
-        return result
+        return result.asReversed()
     }
 
     fun deleteConversation(id: String): Boolean =
