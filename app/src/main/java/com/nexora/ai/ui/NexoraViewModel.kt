@@ -39,6 +39,7 @@ data class NexoraUiState(
     val selectedConversationId: String? = null,
     val historyMenuExpanded: Boolean = false,
     val pendingDeleteConversationId: String? = null,
+    val isDeletingConversation: Boolean = false,
     val showSettings: Boolean = false,
     val maxOutputTokens: Int = GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS,
     val input: String = "",
@@ -153,6 +154,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleHistoryMenu() {
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingConversation) return
         mutableUiState.update { it.copy(historyMenuExpanded = !it.historyMenuExpanded) }
     }
 
@@ -161,24 +163,26 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun openConversation(id: String) {
-        if (mutableUiState.value.isGenerating) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingConversation) return
         viewModelScope.launch { activateConversation(id) }
     }
 
     fun requestDeleteConversation(id: String) {
-        if (mutableUiState.value.isGenerating) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingConversation) return
         mutableUiState.update {
             it.copy(historyMenuExpanded = false, pendingDeleteConversationId = id)
         }
     }
 
     fun cancelDeleteConversation() {
+        if (mutableUiState.value.isDeletingConversation) return
         mutableUiState.update { it.copy(pendingDeleteConversationId = null) }
     }
 
     fun confirmDeleteConversation() {
         val targetId = mutableUiState.value.pendingDeleteConversationId ?: return
-        if (mutableUiState.value.isGenerating) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingConversation) return
+        mutableUiState.update { it.copy(isDeletingConversation = true) }
         viewModelScope.launch {
             try {
                 val deleted = repository.deleteConversation(targetId)
@@ -201,6 +205,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         error = error.message ?: "Unable to delete this conversation."
                     )
                 }
+            } finally {
+                mutableUiState.update { it.copy(isDeletingConversation = false) }
             }
         }
     }
@@ -246,7 +252,9 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         val current = mutableUiState.value
         val prompt = current.input.trim()
         val activeConversation = conversationId
-        if (prompt.isEmpty() || !current.modelReady || current.isGenerating || activeConversation == null) return
+        if (prompt.isEmpty() || !current.modelReady || current.isGenerating ||
+            current.isDeletingConversation || activeConversation == null
+        ) return
 
         val history = current.messages
             .filter { it.role == "user" || it.role == "assistant" }
@@ -322,7 +330,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun newConversation() {
-        if (mutableUiState.value.isGenerating) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingConversation) return
         viewModelScope.launch { createAndActivateConversation() }
     }
 
