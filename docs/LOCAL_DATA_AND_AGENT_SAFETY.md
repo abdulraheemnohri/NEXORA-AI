@@ -10,7 +10,7 @@ The first user prompt becomes the conversation title, trimmed to 60 characters. 
 
 ## Deletion and user control
 
-A user must explicitly confirm deletion from the history menu. The app then deletes the conversation row; SQLite's foreign-key cascade removes dependent messages. The ViewModel also asks the LiteRT-LM runtime to close and forget the corresponding native conversation. If the active conversation is deleted, the app opens the most recently updated remaining conversation or creates a new empty one.
+A user must explicitly confirm deletion from the history menu. While deletion is in progress, sending messages, creating chats, and switching conversations are disabled. The app then deletes the conversation row; SQLite's foreign-key cascade removes dependent messages. The ViewModel also asks the LiteRT-LM runtime to close and forget the corresponding native conversation under the runtime's serialized generation/lifecycle locks. If the active conversation is deleted, the app opens the most recently updated remaining conversation or creates a new empty one.
 
 Deletion is permanent within the app database and is not synchronized to another service. There is no cloud history sync or remote account.
 
