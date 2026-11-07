@@ -2,11 +2,11 @@
 
 | Area | Status | Exit criteria |
 |---|---|---|
-| Android Gradle/Compose foundation | PR #2 and callback lifecycle PR #3 merged; main run #68 passes. Verified Gradle 8.13 wrapper is in draft PR #5; run #78 passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests | Merge the wrapper PR; keep main CI green and local Windows/Android Studio build instructions reproducible |
+| Android Gradle/Compose foundation | PR #2 and callback lifecycle PR #3 merged; main run #68 passed. Verified Gradle 8.13 wrapper merged in PR #5 as `0afe596`; exact PR-head run #80 passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests. Post-merge main status has not yet been independently verified. | Keep main CI green and Windows/Android Studio wrapper builds reproducible |
 | LiteRT-LM adapter | CPU adapter uses pinned v0.18.1 callback API; callback completion gate and explicit tool-call disablement merged in PR #3; main run #68 passed; real inference unverified | Real Gemma output is verified on Pixel 6 |
 | Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
 | Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
-| Local conversation storage | SQLite repository stores current chat session; history browsing/replay and generation settings are in draft PR #4; run #76 passed debug build, lint, and JVM tests; Android instrumentation remains pending. Original PR #1 is preserved and diverged | History list, replay, migrations, and delete behavior pass instrumentation and process-restart tests |
+| Local conversation storage | SQLite repository stores chats. History browsing/replay and generation settings are in draft PR #4; run #76 passed on its prior base. PR #4 became non-mergeable after wrapper PR #5 merged and needs conflict-safe reconciliation. Original PR #1 remains preserved and diverged. Android instrumentation is pending. | History list, replay, migrations, and delete behavior pass instrumentation and process-restart tests |
 | Google AI Edge integration | LiteRT-LM is primary LLM path; Compiled Model API capability boundary and verification plan documented | First non-LLM model selected, licensed, compiled, parity-checked, and measured on Pixel 6 |
 | Speech recognition | Not implemented; candidate LiteRT Compiled Model API task | Model input/output contract, mic permission flow, offline recognition, and Pixel 6 results verified |
 | Vision | Not implemented; candidate LiteRT Compiled Model API task | Model and preprocessing verified against fixed reference inputs on Pixel 6 |
@@ -22,11 +22,12 @@
 
 ## Release gates
 
-1. Merge the verified Gradle 8.13 wrapper from PR #5; run #78 passed wrapper validation, debug build, lint, and JVM unit tests.
-2. Build and lint cleanly in GitHub Actions.
-3. Unit and instrumentation tests pass.
-4. Real model output verified; no mock inference.
-5. Offline behavior verified after model download.
-6. Security review of tool execution completed.
-7. Pixel 6 performance and thermal limits documented.
-8. Any Compiled Model API feature must pass source parity, task-level correctness, accelerator residency, and lifecycle/memory checks before UI release.
+1. Keep the merged Gradle 8.13 wrapper on main and verify the post-merge main workflow.
+2. Reconcile PR #4 history/replay work onto the wrapper-enabled main without force-updating the original PR #1 or PR #4 branches.
+3. Add Android instrumentation for SQLite restore/order/cascade deletion and native conversation lifecycle.
+4. Build and lint cleanly in GitHub Actions; keep JVM unit tests passing.
+5. Verify real Gemma download, load, and multi-turn inference on Pixel 6; no mock inference.
+6. Verify offline operation after model download.
+7. Complete security review of tool execution before registering app tools.
+8. Measure Pixel 6 memory, latency, and thermal behavior.
+9. Any Compiled Model API feature must pass source parity, task-level correctness, accelerator residency, and lifecycle/memory checks before UI release.
