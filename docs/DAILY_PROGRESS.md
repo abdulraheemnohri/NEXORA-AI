@@ -267,8 +267,9 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### CI, commit, and PR
 - Branch: `integration/local-conversation-history`, created from main commit `b399c6a9c370a8dea98f2475f9ee021164c14d19`.
-- This integration branch's CI result is pending until a pull request is opened and its final head completes the workflow.
-- Commit/PR link will be recorded after the final branch head is verified and the pull request is created.
+- Opened draft [PR #4 — Integrate local conversation history and generation settings](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) from `integration/local-conversation-history` to `main`.
+- Initial PR head: `79ecc9498f860ec8f4fe1e8ce4ea9c932f94b90b`; initial Actions run [#69](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42410815028) was queued when inspected. Later documentation commits update the PR head, so the final-head run must be checked separately.
+- No commit was merged to main; the PR remains draft until its exact final head passes CI and review.
 
 ### Blockers
 - Local build execution is unavailable because Gradle and Android SDK are absent and the repository has no wrapper.
