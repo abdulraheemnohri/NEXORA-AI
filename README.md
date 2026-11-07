@@ -2,54 +2,77 @@
 
 **Think Locally. Learn Continuously. Act Intelligently.**
 
-NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpack Compose. Its first model target is Gemma 4 E2B IT through Google's LiteRT-LM Android runtime.
+NEXORA AI is a native Android assistant built with Kotlin and Jetpack Compose. Its first local language model is Gemma 4 E2B IT, executed through Google's LiteRT-LM Android runtime. The application backend runs in-process; prompts and chat history are stored locally.
 
-## Current implementation
+## Runtime constraints
 
-- Kotlin Android app foundation and dark Jetpack Compose chat UI.
-- ViewModel orchestration for model installation, loading, streaming generation, and chat state.
-- Local SQLite conversation/message persistence.
-- Risk-based agent tool approval policy.
-- Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
-- LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
-- Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
-- Automatic LiteRT-LM tool calling is explicitly disabled; no model-generated app side effect is registered.
-- Callback lifecycle hardening is in draft PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3); PR-head run [#66](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291399653) passed debug APK assembly, Android lint, and JVM unit tests. Device inference and cancellation behavior remain unverified.
-- Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
-- GitHub Actions workflow for debug APK assembly, Android lint, and JVM unit tests.
+- **LLM:** Google's LiteRT-LM Android runtime only.
+- **Model:** Gemma 4 E2B IT in the `.litertlm` format.
+- **Baseline backend:** LiteRT-LM CPU.
+- **Initial device:** Google Pixel 6, 6 GB RAM.
+- **Data:** app-private SQLite and SharedPreferences.
+- **Network:** required only to download the model; chat inference is designed to run locally after installation.
+- **Not part of this project:** Ollama, llama.cpp, external Python inference servers, mandatory cloud AI APIs, Firebase, and Docker.
 
-## Google AI Edge stack
+## Implemented on main
 
-NEXORA follows Google's separate runtime paths by workload:
+- Native Kotlin Android app foundation and Jetpack Compose chat interface.
+- ViewModel orchestration for model download, loading, and streamed generation.
+- App-private SQLite conversation/message persistence.
+- Gemma 4 E2B downloader with pinned revision, free-space checks, byte-count validation, and SHA-256 verification.
+- LiteRT-LM v0.18.1 CPU adapter with streamed callback delivery and per-request output-token limits.
+- Native callback completion gate: downstream cancellation stops UI delivery but does not release the generation lock until LiteRT-LM reports a terminal callback.
+- Automatic LiteRT-LM tool calling is disabled; no model-generated app side effect is registered.
+- GitHub Actions checks for debug APK assembly, Android lint, and JVM unit tests.
 
-- **LiteRT-LM:** Gemma `.litertlm` chat and text generation. This remains the primary LLM runtime.
-- **LiteRT Compiled Model API:** planned for verified non-LLM tasks such as speech recognition, image processing, and embeddings when a suitable model artifact is selected.
-- **LiteRT samples and agent skills:** used as the implementation and validation reference for Android runtime lifecycle, model delivery, accelerator verification, and performance measurements.
+## Conversation history integration branch
 
-The Compiled Model API is not a replacement for LiteRT-LM. No legacy TensorFlow Lite `Interpreter` API, Ollama, llama.cpp, external Python inference server, cloud AI API, Firebase, or Docker is part of the NEXORA runtime design. Pixel 6 CPU inference remains the baseline; accelerator use must be verified on the actual device before being advertised.
+The focused branch `integration/local-conversation-history` ports the still-open history work onto the current main baseline while preserving the callback-safe LiteRT-LM adapter:
 
-See [Google AI Edge integration](docs/GOOGLE_AI_EDGE_INTEGRATION.md) for the runtime map, device policy, and implementation gates.
+- Restore the most recently updated conversation at startup.
+- Browse and switch between the 100 most recently updated local conversations.
+- Load up to 500 messages per conversation in chronological order.
+- Update a new conversation's title from its first prompt, capped at 60 characters.
+- Require explicit confirmation before deleting a conversation and its messages.
+- Close the deleted conversation's cached native LiteRT-LM session.
+- Replay the previous user/assistant turns after process restart or native-session eviction.
+- Bound native replay to the newest 16 messages and 12,000 characters; this is a character memory guard, not a tokenizer-aware context guarantee.
+- Keep at most two native conversations in an access-ordered LRU cache.
+- Persist the 256, 512, 1,024, or 2,048 output-token preference in app-private SharedPreferences.
 
-## Honest project status
+The existing draft [PR #1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) and its diverged branch are left untouched. The new integration branch is based on current main and is not merged until its own CI and review gates pass.
 
-PR #2 merged the Android CI and LiteRT-LM compatibility fixes into `main` as commit [`143a8a6`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/143a8a6586c44ecfe4a1da7907a34c07e9264d3b). GitHub Actions run [#62](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42179552385) passed debug APK assembly, Android lint, and JVM unit tests on the reviewed PR head. Post-merge main workflow [#64](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42287012972) also passed debug APK assembly, Android lint, and JVM unit tests on commit `3e95c9d`.
+## Google AI Edge workload split
 
-The chat UI, downloader, runtime adapter, and SQLite repository are present in source. Conversation history browsing/replay remains in separate draft PR #1; that branch currently diverges from main and is not yet integrated. The callback bridge does not forcibly stop native inference: it waits for LiteRT-LM's terminal callback before releasing the generation lock. Immediate native cancellation is intentionally not exposed because the pinned native API warns that cancelProcess() leaves the conversation session poisoned. Real Gemma download/loading/inference, offline-after-download behavior, Android instrumentation coverage, and Pixel 6 memory/thermal validation remain release gates. CI success does not prove device inference.
+- **LiteRT-LM:** Gemma `.litertlm` language-model inference.
+- **LiteRT Compiled Model API:** a separate future path for non-LLM tasks such as speech, vision, or embeddings, only after a licensed artifact and device-level parity tests are available.
 
-## Requirements
+The Compiled Model API is not a replacement for LiteRT-LM. Pixel 6 CPU remains the baseline; no GPU or NPU capability is claimed without device evidence.
 
-- JDK 21 for the current CI/test toolchain; app bytecode target remains Java 17.
-- Android SDK 35
-- Android Gradle Plugin 8.13.2
-- Gradle 8.13
-- Kotlin 2.3.21
-- Android minSdk 26
+## Verification status
 
-Open the project in Android Studio. The Gradle wrapper still needs to be generated and committed; until then, use an installed Gradle 8.13 distribution.
+- PR [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2) merged the Kotlin/Android CI compatibility fixes.
+- PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) merged the LiteRT-LM callback lifecycle fix as [`b399c6a`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b399c6a9c370a8dea98f2475f9ee021164c14d19).
+- GitHub Actions run [#67](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291721158) on PR #3's reviewed head passed debug APK assembly, Android lint, and JVM unit tests.
+- The history integration branch still requires its own CI run.
+- The latest main commit has no PR-triggered workflow run returned by the current Actions lookup; no latest-main build result is inferred from PR-head CI.
+- No real Gemma download/load/inference, offline-after-download test, Android instrumentation run, or physical Pixel 6 memory/thermal measurement is claimed.
 
-## Model
+## Build requirements
 
-See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximately 2.58 GB and is downloaded separately from the APK into app-private storage. It is not committed to Git.
+- JDK 21 for the current CI/test toolchain.
+- Java 17 app bytecode.
+- Android SDK 35.
+- Android Gradle Plugin 8.13.2.
+- Gradle 8.13.
+- Kotlin 2.3.21.
+- Android minSdk 26.
+
+The Gradle wrapper is not committed yet. GitHub Actions provisions Gradle 8.13 directly; local command-line builds require an installed Gradle 8.13 distribution until the wrapper is added.
+
+## Model setup
+
+See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximately 2.58 GB and is downloaded separately from the APK into app-private storage. Model weights are not committed to Git.
 
 ## Documentation
 
@@ -60,6 +83,7 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 - [Local data and agent safety](docs/LOCAL_DATA_AND_AGENT_SAFETY.md)
 - [Security](docs/SECURITY.md)
 - [Roadmap](ROADMAP.md)
+- [Daily progress](docs/DAILY_PROGRESS.md)
 
 ## Licensing
 
