@@ -251,12 +251,12 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/DAILY_PROGRESS.md`
 
 ### API research and review
-- Reviewed Google's Kotlin LiteRT-LM guide for `ConversationConfig.initialMessages` and callback-based streaming: [official Kotlin API guide](https://github.com/google-ai-edge/LiteRT-LM/blob/main/docs/api/kotlin/getting_started.md).
-- Reviewed Google's upstream configuration source for `initialMessages`, `maxOutputToken`, and `automaticToolCalling`: [Config.kt](https://github.com/google-ai-edge/LiteRT-LM/blob/main/kotlin/java/com/google/ai/edge/litertlm/Config.kt).
+- Fetched the exact Google LiteRT-LM v0.18.1 `Config.kt`, `Message.kt`, and `Conversation.kt` through the GitHub connector. Confirmed `ConversationConfig.initialMessages`, `maxOutputToken`, `automaticToolCalling`, `Message.user/model`, the callback overload, and the Flow adapter's empty `awaitClose { }` block.
+- Cross-checked the pinned version's public Kotlin guide: [v0.18.1 Kotlin API guide](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.1/docs/api/kotlin/getting_started.md).
 - The dependency remains pinned to LiteRT-LM v0.18.1. No alternate inference engine, cloud AI API, Firebase, Docker, model weights, or secrets were introduced.
 - The replay path passes prior turns only; the current prompt remains a separate generation input.
 - The native callback completion gate from merged PR #3 was retained. No native hard-cancel claim was added.
-- Deletion remains confirmation-gated; SQLite foreign-key cascade and native-session cleanup are both retained.
+- Deletion remains confirmation-gated; SQLite foreign-key cascade and native-session cleanup are both retained. A ViewModel/UI deletion-in-progress guard disables sending, chat creation, and switching until the database and native-session cleanup complete.
 
 ### Verification actually run
 - Repository and source/API inspection completed.
