@@ -45,7 +45,7 @@ The chat UI, downloader, runtime adapter, and SQLite repository are present in s
 - Kotlin 2.3.21
 - Android minSdk 26
 
-Open the project in Android Studio. The Gradle wrapper still needs to be generated and committed; until then, use an installed Gradle 8.13 distribution.
+Open the project in Android Studio. The checked-in Gradle Wrapper pins Gradle 8.13 and verifies the official distribution checksum before use. See [Building NEXORA](docs/BUILDING.md) for Windows, Linux, and Android Studio setup.
 
 ## Model
 
@@ -53,6 +53,7 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 
 ## Documentation
 
+- [Building NEXORA](docs/BUILDING.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Google AI Edge integration](docs/GOOGLE_AI_EDGE_INTEGRATION.md)
 - [Model setup](docs/MODEL_SETUP.md)

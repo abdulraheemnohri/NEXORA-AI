@@ -35,7 +35,9 @@ See [Google AI Edge integration](GOOGLE_AI_EDGE_INTEGRATION.md) for the workload
 
 ## Build toolchain
 
-The app targets Java 17 bytecode. Kotlin 2.3.21 uses the typed `kotlin.compilerOptions.jvmTarget` DSL; the deprecated Android `kotlinOptions.jvmTarget` property is rejected by this Kotlin plugin. CI uses JDK 21 to accommodate the LiteRT-LM dependency's JVM test runtime while retaining Java 17 app bytecode compatibility.
+The checked-in Gradle Wrapper pins Gradle 8.13. `gradle/wrapper/gradle-wrapper.properties` pins the official binary distribution URL and its published SHA-256 (`20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78`). The wrapper JAR is sourced from the official Gradle `v8.13.0` tag and is checked against Gradle's published wrapper-JAR checksum (`81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f`) by `gradle/actions/setup-gradle@v4` in CI. Do not replace it with an unverified wrapper binary.
+
+The app targets Java 17 bytecode. Kotlin 2.3.21 uses the typed `kotlin.compilerOptions.jvmTarget` DSL; the deprecated Android `kotlinOptions.jvmTarget` property is rejected by this Kotlin plugin. CI and local command-line builds use JDK 21 to accommodate the LiteRT-LM dependency's JVM test runtime while retaining Java 17 app bytecode compatibility. Use the wrapper (`./gradlew` or `gradlew.bat`) rather than a machine-installed Gradle version.
 
 ## Safety
 
