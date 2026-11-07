@@ -2,11 +2,11 @@
 
 | Area | Status | Exit criteria |
 |---|---|---|
-| Android Gradle/Compose foundation | PR #2 merged; PR-head run #62 and post-merge main run #64 passed debug APK assembly, Android lint, and JVM unit tests | Main-branch CI passes; Gradle wrapper is committed and reproducible local build works |
-| LiteRT-LM adapter | CPU adapter uses pinned v0.18.1 callback API; callback completion gate and explicit tool-call disablement in draft PR #3; run #66 passed debug APK assembly, lint, and JVM tests; real inference unverified | Real Gemma output is verified on Pixel 6 |
+| Android Gradle/Compose foundation | PR #2 and callback lifecycle PR #3 merged; main run #68 passes. Verified Gradle 8.13 wrapper is in draft PR #5; run #78 passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests | Merge the wrapper PR; keep main CI green and local Windows/Android Studio build instructions reproducible |
+| LiteRT-LM adapter | CPU adapter uses pinned v0.18.1 callback API; callback completion gate and explicit tool-call disablement merged in PR #3; main run #68 passed; real inference unverified | Real Gemma output is verified on Pixel 6 |
 | Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
 | Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
-| Local conversation storage | SQLite repository stores current chat session; history browsing/replay is proposed in draft PR #1 | History list, replay, migrations, and delete behavior tested; PR #1 requires conflict-safe reconciliation with main |
+| Local conversation storage | SQLite repository stores current chat session; history browsing/replay and generation settings are in draft PR #4; run #76 passed debug build, lint, and JVM tests; Android instrumentation remains pending. Original PR #1 is preserved and diverged | History list, replay, migrations, and delete behavior pass instrumentation and process-restart tests |
 | Google AI Edge integration | LiteRT-LM is primary LLM path; Compiled Model API capability boundary and verification plan documented | First non-LLM model selected, licensed, compiled, parity-checked, and measured on Pixel 6 |
 | Speech recognition | Not implemented; candidate LiteRT Compiled Model API task | Model input/output contract, mic permission flow, offline recognition, and Pixel 6 results verified |
 | Vision | Not implemented; candidate LiteRT Compiled Model API task | Model and preprocessing verified against fixed reference inputs on Pixel 6 |
@@ -22,7 +22,7 @@
 
 ## Release gates
 
-1. Generate and commit the Gradle wrapper.
+1. Merge the verified Gradle 8.13 wrapper from PR #5; run #78 passed wrapper validation, debug build, lint, and JVM unit tests.
 2. Build and lint cleanly in GitHub Actions.
 3. Unit and instrumentation tests pass.
 4. Real model output verified; no mock inference.

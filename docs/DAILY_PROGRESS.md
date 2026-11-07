@@ -212,3 +212,46 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Verify this callback-lifecycle change with branch CI.
 - Reconcile PR #1 history/persistence work onto a fresh branch from current main, preserving its existing branch and resolving overlapping runtime/UI changes deliberately.
 - Then add Android instrumentation for local database and model-runtime lifecycle before attempting real Pixel 6 inference.
+
+
+## 2026-11-08 — Reproducible Gradle 8.13 wrapper
+
+### Repository checkpoint
+- Rechecked repository metadata, current `main`, branches, open issues, pull requests, recent commits, and Actions runs.
+- Main was at `b399c6a9c370a8dea98f2475f9ee021164c14d19`; no standalone open issues were returned. Main run [#68](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42385336171) passed debug APK assembly, Android lint, and JVM unit tests.
+- LiteRT-LM lifecycle PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) is merged. Conversation-history PR [#4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) remains draft; run [#76](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411286786) passed its configured checks, but Android instrumentation and device verification remain outstanding. Original PR #1 was left untouched.
+
+### Delivered on `build/gradle-wrapper-8.13`
+- Added the official Gradle 8.13 wrapper JAR and generated POSIX/Windows launch scripts from the Gradle `v8.13.0` source tag.
+- Pinned the official Gradle 8.13 binary distribution SHA-256 and enabled distribution URL validation.
+- Switched Android CI to run `./gradlew` for debug APK assembly, lint, and JVM unit tests; CI validates the wrapper JAR before executing it.
+- Added Windows 10/11, Linux, macOS, and Android Studio build instructions.
+- Updated README, roadmap, architecture, and this engineering log.
+
+### Files changed
+- `gradle/wrapper/gradle-wrapper.jar`
+- `gradle/wrapper/gradle-wrapper.properties`
+- `gradlew`
+- `gradlew.bat`
+- `.github/workflows/android-ci.yml`
+- `docs/BUILDING.md`
+- `README.md`
+- `ROADMAP.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Initial wrapper CI run [#77](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412128803) correctly validated the wrapper JAR, then failed because the properties file had an extra escape in `distributionUrl`. The failure was diagnosed from the actual Gradle wrapper exception and fixed in commit [`6ef64a9`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6ef64a9af7ab8551f625f363532033944de9de45).
+- Corrected wrapper CI run [#78](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412178384) passed debug APK assembly, Android lint, and JVM unit tests. The setup action reported the wrapper JAR SHA-256 as `81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f`, matching Gradle's official checksum reference.
+- The successful wrapper-based build proves the wrapper could download and launch the pinned distribution; no local Gradle invocation was possible because this environment has no installed Gradle or Android SDK.
+- No model weights, secrets, cloud AI APIs, Firebase, Docker, alternate inference engines, or inference code were added. No Gemma download, real inference, offline-after-download, Android instrumentation, or physical Pixel 6 verification was run.
+
+### Commit / PR
+- Initial wrapper commit: [`6170ef1`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6170ef14804faffba7afa0270ec4656533cbe3ef).
+- URL-escape correction: [`6ef64a9`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6ef64a9af7ab8551f625f363532033944de9de45).
+- Draft PR: [#5 — Add verified Gradle 8.13 wrapper and reproducible build entrypoints](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5). Run [#78](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412178384) passed on source head `6ef64a9`; final PR-head run [#79](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412356371) also passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests on `3205976`.
+
+### Next priority
+- Complete and review PR #5, then reconcile the conversation-history work from PR #4 against the wrapper-enabled main without force-pushing either existing branch.
+- Add Android instrumentation for database restore/order/cascade deletion and lifecycle behavior before claiming full conversation-history validation.
+- After those gates, verify actual Gemma 4 E2B download, loading, multi-turn inference, offline behavior, and Pixel 6 memory/thermal performance on the physical device.
