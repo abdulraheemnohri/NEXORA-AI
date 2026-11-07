@@ -54,7 +54,7 @@ The Compiled Model API is not a replacement for LiteRT-LM. Pixel 6 CPU remains t
 - PR [#2](https://github.com/abdulraheemnohri/NEXORA-AI/pull/2) merged the Kotlin/Android CI compatibility fixes.
 - PR [#3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) merged the LiteRT-LM callback lifecycle fix as [`b399c6a`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b399c6a9c370a8dea98f2475f9ee021164c14d19).
 - GitHub Actions run [#67](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42291721158) on PR #3's reviewed head passed debug APK assembly, Android lint, and JVM unit tests.
-- The history integration branch still requires its own CI run.
+- Draft [PR #4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) now carries the integration. Its initial Actions run [#69](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42410815028) was queued for the reviewed PR head; the final updated head must complete its own CI before merge.
 - The latest main commit has no PR-triggered workflow run returned by the current Actions lookup; no latest-main build result is inferred from PR-head CI.
 - No real Gemma download/load/inference, offline-after-download test, Android instrumentation run, or physical Pixel 6 memory/thermal measurement is claimed.
 
