@@ -166,6 +166,7 @@ class LiteRtLocalModelRuntime(private val cacheDirectory: File) : LocalModelRunt
                 }
             }
         }
+        Unit
     }
 
     private fun evictLeastRecentlyUsedConversations() {
