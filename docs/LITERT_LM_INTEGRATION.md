@@ -13,7 +13,7 @@ NEXORA pins `com.google.ai.edge.litertlm:litertlm-android:0.18.1` and uses Googl
 - `Message.toString()` for streamed content; the pinned `Message` type has no public `text` property.
 - `Conversation.close()`.
 
-Google's Kotlin API guide documents conversation initialization with `initialMessages` and the asynchronous callback interface: [LiteRT-LM Kotlin API guide](https://github.com/google-ai-edge/LiteRT-LM/blob/main/docs/api/kotlin/getting_started.md). The source-level configuration shape is visible in [Google's LiteRT-LM Config.kt](https://github.com/google-ai-edge/LiteRT-LM/blob/main/kotlin/java/com/google/ai/edge/litertlm/Config.kt). NEXORA's dependency remains pinned to v0.18.1; checking current upstream documentation does not change the pinned artifact.
+Google's Kotlin API guide documents conversation initialization with `initialMessages` and the asynchronous callback interface: [LiteRT-LM Kotlin API guide](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.1/docs/api/kotlin/getting_started.md). The source-level configuration shape is visible in [Google's LiteRT-LM Config.kt](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.1/kotlin/java/com/google/ai/edge/litertlm/Config.kt). NEXORA's dependency remains pinned to v0.18.1; checking current upstream documentation does not change the pinned artifact.
 
 The model is downloaded separately to app-private storage and is never bundled into the APK. No tools are registered, and `automaticToolCalling = false` is set for every native conversation.
 
