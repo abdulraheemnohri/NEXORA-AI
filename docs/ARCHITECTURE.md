@@ -19,7 +19,9 @@ NEXORA is a native Android application. Its application backend runs in-process 
 
 `LocalModelRuntime` is the text-generation boundary. The production adapter is pinned to LiteRT-LM Android v0.18.1. Do not substitute Ollama, llama.cpp, remote inference, fabricated responses, or guessed APIs.
 
-The adapter uses CPU inference and passes the configured `maxOutputToken` limit to the LiteRT-LM Flow overload of `sendMessageAsync`. Streamed `Message` content is extracted with `Message.toString()`; the pinned upstream `Message` class exposes `role`, `contents`, and `toString()`, not a public `text` property. Actual compilation and model inference still require CI/device verification.
+The adapter uses CPU inference and passes the configured maxOutputToken limit to the pinned v0.18.1 callback overload of Conversation.sendMessageAsync. Streamed Message content is extracted with Message.toString(); the pinned upstream Message class exposes role, contents, and toString(), not a public text property. The adapter explicitly sets automaticToolCalling = false.
+
+Generation and conversation creation are shifted off the main thread. A generation mutex serializes native requests. The callback bridge waits for onDone or onError even if the downstream collector is cancelled, so a cancelled collector cannot release the generation lock and allow a second request or unload while native inference is still active. This is a drain-to-completion policy, not immediate native cancellation. LiteRT-LM v0.18.1's Flow adapter uses an empty awaitClose block; the callback overload lets NEXORA own the terminal-callback gate. The pinned native Conversation::CancelProcess() documentation warns that cancellation poisons the session; NEXORA therefore does not call it or reuse a cancelled native session. A future explicit cancel feature must discard and reconstruct that conversation from the persisted transcript before reuse. CI compilation does not prove real model inference.
 
 ### Non-LLM model path
 
