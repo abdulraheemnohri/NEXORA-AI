@@ -249,7 +249,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Initial wrapper commit: [`6170ef1`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6170ef14804faffba7afa0270ec4656533cbe3ef).
 - URL-escape correction: [`6ef64a9`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6ef64a9af7ab8551f625f363532033944de9de45).
-- Draft PR: [#5 — Add verified Gradle 8.13 wrapper and reproducible build entrypoints](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5). Run #78 passed on source head `6ef64a9`; a final documentation-only commit is being validated separately.
+- Draft PR: [#5 — Add verified Gradle 8.13 wrapper and reproducible build entrypoints](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5). Run [#78](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412178384) passed on source head `6ef64a9`; final PR-head run [#79](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412356371) also passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests on `3205976`.
 
 ### Next priority
 - Complete and review PR #5, then reconcile the conversation-history work from PR #4 against the wrapper-enabled main without force-pushing either existing branch.
