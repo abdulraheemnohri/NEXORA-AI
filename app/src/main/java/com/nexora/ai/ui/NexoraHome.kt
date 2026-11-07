@@ -62,7 +62,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 Box {
                     TextButton(
                         onClick = viewModel::toggleHistoryMenu,
-                        enabled = !state.isGenerating
+                        enabled = state.conversationReady && !state.isGenerating && !state.isDeletingConversation
                     ) {
                         Text("Chats · ${state.conversations.size}", color = Color(0xFF75D7E8))
                     }
@@ -107,7 +107,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                         }
                     }
                 }
-                TextButton(onClick = viewModel::newConversation, enabled = !state.isGenerating) {
+                TextButton(onClick = viewModel::newConversation, enabled = state.conversationReady && !state.isGenerating && !state.isDeletingConversation) {
                     Text("New chat", color = Color(0xFFB9A2FF))
                 }
                 TextButton(onClick = viewModel::openSettings) {
@@ -198,13 +198,13 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                     value = state.input,
                     onValueChange = viewModel::updateInput,
                     modifier = Modifier.weight(1f),
-                    enabled = state.modelReady && !state.isGenerating,
+                    enabled = state.modelReady && !state.isGenerating && !state.isDeletingConversation,
                     placeholder = { Text("Message NEXORA…") },
                     maxLines = 4
                 )
                 Button(
                     onClick = viewModel::sendMessage,
-                    enabled = state.modelReady && !state.isGenerating && state.input.isNotBlank()
+                    enabled = state.modelReady && !state.isGenerating && !state.isDeletingConversation && state.input.isNotBlank()
                 ) {
                     Text(if (state.isGenerating) "…" else "Send")
                 }
@@ -258,12 +258,18 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmDeleteConversation) {
-                    Text("Delete", color = Color(0xFFFF9EAD))
+                TextButton(
+                    onClick = viewModel::confirmDeleteConversation,
+                    enabled = !state.isDeletingConversation
+                ) {
+                    Text(if (state.isDeletingConversation) "Deleting…" else "Delete", color = Color(0xFFFF9EAD))
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelDeleteConversation) {
+                TextButton(
+                    onClick = viewModel::cancelDeleteConversation,
+                    enabled = !state.isDeletingConversation
+                ) {
                     Text("Cancel")
                 }
             }
