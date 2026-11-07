@@ -262,14 +262,15 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Repository and source/API inspection completed.
 - No local build, lint, or test command was run: this environment has Java but no installed Gradle, no repository Gradle wrapper, and no Android SDK.
 - Actions run [#69](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42410815028) on the initial PR head failed at Kotlin compilation in `LiteRtLocalModelRuntime.kt:161`: `forgetConversation` inferred `Result<Unit>?` instead of the interface's `Unit`. Debug resource processing completed; lint and JVM tests were skipped.
-- Fixed the demonstrated compiler error by making `forgetConversation` return explicit `Unit` after native-session cleanup in commit [7e2a64f](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7e2a64fde0f3645d63186d9f64fdcf1c58d633a2). The corrected head still requires a fresh CI result.
+- Fixed the demonstrated compiler error by making `forgetConversation` return explicit `Unit` after native-session cleanup in commit [7e2a64f](https://github.com/abdulraheemnohri/NEXORA-AI/commit/7e2a64fde0f3645d63186d9f64fdcf1c58d633a2).
+- The corrected PR source head `65620d404e4320526387bfbfc962661220b1624c` passed GitHub Actions run [#75](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411054429): debug APK assembly, Android lint, and JVM unit tests all completed successfully. Run #74 was cancelled by workflow concurrency while run #75 proceeded.
 - No Android instrumentation, real Gemma download/load/inference, offline-after-download test, or physical Pixel 6 memory/thermal measurement was run.
 - PR #3 Actions run #67 passed all configured CI steps on the prior reviewed head; it does not validate this new branch.
 
 ### CI, commit, and PR
 - Branch: `integration/local-conversation-history`, created from main commit `b399c6a9c370a8dea98f2475f9ee021164c14d19`.
 - Opened draft [PR #4 — Integrate local conversation history and generation settings](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) from `integration/local-conversation-history` to `main`.
-- Initial PR head: `79ecc9498f860ec8f4fe1e8ce4ea9c932f94b90b`; Actions run #69 failed at Kotlin compilation as described above. The return-type fix is committed; the updated PR head must be checked for a new workflow run.
+- Initial PR head: `79ecc9498f860ec8f4fe1e8ce4ea9c932f94b90b`; run #69 failed as described above. The corrected source head `65620d404e4320526387bfbfc962661220b1624c` passed run #75. The final commit from this update changes documentation only.
 - No commit was merged to main; the PR remains draft until its exact final head passes CI and review.
 
 ### Blockers
@@ -278,6 +279,6 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Real Gemma inference, offline behavior, and device memory/thermal measurements remain unverified.
 
 ### Next priority
-- Recheck CI on the corrected PR head after the explicit-Unit fix; fix only failures demonstrated by the logs.
+- Add Android instrumentation for SQLite restore/order/delete cascade and process-restart behavior, then run it on an emulator/device workflow.
 - After green CI, add Android instrumentation for SQLite restore/order/delete cascade and process-restart behavior.
 - Then verify actual Gemma multi-turn replay and callback completion on Pixel 6 before marking the history/runtime work device-verified.
