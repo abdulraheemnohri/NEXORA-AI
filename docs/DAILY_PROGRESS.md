@@ -306,3 +306,54 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Port the conversation-history/replay implementation from PR #4 onto a fresh branch based on current main, preserving both PR #4 and original PR #1.
 - Add Android instrumentation for SQLite conversation restore, ordering, cascade deletion, and native-session lifecycle before claiming full history validation.
 - Then verify actual Gemma 4 E2B inference, offline operation, and Pixel 6 resource behavior on the physical device.
+
+
+## 2026-11-08 — Wrapper-main conversation history port and SQLite instrumentation
+
+### Repository checkpoint
+- Re-inspected the current `main`, branch heads, open issues, open PRs, recent commits, and available Actions results before editing.
+- Main is based on merge commit `da096a0a1e86ff6c5a810aa56000ee8145bad0cd` (PR #6). PR #6's exact head run [#82](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42413003504) passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests.
+- PR #4's previous head `16bce03e3b5889b6fa39812a1ef66e4893c0cd56` was 31 commits ahead / 2 behind after PR #6 and was not mergeable. Original PR #1 remains 42 ahead / 12 behind. Neither existing branch was changed or deleted.
+
+### Delivered on `integration/chat-history-wrapper-main`
+- Ported the local conversation history and generation settings source from the existing integration branch onto a fresh branch created directly from the wrapper-enabled main.
+- Preserved the callback-safe LiteRT-LM adapter, explicit `automaticToolCalling = false`, 16-message / 12,000-character replay bounds, and two-session LRU cache.
+- Added AndroidX instrumentation dependencies and emulator CI execution using the Android Emulator Runner.
+- Added `LocalChatDatabaseInstrumentedTest` for database reopen persistence, chronological message ordering, recent-conversation ordering, and SQLite foreign-key cascade deletion.
+- Updated README, ROADMAP, architecture, LiteRT-LM integration, local data safety, and this daily progress record.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ai/LocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/ai/ConversationHistoryPolicy.kt`
+- `app/src/main/java/com/nexora/ai/ai/GenerationSettings.kt`
+- `app/src/main/java/com/nexora/ai/ai/LiteRtLocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/data/ChatRepository.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/test/java/com/nexora/ai/ai/ConversationHistoryPolicyTest.kt`
+- `app/src/test/java/com/nexora/ai/ai/GenerationSettingsTest.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalChatDatabaseInstrumentedTest.kt`
+- `app/build.gradle.kts`, `.github/workflows/android-ci.yml`
+- `README.md`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Inspected the ported Kotlin source, SQLite schema, foreign-key configuration, runtime replay path, and CI workflow.
+- Existing PR #4 exact head run [#76](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411286786) passed debug APK assembly, Android lint, and JVM unit tests on the previous main base. It does not validate this wrapper-main port or the new instrumentation tests.
+- The new branch has not yet completed CI at this checkpoint. No build, lint, JVM test, or emulator instrumentation pass is claimed for this branch until its exact head workflow completes.
+- No local Gradle command was run in this environment. No Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Safety and constraints
+- No model weights, secrets, new inference engines, cloud AI APIs, Firebase, Docker, Ollama, llama.cpp, or external Python inference service were added.
+- No new Android permissions were added. SQLite remains app-private. Destructive conversation deletion still requires explicit confirmation.
+- No PR #1 or PR #4 branch was force-pushed, overwritten, or deleted.
+
+### Commit / PR
+- Base: `da096a0a1e86ff6c5a810aa56000ee8145bad0cd`.
+- Branch: `integration/chat-history-wrapper-main`.
+- Pull request: pending creation after the source and documentation diff review.
+
+### Blockers and next priority
+- Wait for the exact new PR-head CI, including the emulator job. Fix only failures reproduced by the actual logs.
+- If emulator CI passes, review and merge the wrapper-main history port; keep the original PR #1 and PR #4 branches as preserved history until no unique work remains.
+- Then validate real Gemma multi-turn replay, offline operation, callback drain, and Pixel 6 memory/thermal behavior on physical hardware.
