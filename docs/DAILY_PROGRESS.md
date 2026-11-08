@@ -402,7 +402,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Updated branch: integration/chat-history-wrapper-main.
 - Pull request: [#7 — Restore local conversations and add SQLite instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7).
-- This CI-only change is a fast-forward commit on the existing PR branch; the exact commit SHA and resulting Actions run are recorded after the push below.
+- CI fix commit: [35f5412](https://github.com/abdulraheemnohri/NEXORA-AI/commit/35f54127a16ad2c9df140ce29c95f80cef92d3f5). Exact-head Actions run [#89](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522773908) was still in progress when this progress record was corrected; this documentation-only follow-up triggers a fresh final-head run, so no instrumentation pass is claimed until that run completes.
 
 ### Blockers and next priority
 - Wait for the new exact-head CI run. Confirm the KVM preflight succeeds, the emulator reaches sys.boot_completed=1, and all SQLite instrumentation tests actually execute and pass.
