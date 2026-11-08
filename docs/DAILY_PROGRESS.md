@@ -341,7 +341,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Inspected the ported Kotlin source, SQLite schema, foreign-key configuration, runtime replay path, and CI workflow.
 - Existing PR #4 exact head run [#76](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411286786) passed debug APK assembly, Android lint, and JVM unit tests on the previous main base. It does not validate this wrapper-main port or the new instrumentation tests.
 - Opened draft PR [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7) from `integration/chat-history-wrapper-main`.
-- Exact PR-head Actions run [#84](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477494400) is in progress. No build, lint, JVM test, or emulator instrumentation pass is claimed until that run completes.
+- Initial exact-head run #84 was cancelled when the documentation-only follow-up commit triggered the latest workflow.
+- Exact current-head Actions run [#85](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477520543) is in progress at debug APK assembly. No build, lint, JVM test, or emulator instrumentation pass is claimed until that run completes.
 - No local Gradle command was run in this environment. No Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 
 ### Safety and constraints
