@@ -340,7 +340,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Verification actually run
 - Inspected the ported Kotlin source, SQLite schema, foreign-key configuration, runtime replay path, and CI workflow.
 - Existing PR #4 exact head run [#76](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411286786) passed debug APK assembly, Android lint, and JVM unit tests on the previous main base. It does not validate this wrapper-main port or the new instrumentation tests.
-- The new branch has not yet completed CI at this checkpoint. No build, lint, JVM test, or emulator instrumentation pass is claimed for this branch until its exact head workflow completes.
+- Opened draft PR [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7) from `integration/chat-history-wrapper-main`.
+- Exact PR-head Actions run [#84](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477494400) is in progress. No build, lint, JVM test, or emulator instrumentation pass is claimed until that run completes.
 - No local Gradle command was run in this environment. No Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 
 ### Safety and constraints
@@ -351,7 +352,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Base: `da096a0a1e86ff6c5a810aa56000ee8145bad0cd`.
 - Branch: `integration/chat-history-wrapper-main`.
-- Pull request: pending creation after the source and documentation diff review.
+- Pull request: [#7 — Restore local conversations and add SQLite instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7), draft; exact-head run #84 pending.
 
 ### Blockers and next priority
 - Wait for the exact new PR-head CI, including the emulator job. Fix only failures reproduced by the actual logs.
