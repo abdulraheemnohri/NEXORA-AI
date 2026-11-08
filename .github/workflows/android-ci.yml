@@ -27,6 +27,17 @@ jobs:
         run: ./gradlew :app:lintDebug
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
+      # GitHub-hosted Ubuntu runners expose KVM but the device is not always
+      # readable by the runner user. Grant access before starting the AVD.
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -e /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+          ls -l /dev/kvm
       - name: Run Android instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -35,4 +46,6 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 600
           script: ./gradlew :app:connectedDebugAndroidTest

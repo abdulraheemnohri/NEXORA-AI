@@ -6,7 +6,7 @@
 | LiteRT-LM adapter | CPU adapter uses pinned v0.18.1 callback API; callback completion gate and explicit tool-call disablement merged in PR #3; main run #68 passed; real inference unverified | Real Gemma output is verified on Pixel 6 |
 | Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
 | Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
-| Local conversation storage | Conversation history/replay and generation settings are ported onto wrapper-enabled main in `integration/chat-history-wrapper-main`; Android instrumentation tests now cover SQLite reopen persistence, chronological ordering, and cascade deletion. Draft PR [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7) is open; exact-head CI, including emulator instrumentation, is pending. Original PR #1 and prior PR #4 branches are preserved. | Emulator instrumentation and process-restart tests pass; native multi-turn replay verified on Pixel 6 |
+| Local conversation storage | History/replay and generation settings are ported in draft PR [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7). Exact-head run [#88](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477644347) passed APK assembly, lint, and JVM tests, but instrumentation never started because the Ubuntu emulator had no `/dev/kvm` access and timed out. The workflow now applies KVM udev permissions and requires hardware acceleration; exact-head rerun is pending. PR #1 and #4 branches remain preserved. | API 35 emulator instrumentation passes; native multi-turn replay verified on Pixel 6 |
 | Google AI Edge integration | LiteRT-LM is primary LLM path; Compiled Model API capability boundary and verification plan documented | First non-LLM model selected, licensed, compiled, parity-checked, and measured on Pixel 6 |
 | Speech recognition | Not implemented; candidate LiteRT Compiled Model API task | Model input/output contract, mic permission flow, offline recognition, and Pixel 6 results verified |
 | Vision | Not implemented; candidate LiteRT Compiled Model API task | Model and preprocessing verified against fixed reference inputs on Pixel 6 |
@@ -23,9 +23,9 @@
 ## Release gates
 
 1. Keep the merged Gradle 8.13 wrapper on main and verify the post-merge main workflow.
-2. Complete CI for `integration/chat-history-wrapper-main` and review the history/replay port; preserve the original PR #1 and PR #4 branches.
-3. Run Android emulator instrumentation for SQLite restore/order/cascade deletion; separately verify native conversation lifecycle on a real device.
-4. Build and lint cleanly in GitHub Actions; keep JVM unit tests passing.
+2. Verify the KVM-enabled exact-head CI rerun for draft PR #7; confirm the API 35 emulator boots and executes the SQLite instrumentation suite.
+3. Review and merge the history/replay port only after required CI passes and the branch diff is conflict-safe; preserve original PR #1 and PR #4 history.
+4. Separately verify native conversation lifecycle and bounded multi-turn replay on a physical device.
 5. Verify real Gemma download, load, and multi-turn inference on Pixel 6; no mock inference.
 6. Verify offline operation after model download.
 7. Complete security review of tool execution before registering app tools.
