@@ -13,6 +13,10 @@ NEXORA is a native Android application. Its application backend runs in-process 
 - Data: app-private SQLite conversation/message storage and local settings.
 - Platform: Android permissions, app-private storage, and lifecycle management.
 
+## Local conversation history
+
+SQLite is the durable source of truth for conversation history. The ViewModel restores the most recently updated conversation at startup, loads up to 500 messages in chronological order, and exposes a local history picker. On first generation in a native session, the runtime replays the newest 16 user/assistant messages within a 12,000-character memory budget using the pinned LiteRT-LM `ConversationConfig.initialMessages` API. The current prompt is sent separately. Native conversations are cached in a two-entry access-ordered LRU and are closed on eviction or confirmed deletion. The transcript character budget is not a tokenizer-aware context guarantee. Conversation deletion requires explicit user confirmation and SQLite foreign-key cascade removes associated messages.
+
 ## Runtime integration rules
 
 ### LLM path
