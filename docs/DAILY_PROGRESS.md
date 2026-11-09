@@ -306,3 +306,105 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Port the conversation-history/replay implementation from PR #4 onto a fresh branch based on current main, preserving both PR #4 and original PR #1.
 - Add Android instrumentation for SQLite conversation restore, ordering, cascade deletion, and native-session lifecycle before claiming full history validation.
 - Then verify actual Gemma 4 E2B inference, offline operation, and Pixel 6 resource behavior on the physical device.
+
+
+## 2026-11-08 — Wrapper-main conversation history port and SQLite instrumentation
+
+### Repository checkpoint
+- Re-inspected the current `main`, branch heads, open issues, open PRs, recent commits, and available Actions results before editing.
+- Main is based on merge commit `da096a0a1e86ff6c5a810aa56000ee8145bad0cd` (PR #6). PR #6's exact head run [#82](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42413003504) passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests.
+- PR #4's previous head `16bce03e3b5889b6fa39812a1ef66e4893c0cd56` was 31 commits ahead / 2 behind after PR #6 and was not mergeable. Original PR #1 remains 42 ahead / 12 behind. Neither existing branch was changed or deleted.
+
+### Delivered on `integration/chat-history-wrapper-main`
+- Ported the local conversation history and generation settings source from the existing integration branch onto a fresh branch created directly from the wrapper-enabled main.
+- Preserved the callback-safe LiteRT-LM adapter, explicit `automaticToolCalling = false`, 16-message / 12,000-character replay bounds, and two-session LRU cache.
+- Added AndroidX instrumentation dependencies and emulator CI execution using the Android Emulator Runner.
+- Added `LocalChatDatabaseInstrumentedTest` for database reopen persistence, chronological message ordering, recent-conversation ordering, and SQLite foreign-key cascade deletion.
+- Updated README, ROADMAP, architecture, LiteRT-LM integration, local data safety, and this daily progress record.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ai/LocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/ai/ConversationHistoryPolicy.kt`
+- `app/src/main/java/com/nexora/ai/ai/GenerationSettings.kt`
+- `app/src/main/java/com/nexora/ai/ai/LiteRtLocalModelRuntime.kt`
+- `app/src/main/java/com/nexora/ai/data/ChatRepository.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/test/java/com/nexora/ai/ai/ConversationHistoryPolicyTest.kt`
+- `app/src/test/java/com/nexora/ai/ai/GenerationSettingsTest.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalChatDatabaseInstrumentedTest.kt`
+- `app/build.gradle.kts`, `.github/workflows/android-ci.yml`
+- `README.md`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/LITERT_LM_INTEGRATION.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Inspected the ported Kotlin source, SQLite schema, foreign-key configuration, runtime replay path, and CI workflow.
+- Existing PR #4 exact head run [#76](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42411286786) passed debug APK assembly, Android lint, and JVM unit tests on the previous main base. It does not validate this wrapper-main port or the new instrumentation tests.
+- Opened draft PR [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7) from `integration/chat-history-wrapper-main`.
+- Initial exact-head run #84 was cancelled after a documentation-only follow-up commit. Run #85 was subsequently cancelled when the final progress-record update superseded its head; run #87 was queued on an intermediate documentation head and is also superseded by this final documentation-only update.
+- The final PR head triggers a fresh workflow with the emulator instrumentation step. No build, lint, JVM test, or emulator instrumentation pass is claimed until that exact-head run completes.
+- No local Gradle command was run in this environment. No Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Safety and constraints
+- No model weights, secrets, new inference engines, cloud AI APIs, Firebase, Docker, Ollama, llama.cpp, or external Python inference service were added.
+- No new Android permissions were added. SQLite remains app-private. Destructive conversation deletion still requires explicit confirmation.
+- No PR #1 or PR #4 branch was force-pushed, overwritten, or deleted.
+
+### Commit / PR
+- Base: `da096a0a1e86ff6c5a810aa56000ee8145bad0cd`.
+- Branch: `integration/chat-history-wrapper-main`.
+- Pull request: [#7 — Restore local conversations and add SQLite instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7), draft; exact-head run #84 pending.
+
+### Blockers and next priority
+- Wait for the exact new PR-head CI, including the emulator job. Fix only failures reproduced by the actual logs.
+- If emulator CI passes, review and merge the wrapper-main history port; keep the original PR #1 and PR #4 branches as preserved history until no unique work remains.
+- Then validate real Gemma multi-turn replay, offline operation, callback drain, and Pixel 6 memory/thermal behavior on physical hardware.
+
+
+## 2026-11-09 — Repair Android emulator CI prerequisites
+
+### Repository checkpoint
+- Re-inspected the current default branch, open issues, recent commits, every branch head, open pull requests, and the latest GitHub Actions runs before editing.
+- main is da096a0a1e86ff6c5a810aa56000ee8145bad0cd (PR #6 merge). Main workflow run [#83](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477322655) completed successfully.
+- No standalone open issues were returned. Open PRs: [#7](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7) (draft), [#4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4), and [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1).
+- PR #7 branch integration/chat-history-wrapper-main was at 005e100eb4c232517ca0c93fa757053c6bb4b390 (28 commits ahead / 0 behind main). PR #4 branch integration/local-conversation-history was 31 ahead / 2 behind; PR #1 branch feature/chat-history-replay was 42 ahead / 13 behind.
+- Other branch heads were also checked: build/gradle-wrapper-8.13 (4 ahead / 2 behind), docs/record-gradle-wrapper-merge (3 ahead / 1 behind), fix/litertlm-native-callback-lifecycle (4 ahead / 3 behind), and fix/main-ci-kotlin-compiler-options (17 ahead / 5 behind). Every non-main branch has unique commits; all were preserved.
+
+### CI diagnosis
+- PR #7 exact-head Actions run [#88](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42477644347) completed with failure.
+- Debug APK assembly, Android lint, and JVM unit tests all passed. The Android instrumentation test command never ran because the API 35 emulator remained ADB-offline and the emulator runner timed out after 600 seconds.
+- The actual log reports that the runner user did not have permission to use /dev/kvm; the emulator therefore started without hardware acceleration. This is an emulator-host configuration failure, not a failing SQLite assertion.
+- The Android Emulator Runner upstream README documents the KVM udev permission rule for Ubuntu runners: https://github.com/ReactiveCircus/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners.
+
+### Delivered on integration/chat-history-wrapper-main
+- Added an explicit KVM udev rule and reload/trigger sequence before starting the API 35 emulator.
+- Added read/write/existence preflight checks for /dev/kvm so missing host acceleration is reported immediately.
+- Set disable-linux-hw-accel: false and an explicit 600-second emulator boot timeout; the job no longer silently accepts the extremely slow software-emulation fallback.
+- Updated README, roadmap, build instructions, and this engineering log to distinguish the failed emulator startup from test execution.
+
+### Files changed
+- .github/workflows/android-ci.yml
+- README.md
+- ROADMAP.md
+- docs/BUILDING.md
+- docs/DAILY_PROGRESS.md
+
+### Verification actually run
+- Inspected the exact PR #7 workflow, emulator job log, and Android instrumentation source. The instrumentation source contains real Android-context SQLite reopen, ordering, recent-conversation ordering, and cascade-delete tests.
+- Run #88 verified APK assembly, lint, and JVM unit tests; it did not execute Android instrumentation.
+- The KVM workflow correction is committed to the existing PR #7 branch in this increment; its new exact-head Actions result is not yet available at the time of this record. No instrumentation pass is claimed.
+- No local Gradle build/lint/test was run in this automation environment. No real Gemma download/load/inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Safety and preservation
+- No model weights, secrets, dependencies, Android permissions, inference engines, cloud AI APIs, Firebase, Docker, or external inference services were added.
+- No branch was force-pushed, overwritten, or deleted. PR #1 and PR #4 remain untouched.
+
+### Commit / PR
+- Updated branch: integration/chat-history-wrapper-main.
+- Pull request: [#7 — Restore local conversations and add SQLite instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7).
+- CI fix commit: [35f5412](https://github.com/abdulraheemnohri/NEXORA-AI/commit/35f54127a16ad2c9df140ce29c95f80cef92d3f5). Exact-head Actions run [#89](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522773908) was still in progress when this progress record was corrected; this documentation-only follow-up triggers a fresh final-head run, so no instrumentation pass is claimed until that run completes.
+
+### Blockers and next priority
+- Wait for the new exact-head CI run. Confirm the KVM preflight succeeds, the emulator reaches sys.boot_completed=1, and all SQLite instrumentation tests actually execute and pass.
+- If the runner still lacks KVM, do not increase the timeout or claim the tests passed; select a runner with documented virtualization support after inspecting the next failure.
+- After required CI passes, review the PR #7 diff and merge only after conflict checks. Then validate real Gemma multi-turn replay, offline behavior, and Pixel 6 memory/thermal behavior on physical hardware.

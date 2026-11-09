@@ -16,3 +16,8 @@ A tool being enabled is not equivalent to user approval. The policy is a guard, 
 
 ## Remaining integration
 The current change adds storage and policy primitives only. The Compose chat screen, Room/SQLite migration strategy, real LiteRT-LM adapter, model downloads, encrypted export, and device validation remain separate work items. No claim of production-ready autonomous execution is made.
+
+
+## Conversation history controls
+
+The history picker lists at most 100 recently updated conversations and loads up to 500 stored messages for the selected conversation. A conversation title is derived from the first prompt and limited to 60 characters. Deletion is always confirmation-gated in the UI. While deletion is running, chat switching, new chat creation, and sending are disabled; the repository deletes the conversation row and SQLite foreign-key cascade deletes dependent messages. The ViewModel then asks LiteRT-LM to close the corresponding cached native session. The runtime serializes this cleanup with generation and lifecycle operations. This does not imply secure erasure from flash storage or backups; no app-layer database encryption is currently implemented.

@@ -31,6 +31,12 @@ NEXORA calls the callback overload directly and owns a CompletableDeferred compl
 - Cancellation exceptions are propagated; they are not converted into ordinary model errors.
 - Automatic LiteRT-LM tool calling is disabled. Any future app tool must pass the app's explicit approval policy immediately before its side effect.
 
+## Conversation replay and bounded native cache
+
+The ViewModel snapshots the previously persisted user/assistant turns before saving the current prompt. When a conversation has no in-memory native session, the adapter maps those turns to `Message.user` and `Message.model` and supplies them through `ConversationConfig.initialMessages`. Replay is bounded to 16 recent messages and 12,000 characters; the current prompt is not included in that replay. The runtime retains at most two native conversations in an access-ordered LRU and closes an evicted or explicitly forgotten session. `automaticToolCalling = false` remains explicit. Confirmed deletion removes the local SQLite conversation (foreign-key cascade removes its messages) and then closes the matching native session under the runtime locks.
+
+The character budget is a memory guard, not a tokenizer-aware context-window guarantee. CI compilation and JVM policy tests do not prove native multi-turn inference on Pixel 6.
+
 ## Verification boundaries
 
 Source inspection is pinned to the Google LiteRT-LM v0.18.1 Kotlin Conversation.kt, Engine.kt, and native runtime/conversation/conversation.h. This verifies the callback signatures, output-token parameter, empty Flow awaitClose block, and native cancellation warning. It does not prove successful Gemma inference or correct callback behavior on a physical device.
