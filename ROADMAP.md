@@ -22,8 +22,7 @@
 
 ## Release gates
 
-1. Confirm post-merge main workflow [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) completes successfully on the pinned Ubuntu 24.04 runner.
-2. Verify real Gemma 4 E2B download, checksum, load, and multi-turn inference on a physical Pixel 6; no mock inference.
+1. Verify real Gemma 4 E2B download, checksum, load, and multi-turn inference on a physical Pixel 6; no mock inference.
 3. Verify offline operation after the model is downloaded.
 4. Verify native callback drain, collector cancellation, session cleanup, and transcript replay on the physical device.
 5. Measure Pixel 6 peak memory, sustained CPU, latency, and thermal behavior over long sessions.

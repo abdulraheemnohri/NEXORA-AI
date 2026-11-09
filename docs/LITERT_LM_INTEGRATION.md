@@ -44,7 +44,7 @@ Source inspection is pinned to the Google LiteRT-LM v0.18.1 Kotlin Conversation.
 CI evidence:
 - PR #7 exact-head run [#90](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522885207) passed build, lint, JVM tests, and three API 35 SQLite instrumentation tests.
 - PR #8 exact-head run [#92](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691929272) passed the same checks on Ubuntu 24.04 after the KVM runner pin.
-- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) was still in progress at this documentation checkpoint. The SQLite instrumentation suite validates persistence, ordering, and cascade deletion; it does not instantiate Gemma or exercise native multi-turn inference.
+- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) also passed on Ubuntu 24.04, including emulator boot and all three SQLite instrumentation tests. The SQLite suite validates persistence, ordering, and cascade deletion; it does not instantiate Gemma or exercise native multi-turn inference.
 
 Remaining release gates:
 - Real Gemma 4 E2B download, load, multi-turn inference, and stream completion on Pixel 6.

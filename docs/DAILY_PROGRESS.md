@@ -426,7 +426,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Verification actually run
 - PR #7 exact-head Actions run [#90](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522885207): debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all three API 35 SQLite instrumentation tests passed.
 - PR #8 exact-head Actions run [#92](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691929272): debug APK assembly, lint, JVM unit tests, KVM preflight, emulator boot, and all three SQLite instrumentation tests passed on Ubuntu 24.04.
-- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) was in progress at the time this record was prepared. Its build, lint, unit-test, and KVM-preflight steps had passed; emulator instrumentation was still running. No final main-run result is claimed in this entry.
+- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) completed successfully on Ubuntu 24.04. Debug APK assembly, lint, JVM unit tests, KVM preflight, emulator boot, and all three API 35 SQLite instrumentation tests passed.
 - No local Gradle build was run in this automation environment. No Gemma model download, native inference, offline-after-download, callback cancellation test, or physical Pixel 6 test was performed.
 
 ### Files changed in the documentation follow-up
@@ -448,5 +448,4 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - This documentation follow-up is on `docs/record-2026-11-10-engineering`; its PR is created after the files are committed.
 
 ### Blockers and next priority
-- Confirm the post-merge main workflow #94 completes, including all three API 35 SQLite instrumentation tests.
 - Next product priority is physical Pixel 6 validation of real Gemma 4 E2B load, multi-turn replay, offline behavior, cancellation/drain, peak RAM, sustained CPU, and thermal behavior. Emulator CI is not a substitute for target-device verification.
