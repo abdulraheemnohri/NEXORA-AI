@@ -2,9 +2,9 @@
 
 | Area | Status | Exit criteria |
 |---|---|---|
-| Android Gradle/Compose foundation | PR #7 conversation history and PR #8 stable Ubuntu 24.04/KVM CI fixes merged. Exact-head runs #90 and #92 passed; post-merge main run #94 was in progress at this record. | Keep main CI green and Windows/Android Studio wrapper builds reproducible |
+| Android Gradle/Compose foundation | PR #7 conversation history, PR #8 stable Ubuntu 24.04/KVM CI, and PR #9 documentation reconciliation merged. Exact-head runs #90, #92, and #96 passed; post-merge main run #94 passed all configured jobs. | Keep main CI green and Windows/Android Studio wrapper builds reproducible |
 | LiteRT-LM adapter | CPU adapter uses pinned v0.18.1 callback API; callback completion gate and explicit tool-call disablement merged in PR #3; main run #68 passed; real inference unverified | Real Gemma output is verified on Pixel 6 |
-| Model download and integrity | Revision-pinned downloader with SHA-256; not device-tested | Download, checksum, cancellation, and storage checks pass on Android |
+| Model download and integrity | Revision-pinned app-private downloader enforces HTTPS after redirects, exact byte count, SHA-256, and atomic finalization. Six deterministic downloader instrumentation tests passed on API 35 in exact PR-head run #97. The fixtures do not test the live CDN transfer; Pixel 6 storage behavior remains unverified. | Live 2.58 GB download, cancellation, checksum, storage, and retry behavior pass on Pixel 6 |
 | Chat and streaming | Compose UI and ViewModel connected to runtime API; end-to-end unverified | Compose chat receives and renders real local tokens |
 | Local conversation storage | Implemented and merged in PR #7: 100-conversation history picker, up to 500 persisted messages, bounded 16-message / 12,000-character replay, two-session LRU, local generation settings, and confirmation-gated deletion. Three SQLite instrumentation tests passed on API 35 emulator in runs #90 and #92. | Verify native multi-turn replay and deletion/session cleanup on physical Pixel 6 |
 | Google AI Edge integration | LiteRT-LM is primary LLM path; Compiled Model API capability boundary and verification plan documented | First non-LLM model selected, licensed, compiled, parity-checked, and measured on Pixel 6 |
@@ -22,7 +22,8 @@
 
 ## Release gates
 
-1. Verify real Gemma 4 E2B download, checksum, load, and multi-turn inference on a physical Pixel 6; no mock inference.
+1. Verify the real 2.58 GB Gemma 4 E2B download, final HTTPS redirect, checksum, and storage behavior on a physical Pixel 6; no mock inference.
+2. Verify real LiteRT-LM model load and multi-turn inference on the physical Pixel 6.
 3. Verify offline operation after the model is downloaded.
 4. Verify native callback drain, collector cancellation, session cleanup, and transcript replay on the physical device.
 5. Measure Pixel 6 peak memory, sustained CPU, latency, and thermal behavior over long sessions.

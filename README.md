@@ -18,7 +18,8 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
 - Automatic LiteRT-LM tool calling is explicitly disabled; no model-generated app side effect is registered.
 - LiteRT-LM callback lifecycle hardening is merged in [PR #3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) as `b399c6a`; main run [#68](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42385336171) passed debug APK assembly, Android lint, and JVM unit tests. Device inference and cancellation behavior remain unverified.
-- Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, byte-count validation, and SHA-256 verification.
+- Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, HTTPS redirect enforcement, exact byte-count and SHA-256 verification, and atomic finalization.
+- New API 35 instrumentation coverage exercises downloader success, checksum rejection, truncated/oversized responses, corrupt-file replacement, and HTTPS downgrade rejection using small deterministic fixtures; this does not substitute for a live 2.58 GB download.
 - Verified Gradle 8.13 wrapper with official distribution SHA-256 pin, merged in [PR #5](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5) as [`0afe596`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0afe596566fb878e32f6aba4cc57aed687ffbf3f). Latest PR-head run [#80](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412475976) passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests on the exact reviewed head.
 - GitHub Actions workflow for debug APK assembly, Android lint, JVM unit tests, and API 35 emulator instrumentation. The emulator job is pinned to the stable Ubuntu 24.04 image and fails fast with explicit KVM diagnostics.
 
@@ -44,7 +45,7 @@ PR [#8](https://github.com/abdulraheemnohri/NEXORA-AI/pull/8) merged on 2026-11-
 
 Main run [#91](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691148102) passed APK assembly, lint, and JVM tests but failed the KVM preflight twice because that hosted runner did not expose `/dev/kvm`; instrumentation was skipped. This was a runner-capability failure, not a Kotlin or SQLite test failure. The Ubuntu 24.04 pin then passed on PR #8.
 
-Original PRs [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) and [#4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) remain open and their diverged branches are preserved. The merged PR #7 and #8 branches are also retained; no force-push or branch deletion was performed. Real Gemma download/loading/inference, offline-after-download behavior, callback-drain behavior on device, and physical Pixel 6 memory/thermal validation remain separate release gates. CI success does not prove device inference.
+Original PRs [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) and [#4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) remain open and their diverged branches are preserved. The merged PR #7 and #8 branches are also retained; no force-push or branch deletion was performed. Real Gemma download/loading/inference, offline-after-download behavior, callback-drain behavior on device, and physical Pixel 6 memory/thermal validation remain separate release gates. PR [#9](https://github.com/abdulraheemnohri/NEXORA-AI/pull/9) merged on 2026-11-10 as [2bfaae7](https://github.com/abdulraheemnohri/NEXORA-AI/commit/2bfaae7e18e70a37255cfd0e442c132252a053e8); its exact-head run [#96](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42693283140) passed build, lint, JVM tests, KVM preflight, and all three existing SQLite instrumentation tests. CI success does not prove device inference.
 
 ## Requirements
 
@@ -76,3 +77,6 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 ## Licensing
 
 Project source licensing must be finalized before public release. Gemma model terms and LiteRT-LM library licensing are separate and remain governed by their respective owners.
+
+
+PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
