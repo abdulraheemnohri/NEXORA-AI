@@ -11,7 +11,7 @@
 - Download location: app-private `filesDir/models/`
 - Initial execution backend: CPU
 
-The downloader uses a revision-pinned HTTPS URL. It checks available storage, follows HTTPS redirects, writes to a temporary file, verifies the exact byte count and SHA-256, flushes the file, and only then renames it to the model filename. Existing files are also re-hashed before being reused. A failed or cancelled download is not treated as a valid model.
+The downloader uses a revision-pinned HTTPS URL. It checks available storage, follows redirects only when the final URL remains HTTPS, writes to a temporary `.part` file, verifies the exact byte count and SHA-256, flushes the file, and atomically moves the verified file into its final name. Existing files are re-hashed before being reused; invalid existing files and stale partial files must be removed successfully before a new transfer starts. A failed or cancelled transfer never exposes the partial file as an installed model.
 
 The pinned revision is intentional: model repository files can change. Updating to a newer model revision requires updating the URL, byte count, and checksum together after checking the publisher's file metadata.
 
@@ -32,7 +32,11 @@ https://github.com/google-ai-edge/LiteRT-LM/blob/main/docs/api/kotlin/getting_st
 5. Streams response text as `GenerationEvent.Token` events.
 6. Closes conversations and engine on unload.
 
-The persisted app transcript is not automatically injected into LiteRT-LM after process death yet. The chat orchestration layer must restore the transcript into a new runtime conversation in a later milestone. `GenerationRequest.maxOutputTokens` remains a contract field and is not yet mapped to a LiteRT-LM sampler setting.
+After process death or native-session eviction, the chat orchestration layer restores the persisted transcript and supplies the newest bounded user/assistant turns through `ConversationConfig.initialMessages` when it creates a new LiteRT-LM conversation. Replay is limited to 16 messages and 12,000 characters; this character budget is not tokenizer-aware. The current prompt is passed separately. The locally selected output-token limit is applied through both `ConversationConfig.maxOutputToken` and `sendMessageAsync(maxOutputToken = ...)`.
+
+## Downloader test coverage
+
+The API 35 Android instrumentation suite uses small deterministic byte fixtures and an injected in-memory HTTP connection to test: successful verified installation, checksum mismatch rejection, truncated transfer rejection when content length is unknown, oversized transfer rejection, replacement of a corrupt prior artifact only after the replacement passes verification, and rejection of an HTTP downgrade after redirect. These tests do not fetch the pinned 2.58 GB model, validate the live Hugging Face/CDN redirect chain, measure download speed, or prove behavior under actual Pixel 6 storage pressure. Those remain device/network verification gates.
 
 ## Pixel 6 expectations
 
