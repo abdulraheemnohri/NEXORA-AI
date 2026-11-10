@@ -77,3 +77,6 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 ## Licensing
 
 Project source licensing must be finalized before public release. Gemma model terms and LiteRT-LM library licensing are separate and remain governed by their respective owners.
+
+
+PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
