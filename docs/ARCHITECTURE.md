@@ -50,3 +50,12 @@ Treat model-generated tool requests as untrusted. Validate schemas, authorize ea
 ## Device target
 
 Initial target is Pixel 6 / 6 GB RAM. CPU inference is the baseline. Model loading, context size, CPU behavior, peak memory, and sustained thermal performance must be measured on physical hardware. Do not infer Google Tensor NPU support from the SoC branding; use only an accelerator/model/runtime combination explicitly verified for the target device. No Pixel 6 performance claim is made without device evidence.
+
+
+## Agent tool execution boundary
+
+Tool invocation is separate from LiteRT-LM generation. Model text is never parsed into an executable tool call, and automatic LiteRT-LM tool calling remains disabled. A caller must create a user-originated `ToolInvocation`; the executor resolves only an explicitly registered tool, evaluates its risk policy immediately before the handler runs, and rejects disabled or unknown tools.
+
+Approval grants are one-use and tied to the exact invocation object. A grant cannot be reused for another request or replayed after consumption. The current registered capability is a user-enabled, manually invoked, read-only search over message text in the app-private SQLite conversation store. It runs through the repository IO boundary, uses bound SQL parameters, limits query length and result count, and does not transmit data outside the device.
+
+No external, destructive, or local-write tool is registered. The approval primitive is infrastructure, not permission to execute arbitrary code. Any future side-effect tool must have a concrete handler, an explicit user-facing review step, immediate policy re-check, and focused tests before registration.

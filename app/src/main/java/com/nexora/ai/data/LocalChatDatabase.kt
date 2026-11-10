@@ -106,17 +106,73 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         return result.asReversed()
     }
 
+    /** Searches message bodies only; query text is bound as data, never interpreted as SQL. */
+    fun searchMessages(query: String, limit: Int = 20): List<ConversationSearchHit> {
+        val normalized = query.trim()
+        require(normalized.length in MIN_SEARCH_QUERY_LENGTH..MAX_SEARCH_QUERY_LENGTH) {
+            "Search query must contain 2–128 characters."
+        }
+        val safeLimit = limit.coerceIn(1, MAX_SEARCH_RESULTS)
+        val result = mutableListOf<ConversationSearchHit>()
+        readableDatabase.rawQuery(
+            """SELECT m.id,c.id,c.title,m.role,m.content,m.created_at
+                FROM messages m
+                INNER JOIN conversations c ON c.id=m.conversation_id
+                WHERE instr(m.content,?) > 0 OR instr(lower(m.content),lower(?)) > 0
+                ORDER BY m.created_at DESC,m.rowid DESC
+                LIMIT ?""".trimIndent(),
+            arrayOf(normalized, normalized, safeLimit.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val content = cursor.getString(4)
+                val matchIndex = content.indexOf(normalized, ignoreCase = true)
+                val start = if (matchIndex >= 0) (matchIndex - 64).coerceAtLeast(0) else 0
+                val end = if (matchIndex >= 0) {
+                    (matchIndex + normalized.length + 96).coerceAtMost(content.length)
+                } else {
+                    content.length.coerceAtMost(160)
+                }
+                val snippet = buildString {
+                    if (start > 0) append('…')
+                    append(content.substring(start, end))
+                    if (end < content.length) append('…')
+                }.replace('\n', ' ').replace('\r', ' ').trim()
+                result += ConversationSearchHit(
+                    messageId = cursor.getString(0),
+                    conversationId = cursor.getString(1),
+                    title = cursor.getString(2),
+                    role = cursor.getString(3),
+                    snippet = snippet,
+                    createdAt = cursor.getLong(5)
+                )
+            }
+        }
+        return result
+    }
+
     fun deleteConversation(id: String): Boolean =
         writableDatabase.delete("conversations", "id=?", arrayOf(id)) > 0
 
     companion object {
         private const val DATABASE_NAME = "nexora_local.db"
         private const val DATABASE_VERSION = 1
+        private const val MIN_SEARCH_QUERY_LENGTH = 2
+        private const val MAX_SEARCH_QUERY_LENGTH = 128
+        private const val MAX_SEARCH_RESULTS = 50
     }
 }
 
 data class StoredConversation(
     val id: String, val title: String, val createdAt: Long, val updatedAt: Long
+)
+
+data class ConversationSearchHit(
+    val messageId: String,
+    val conversationId: String,
+    val title: String,
+    val role: String,
+    val snippet: String,
+    val createdAt: Long
 )
 
 data class StoredMessage(

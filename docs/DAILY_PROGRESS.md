@@ -493,3 +493,53 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Blockers and next priority
 - Confirm the new documentation-only exact-head workflow remains green, then review PR #10's final diff and merge only after the required checks pass.
 - Next product gate remains physical Pixel 6 verification of the real 2.58 GB model transfer, LiteRT-LM engine initialization, multi-turn inference, offline operation, callback drain, and memory/thermal behavior. Emulator fixtures are not a substitute for device validation.
+
+
+## 2026-11-11 — Permissioned local conversation search
+
+### Repository checkpoint
+- Re-inspected repository metadata, current `main`, standalone open issues, open pull requests, recent commits, all branch heads, the main tree, and recent GitHub Actions before editing.
+- `main` was `ece0de6d18cb25901eb3d842283474030335181d`; main Actions run [#100](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42809688030) completed successfully, including debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and Android instrumentation.
+- No standalone open issues were returned. Draft PRs [#1](https://github.com/abdulraheemnohri/NEXORA-AI/pull/1) and [#4](https://github.com/abdulraheemnohri/NEXORA-AI/pull/4) remain open, have no review submissions or inline threads, and are based on older main commits. Their branches contain unique work and were not modified. Twelve branch heads were inspected; none were deleted.
+- PRs #9 and #10 are merged. No force-push was performed.
+
+### Delivered on `feat/permissioned-local-search`
+- Added a central `AgentToolExecutor` that resolves only registered tools and re-evaluates the existing risk policy immediately before invoking a handler.
+- Added one-use approval grants bound to the exact invocation object; grants cannot authorize a different request or be replayed after use.
+- Added a real local read-only capability: user-enabled search over saved conversation message bodies. It is disabled by default and is manually invoked from a Compose Tools dialog.
+- Added query bounds (2–128 characters), a 20-result tool limit, bounded message excerpts, parameterized SQL, and IO-dispatched repository access.
+- Added a persistent local setting for enabling/disabling this capability. Disabling it clears the displayed query and results.
+- LiteRT-LM automatic tool calling remains disabled. Model output is not converted into tool invocations. No external, destructive, or local-write handler was registered.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/agent/AgentToolExecutor.kt`
+- `app/src/main/java/com/nexora/ai/agent/SearchSavedConversationsTool.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt`
+- `app/src/main/java/com/nexora/ai/data/ChatRepository.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/test/java/com/nexora/ai/agent/AgentToolExecutorTest.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalChatDatabaseInstrumentedTest.kt`
+- `README.md`, `ROADMAP.md`
+- `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification
+- Added five JVM tests for disabled-tool denial, read-only execution, destructive approval, exact-invocation binding/one-shot use, and duplicate registration rejection.
+- Added two API 35 instrumentation tests for recent-match ordering/result limits and literal SQL wildcard handling.
+- No local Gradle build, lint, or tests were run in this environment. Main run #100 is a pre-change baseline, not validation of this branch. The new PR's exact-head CI must validate the increment.
+- No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Review and safety
+- No new dependency, model weights, secrets, Android permissions, cloud AI, Firebase, Docker, Ollama, llama.cpp, or external inference server was added.
+- The database schema remains version 1; the search query is additive and does not migrate or rewrite user data.
+- Search is keyword substring matching, not semantic retrieval. SQLite built-in `lower()` is ASCII case-folding; exact-case non-ASCII substring matching remains available.
+- External/destructive/local-write handlers remain unregistered. No automatic or model-originated tool execution is enabled.
+
+### Commit / PR
+- Branch: [feat/permissioned-local-search](https://github.com/abdulraheemnohri/NEXORA-AI/tree/feat/permissioned-local-search).
+- Commit and PR links are added after GitHub records the final branch head.
+
+### Next priority
+- Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
+- Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
+- Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
