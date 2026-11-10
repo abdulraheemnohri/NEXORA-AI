@@ -449,3 +449,46 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Blockers and next priority
 - Next product priority is physical Pixel 6 validation of real Gemma 4 E2B load, multi-turn replay, offline behavior, cancellation/drain, peak RAM, sustained CPU, and thermal behavior. Emulator CI is not a substitute for target-device verification.
+
+
+## 2026-11-10 — Harden Gemma artifact finalization and add downloader instrumentation
+
+### Repository checkpoint
+- Re-inspected `main`, open issues, recent commits, open PRs, every branch head, and relevant Actions evidence before this increment.
+- Current `main` at the start of this increment was PR #9 merge `2bfaae7e18e70a37255cfd0e442c132252a053e8`. PR #9 documentation-only exact-head run [#96](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42693283140) passed APK assembly, lint, JVM tests, KVM preflight, emulator boot, and the three existing SQLite instrumentation tests.
+- PRs #1 and #4 remain open and contain unique diverged commits. No standalone open issues were returned. All branches were retained.
+
+### Delivered on `test/gemma-model-downloader-integrity`
+- Refactored the pinned Gemma downloader to accept an internal immutable artifact specification and injectable `HttpURLConnection` factory so the Android test suite can exercise real file/hash logic without downloading model weights or mocking inference.
+- Enforced HTTPS on the final connection URL after redirect handling.
+- Require successful deletion of invalid existing model files and stale partial files before beginning a new transfer.
+- Keep exact byte-count and SHA-256 validation, `fsync` before publication, and use `Files.move(..., ATOMIC_MOVE, REPLACE_EXISTING)` to expose only a verified artifact.
+- Added six API 35 instrumentation cases: verified install/progress, checksum mismatch, truncated transfer with unknown content length, oversized transfer with unknown content length, corrupt-existing-file replacement, and HTTPS downgrade rejection.
+- Updated README, roadmap, model setup, build instructions, and this progress record. Corrected stale model setup notes about transcript replay and output-token limits.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ai/Gemma4E2BModelDownloader.kt`
+- `app/src/androidTest/java/com/nexora/ai/ai/Gemma4E2BModelDownloaderInstrumentedTest.kt`
+- `README.md`, `ROADMAP.md`, `docs/MODEL_SETUP.md`, `docs/BUILDING.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source and test changes were inspected; no local Gradle build was available/run in this environment.
+- Existing post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) passed the prior three SQLite instrumentation tests, but predates this downloader change.
+- Exact-head CI for this branch is pending. No build, lint, JVM test, or new downloader instrumentation pass is claimed until its workflow completes.
+- No live 2.58 GB download, real LiteRT-LM/Gemma inference, offline-after-download test, or physical Pixel 6 verification was performed.
+
+### Safety and constraints
+- The production URL, revision, expected bytes, and SHA-256 remain unchanged. No model weights or secrets were added.
+- The production connection still uses standard Android/JVM HTTPS `HttpURLConnection`; the injected connection factory is internal and used only by tests.
+- No new permissions, cloud services, Firebase, Docker, Ollama, llama.cpp, or external Python inference server were introduced.
+- No force-push, branch deletion, or modification of PR #1/#4 was performed.
+
+### Commit / PR
+- Base: `2bfaae7e18e70a37255cfd0e442c132252a053e8` (PR #9 merge).
+- Branch: `test/gemma-model-downloader-integrity`.
+- Pull request: to be opened after exact source/documentation diff review.
+
+### Blockers and next priority
+- Run exact-head CI, verify all six downloader tests execute and pass, and review the Android API 26 `java.nio.file.Files` compatibility on the configured minSdk 26 baseline.
+- If CI passes, merge the downloader test increment.
+- Next product gate remains physical Pixel 6 verification of the real 2.58 GB model transfer, LiteRT-LM engine initialization, multi-turn inference, offline operation, callback drain, and memory/thermal behavior. Emulator fixtures are not a substitute for device validation.
