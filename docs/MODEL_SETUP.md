@@ -36,7 +36,7 @@ After process death or native-session eviction, the chat orchestration layer res
 
 ## Downloader test coverage
 
-The API 35 Android instrumentation suite uses small deterministic byte fixtures and an injected in-memory HTTP connection to test: successful verified installation, checksum mismatch rejection, truncated transfer rejection when content length is unknown, oversized transfer rejection, replacement of a corrupt prior artifact only after the replacement passes verification, and rejection of an HTTP downgrade after redirect. These tests do not fetch the pinned 2.58 GB model, validate the live Hugging Face/CDN redirect chain, measure download speed, or prove behavior under actual Pixel 6 storage pressure. Those remain device/network verification gates.
+The API 35 Android instrumentation suite uses small deterministic byte fixtures and an injected in-memory HTTP connection to test: successful verified installation, checksum mismatch rejection, truncated transfer rejection when content length is unknown, oversized transfer rejection, replacement of a corrupt prior artifact only after the replacement passes verification, and rejection of an HTTP downgrade after redirect. These tests passed on the API 35 emulator in exact PR-head Actions run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931), as part of nine total instrumentation tests. They do not fetch the pinned 2.58 GB model, validate the live Hugging Face/CDN redirect chain, measure download speed, or prove behavior under actual Pixel 6 storage pressure. Those remain device/network verification gates.
 
 ## Pixel 6 expectations
 
