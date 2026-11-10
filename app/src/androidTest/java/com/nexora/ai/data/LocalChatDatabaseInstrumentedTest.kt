@@ -71,6 +71,7 @@ class LocalChatDatabaseInstrumentedTest {
         database.addMessage(StoredMessage("match-old", "search-1", "user", "Local model first", 10L))
         database.addMessage(StoredMessage("match-new", "search-1", "assistant", "LOCAL MODEL ready", 20L))
         database.addMessage(StoredMessage("no-match", "search-1", "assistant", "Cloud only", 30L))
+        database.addMessage(StoredMessage("system-match", "search-1", "system", "Internal model instructions", 40L))
 
         val results = database.searchMessages("model", limit = 1)
 

@@ -118,7 +118,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
             """SELECT m.id,c.id,c.title,m.role,m.content,m.created_at
                 FROM messages m
                 INNER JOIN conversations c ON c.id=m.conversation_id
-                WHERE instr(m.content,?) > 0 OR instr(lower(m.content),lower(?)) > 0
+                WHERE m.role IN ('user','assistant') AND (instr(m.content,?) > 0 OR instr(lower(m.content),lower(?)) > 0)
                 ORDER BY m.created_at DESC,m.rowid DESC
                 LIMIT ?""".trimIndent(),
             arrayOf(normalized, normalized, safeLimit.toString())
