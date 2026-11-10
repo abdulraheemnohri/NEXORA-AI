@@ -537,7 +537,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Commit / PR
 - Branch: [feat/permissioned-local-search](https://github.com/abdulraheemnohri/NEXORA-AI/tree/feat/permissioned-local-search).
-- Commit and PR links are added after GitHub records the final branch head.
+- Commit: [b91be17936e039234457c2af75f76e530b74194e](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b91be17936e039234457c2af75f76e530b74194e).
+- Draft PR: [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11). Exact-head CI status is checked separately below.
 
 ### Next priority
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.

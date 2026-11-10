@@ -81,3 +81,6 @@ Project source licensing must be finalized before public release. Gemma model te
 
 
 PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
+
+
+PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
