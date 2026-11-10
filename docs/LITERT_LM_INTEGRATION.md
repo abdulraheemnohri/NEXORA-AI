@@ -41,10 +41,14 @@ The character budget is a memory guard, not a tokenizer-aware context-window gua
 
 Source inspection is pinned to the Google LiteRT-LM v0.18.1 Kotlin Conversation.kt, Engine.kt, and native runtime/conversation/conversation.h. This verifies the callback signatures, output-token parameter, empty Flow awaitClose block, and native cancellation warning. It does not prove successful Gemma inference or correct callback behavior on a physical device.
 
-Remaining release gates:
+CI evidence:
+- PR #7 exact-head run [#90](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522885207) passed build, lint, JVM tests, and three API 35 SQLite instrumentation tests.
+- PR #8 exact-head run [#92](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691929272) passed the same checks on Ubuntu 24.04 after the KVM runner pin.
+- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) also passed on Ubuntu 24.04, including emulator boot and all three SQLite instrumentation tests. The SQLite suite validates persistence, ordering, and cascade deletion; it does not instantiate Gemma or exercise native multi-turn inference.
 
+Remaining release gates:
 - Real Gemma 4 E2B download, load, multi-turn inference, and stream completion on Pixel 6.
-- Confirm the callback-drain behavior under collector cancellation on device.
+- Confirm callback-drain behavior under collector cancellation on a physical device.
+- Native conversation lifecycle and replay verification on Pixel 6; SQLite instrumentation is covered, but native runtime lifecycle is not.
 - Offline-after-download verification.
-- Android instrumentation coverage for SQLite and runtime lifecycle.
 - Pixel 6 peak memory, sustained CPU, thermal, and long-session measurements.

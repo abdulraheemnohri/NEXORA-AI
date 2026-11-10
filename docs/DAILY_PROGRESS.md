@@ -408,3 +408,44 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Wait for the new exact-head CI run. Confirm the KVM preflight succeeds, the emulator reaches sys.boot_completed=1, and all SQLite instrumentation tests actually execute and pass.
 - If the runner still lacks KVM, do not increase the timeout or claim the tests passed; select a runner with documented virtualization support after inspecting the next failure.
 - After required CI passes, review the PR #7 diff and merge only after conflict checks. Then validate real Gemma multi-turn replay, offline behavior, and Pixel 6 memory/thermal behavior on physical hardware.
+
+## 2026-11-10 — Merge local conversation history and stabilize Android emulator CI
+
+### Repository checkpoint
+- Re-inspected the default branch, standalone open issues, recent commits, every branch head, open pull requests, and the latest Actions runs before edits.
+- Current `main`: [`651a129`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/651a129ad0b0a9537e5e56decbd8fdf791ac932c), merge of PR #8. PR #7 is also merged as [`9729bcf`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/9729bcf9b03cf4da0aa96a20accb3dad1b9440c8).
+- No standalone open issues. Open PRs are #1 and #4; both remain draft and untouched.
+- Inspected all nine branch heads. PR #1 and #4 branches still contain unique, diverged commits and remain preserved. The merged PR #7 and #8 branches are no longer ahead of main, but were retained because no branch-delete action is available through the connected GitHub operations.
+
+### Delivered
+- Merged PR #7: local conversation history picker and startup restoration; up to 500 stored messages; bounded 16-message / 12,000-character transcript replay via pinned LiteRT-LM v0.18.1; two-entry native conversation LRU; local output-token settings (256 / 512 / 1,024 / 2,048); confirmation-gated deletion with SQLite cascade and cached-session cleanup.
+- Reviewed the PR #7 source, SQLite schema, replay policy, Compose settings/history UI, tests, Android manifest, and dependency changes. No new Android permissions, model weights, secrets, or inference engines were introduced.
+- Diagnosed post-merge main run #91: APK assembly, lint, and JVM unit tests passed, but the KVM preflight failed twice because the Ubuntu 26.04 hosted runner did not expose `/dev/kvm`; emulator instrumentation was skipped.
+- Merged PR #8: pinned the workflow to stable Ubuntu 24.04 and added explicit character-device and read/write checks with clear KVM failure diagnostics. Hardware acceleration remains required; no silent software fallback is accepted.
+
+### Verification actually run
+- PR #7 exact-head Actions run [#90](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522885207): debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all three API 35 SQLite instrumentation tests passed.
+- PR #8 exact-head Actions run [#92](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691929272): debug APK assembly, lint, JVM unit tests, KVM preflight, emulator boot, and all three SQLite instrumentation tests passed on Ubuntu 24.04.
+- Post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) completed successfully on Ubuntu 24.04. Debug APK assembly, lint, JVM unit tests, KVM preflight, emulator boot, and all three API 35 SQLite instrumentation tests passed.
+- No local Gradle build was run in this automation environment. No Gemma model download, native inference, offline-after-download, callback cancellation test, or physical Pixel 6 test was performed.
+
+### Files changed in the documentation follow-up
+- `README.md`
+- `ROADMAP.md`
+- `docs/DAILY_PROGRESS.md`
+- `docs/BUILDING.md`
+- `docs/LITERT_LM_INTEGRATION.md`
+- `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`
+
+### Safety and preservation
+- Runtime remains native Kotlin + Jetpack Compose with Google's LiteRT-LM v0.18.1 only for Gemma inference. No Ollama, llama.cpp, Python inference server, mandatory cloud AI API, Firebase, or Docker was introduced.
+- No model weights, secrets, or new Android permissions were added. App backup remains disabled; conversation storage remains app-private; deletion requires explicit confirmation.
+- No force-push or branch deletion was performed. PR #1 and #4 branches remain preserved. Merged PR #7 and #8 branches remain present because branch deletion is not exposed.
+
+### Commit / PR
+- PR #7: [conversation history and SQLite instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/7), merged as `9729bcf`.
+- PR #8: [stable Ubuntu 24.04 Android CI runner](https://github.com/abdulraheemnohri/NEXORA-AI/pull/8), merged as `651a129`.
+- This documentation follow-up is on `docs/record-2026-11-10-engineering`; its PR is created after the files are committed.
+
+### Blockers and next priority
+- Next product priority is physical Pixel 6 validation of real Gemma 4 E2B load, multi-turn replay, offline behavior, cancellation/drain, peak RAM, sustained CPU, and thermal behavior. Emulator CI is not a substitute for target-device verification.

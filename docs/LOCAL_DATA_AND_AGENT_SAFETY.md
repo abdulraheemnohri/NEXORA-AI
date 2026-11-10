@@ -14,8 +14,11 @@ Every tool declares a risk class:
 
 A tool being enabled is not equivalent to user approval. The policy is a guard, not a substitute for Android runtime permissions or OS sandboxing. Tool implementations must re-check the decision immediately before executing the side effect. Never treat model-generated text as approval.
 
-## Remaining integration
-The current change adds storage and policy primitives only. The Compose chat screen, Room/SQLite migration strategy, real LiteRT-LM adapter, model downloads, encrypted export, and device validation remain separate work items. No claim of production-ready autonomous execution is made.
+## Current integration status
+The native Compose chat screen, Kotlin ViewModel, SQLite repository, LiteRT-LM CPU adapter, and revision-pinned Gemma model downloader are implemented. The current conversation database uses Android's `SQLiteOpenHelper` with schema version 1 and additive-only migration policy; Room is not the active persistence implementation. Encrypted export and database encryption are not implemented. Agent risk-policy primitives exist, but no general tool executor is integrated; LiteRT-LM automatic tool calling remains disabled. No claim of production-ready autonomous execution is made.
+
+## Verification evidence
+API 35 emulator instrumentation in Actions runs [#90](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42522885207) and [#92](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42691929272) passed three tests covering database reopen persistence, chronological message order, recent conversation order, and foreign-key cascade deletion. These tests do not prove secure flash erasure, encrypted storage, native Gemma inference, or physical Pixel 6 behavior.
 
 
 ## Conversation history controls

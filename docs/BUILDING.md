@@ -49,6 +49,16 @@ The wrapper JAR is taken from the official Gradle `v8.13.0` source tag. The GitH
 These commands build and test the Android project. They do not download the Gemma model, run local inference, or validate Pixel 6 runtime performance. Those are separate application/device verification gates. NEXORA does not require Docker, Firebase, Ollama, llama.cpp, or a cloud AI inference service.
 
 
+## Local instrumentation tests
+
+With an API 35 `google_apis` x86_64 Android emulator booted and visible to ADB, run:
+
+```sh
+./gradlew :app:connectedDebugAndroidTest
+```
+
+The instrumentation suite exercises SQLite persistence, ordering, and cascade deletion. It does not download or execute Gemma.
+
 ## GitHub Actions instrumentation environment
 
-The CI workflow runs SQLite instrumentation on an API 35 `google_apis` x86_64 Android emulator after the debug build, lint, and JVM unit tests. Before launching the emulator, it installs a udev rule that grants the runner read/write access to `/dev/kvm`, reloads the rule, and checks that KVM is accessible. The emulator action is configured not to fall back to software CPU emulation and has a 600-second boot limit. If the runner cannot expose KVM, the job fails at the explicit preflight instead of spending the boot window on an unusably slow emulator. These instrumentation tests exercise Android SQLite persistence and deletion; they do not download or execute Gemma.
+The CI workflow runs on the stable `ubuntu-24.04` image and executes SQLite instrumentation on an API 35 `google_apis` x86_64 Android emulator after the debug build, lint, and JVM unit tests. Before launching the emulator, it installs a udev rule that grants the runner read/write access to `/dev/kvm`, reloads the rule, and verifies that `/dev/kvm` is a character device with read/write access. The emulator action is configured not to fall back to software CPU emulation and has a 600-second boot limit. If the runner cannot expose KVM, the job fails at the explicit preflight instead of spending the boot window on an unusably slow emulator. These instrumentation tests exercise Android SQLite persistence and deletion; they do not download or execute Gemma.
