@@ -91,6 +91,15 @@ class LocalChatDatabaseInstrumentedTest {
         assertEquals(listOf("literal"), results.map { it.messageId })
     }
 
+    @Test
+    fun searchOnlyScansTheBoundedPrefixOfEachMessage() {
+        database.createConversation("search-3", "Bounded search", now = 1L)
+        val content = "a".repeat(12_000) + "needle"
+        database.addMessage(StoredMessage("long-message", "search-3", "user", content, 10L))
+
+        assertTrue(database.searchMessages("needle").isEmpty())
+    }
+
     private companion object {
         const val DATABASE_NAME = "nexora_local.db"
     }

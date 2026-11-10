@@ -279,7 +279,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                             onValueChange = viewModel::updateLocalSearchQuery,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Search message text") },
-                            supportingText = { Text("2–128 characters · up to 20 matches") },
+                            supportingText = { Text("Recent 2,000 messages · first 12k characters each · 20 matches max") },
                             singleLine = true
                         )
                         Button(

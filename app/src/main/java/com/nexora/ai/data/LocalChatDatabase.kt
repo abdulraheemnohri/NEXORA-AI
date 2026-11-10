@@ -115,13 +115,27 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         val safeLimit = limit.coerceIn(1, MAX_SEARCH_RESULTS)
         val result = mutableListOf<ConversationSearchHit>()
         readableDatabase.rawQuery(
-            """SELECT m.id,c.id,c.title,m.role,m.content,m.created_at
-                FROM messages m
+            """SELECT m.id,c.id,c.title,m.role,m.searchable_content,m.created_at,m.rowid
+                FROM (
+                    SELECT id,conversation_id,role,
+                        substr(content,1,?) AS searchable_content,created_at,rowid
+                    FROM messages
+                    WHERE role IN ('user','assistant')
+                    ORDER BY rowid DESC
+                    LIMIT ?
+                ) m
                 INNER JOIN conversations c ON c.id=m.conversation_id
-                WHERE m.role IN ('user','assistant') AND (instr(m.content,?) > 0 OR instr(lower(m.content),lower(?)) > 0)
+                WHERE instr(m.searchable_content,?) > 0
+                    OR instr(lower(m.searchable_content),lower(?)) > 0
                 ORDER BY m.created_at DESC,m.rowid DESC
                 LIMIT ?""".trimIndent(),
-            arrayOf(normalized, normalized, safeLimit.toString())
+            arrayOf(
+                MAX_SEARCHABLE_MESSAGE_CHARACTERS.toString(),
+                MAX_SEARCH_SCAN_MESSAGES.toString(),
+                normalized,
+                normalized,
+                safeLimit.toString()
+            )
         ).use { cursor ->
             while (cursor.moveToNext()) {
                 val content = cursor.getString(4)
@@ -159,6 +173,8 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         private const val MIN_SEARCH_QUERY_LENGTH = 2
         private const val MAX_SEARCH_QUERY_LENGTH = 128
         private const val MAX_SEARCH_RESULTS = 50
+        private const val MAX_SEARCH_SCAN_MESSAGES = 2_000
+        private const val MAX_SEARCHABLE_MESSAGE_CHARACTERS = 12_000
     }
 }
 

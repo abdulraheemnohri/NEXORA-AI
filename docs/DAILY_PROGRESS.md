@@ -507,7 +507,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added a central `AgentToolExecutor` that resolves only registered tools and re-evaluates the existing risk policy immediately before invoking a handler.
 - Added one-use approval grants bound to the exact invocation object; grants cannot authorize a different request or be replayed after use.
 - Added a real local read-only capability: user-enabled search over saved conversation user/assistant message bodies. System-role messages are excluded. It is disabled by default and is manually invoked from a Compose Tools dialog.
-- Added query bounds (2–128 characters), a 20-result tool limit, bounded message excerpts, parameterized SQL, and IO-dispatched repository access.
+- Added query bounds (2–128 characters), a 20-result tool limit, a scan cap of the most recent 2,000 user/assistant messages and first 12,000 characters per message, bounded excerpts, parameterized SQL, and IO-dispatched repository access.
 - Added a persistent local setting for enabling/disabling this capability. Disabling it clears the displayed query and results.
 - LiteRT-LM automatic tool calling remains disabled. Model output is not converted into tool invocations. No external, destructive, or local-write handler was registered.
 
