@@ -39,7 +39,7 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
         val downloader = downloader(payload)
         val progress = mutableListOf<ModelDownloadProgress>()
 
-        val installed = downloader.download(progress::add)
+        val installed = downloader.download { progress.add(it) }
 
         assertTrue(installed.isFile)
         assertArrayEquals(payload, installed.readBytes())
@@ -63,7 +63,7 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
     @Test
     fun truncatedResponseIsRejectedAndPartialFileIsRemoved() = runBlocking {
         val payload = "short".toByteArray()
-        val downloader = downloader(payload, expectedBytes = payload.size.toLong() + 3L)
+        val downloader = downloader(payload, expectedBytes = payload.size.toLong() + 3L, reportedLength = -1L)
 
         val failure = runCatching { downloader.download() }.exceptionOrNull()
 
