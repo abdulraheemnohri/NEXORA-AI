@@ -57,7 +57,7 @@ With an API 35 `google_apis` x86_64 Android emulator booted and visible to ADB, 
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-The instrumentation suite exercises SQLite persistence, ordering, and cascade deletion. It does not download or execute Gemma.
+The instrumentation suite exercises SQLite persistence, ordering, and cascade deletion, plus deterministic downloader fixtures for byte-count validation, checksum rejection, partial-file cleanup, corrupt-file replacement, and HTTPS redirect enforcement. Downloader tests use tiny in-memory responses; they do not download or execute the real Gemma model.
 
 ## GitHub Actions instrumentation environment
 
