@@ -526,7 +526,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Verification
 - Added five JVM tests for disabled-tool denial, read-only execution, destructive approval, exact-invocation binding/one-shot use, and duplicate registration rejection.
 - Added three API 35 instrumentation tests for recent-match ordering/result limits, literal SQL wildcard handling, and exclusion of system-role messages.
-- No local Gradle build, lint, or tests were run in this environment. Main run #100 is a pre-change baseline, not validation of this branch. The final exact-head Actions run [#106](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42901017050) is pending on commit `ef2ccbacb0433039f582af303db9452600579dae`; earlier runs for superseded intermediate heads were cancelled by the workflow concurrency policy.
+- No local Gradle build, lint, or tests were run in this environment. Main run #100 is a pre-change baseline, not validation of this branch. Run [#106](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42901017050) for the immediately previous head `ef2ccbacb0433039f582af303db9452600579dae` was superseded and cancelled by a documentation follow-up. Current branch head `a6fe013bd2843b2ec1c782fd27c259c68b79f750` has exact-head run [#107](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42901116868); at last inspection the debug APK build step was in progress and lint, JVM tests, KVM preflight, and instrumentation were still pending. This entry's documentation-only follow-up will trigger a fresh exact-head run; no final CI result is claimed.
 - No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 
 ### Review and safety
