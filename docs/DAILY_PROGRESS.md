@@ -474,7 +474,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Verification actually run
 - Source and test changes were inspected; no local Gradle build was available/run in this environment.
 - Existing post-merge main run [#94](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42692535230) passed the prior three SQLite instrumentation tests, but predates this downloader change.
-- Exact-head CI for this branch is pending. No build, lint, JVM test, or new downloader instrumentation pass is claimed until its workflow completes.
+- Exact PR-head Actions run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all nine combined instrumentation tests (three SQLite + six downloader cases). The run log confirms `Starting 9 tests` / `Finished 9 tests` and `BUILD SUCCESSFUL`.
+- This progress-record update is documentation-only and will trigger a fresh exact-head workflow; run #97 validates source head `c4c645b68e8c539f654534b13313d05034ff7b78`, not the follow-up documentation commit.
 - No live 2.58 GB download, real LiteRT-LM/Gemma inference, offline-after-download test, or physical Pixel 6 verification was performed.
 
 ### Safety and constraints
@@ -486,9 +487,9 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Base: `2bfaae7e18e70a37255cfd0e442c132252a053e8` (PR #9 merge).
 - Branch: `test/gemma-model-downloader-integrity`.
-- Pull request: to be opened after exact source/documentation diff review.
+- Pull request: [#10 — Harden Gemma download integrity and add instrumentation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10), draft.
+- Exact source-head CI: [run #97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931), passed all configured jobs.
 
 ### Blockers and next priority
-- Run exact-head CI, verify all six downloader tests execute and pass, and review the Android API 26 `java.nio.file.Files` compatibility on the configured minSdk 26 baseline.
-- If CI passes, merge the downloader test increment.
+- Confirm the new documentation-only exact-head workflow remains green, then review PR #10's final diff and merge only after the required checks pass.
 - Next product gate remains physical Pixel 6 verification of the real 2.58 GB model transfer, LiteRT-LM engine initialization, multi-turn inference, offline operation, callback drain, and memory/thermal behavior. Emulator fixtures are not a substitute for device validation.
