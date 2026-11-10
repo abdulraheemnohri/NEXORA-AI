@@ -506,7 +506,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Delivered on `feat/permissioned-local-search`
 - Added a central `AgentToolExecutor` that resolves only registered tools and re-evaluates the existing risk policy immediately before invoking a handler.
 - Added one-use approval grants bound to the exact invocation object; grants cannot authorize a different request or be replayed after use.
-- Added a real local read-only capability: user-enabled search over saved conversation user/assistant message bodies. System-role messages are excluded. It is disabled by default and is manually invoked from a Compose Tools dialog.
+- Added a real local read-only capability: user-enabled search over saved conversation user/assistant message bodies. System-role messages are excluded. The scan is capped at the latest 2,000 messages and first 12,000 characters per message. It is disabled by default and is manually invoked from a Compose Tools dialog.
 - Added query bounds (2–128 characters), a 20-result tool limit, a scan cap of the most recent 2,000 user/assistant messages and first 12,000 characters per message, bounded excerpts, parameterized SQL, and IO-dispatched repository access.
 - Added a persistent local setting for enabling/disabling this capability. Disabling it clears the displayed query and results.
 - LiteRT-LM automatic tool calling remains disabled. Model output is not converted into tool invocations. No external, destructive, or local-write handler was registered.
@@ -525,8 +525,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Verification
 - Added five JVM tests for disabled-tool denial, read-only execution, destructive approval, exact-invocation binding/one-shot use, and duplicate registration rejection.
-- Added two API 35 instrumentation tests for recent-match ordering/result limits, literal SQL wildcard handling, and exclusion of system-role messages.
-- No local Gradle build, lint, or tests were run in this environment. Main run #100 is a pre-change baseline, not validation of this branch. The new PR's exact-head CI must validate the increment.
+- Added three API 35 instrumentation tests for recent-match ordering/result limits, literal SQL wildcard handling, and exclusion of system-role messages.
+- No local Gradle build, lint, or tests were run in this environment. Main run #100 is a pre-change baseline, not validation of this branch. The final exact-head Actions run [#106](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42901017050) is pending on commit `ef2ccbacb0433039f582af303db9452600579dae`; earlier runs for superseded intermediate heads were cancelled by the workflow concurrency policy.
 - No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 
 ### Review and safety
@@ -538,7 +538,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Branch: [feat/permissioned-local-search](https://github.com/abdulraheemnohri/NEXORA-AI/tree/feat/permissioned-local-search).
 - Initial implementation commit: [b91be17936e039234457c2af75f76e530b74194e](https://github.com/abdulraheemnohri/NEXORA-AI/commit/b91be17936e039234457c2af75f76e530b74194e).
-- Safety and documentation follow-ups: [64bd548](https://github.com/abdulraheemnohri/NEXORA-AI/commit/64bd5485263b2df2f19d96040af44987703650dd) and [0f68cf5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0f68cf508f3b6444c4c06634d4839d8eaee9c4a9).
+- Safety and documentation follow-ups: [64bd548](https://github.com/abdulraheemnohri/NEXORA-AI/commit/64bd5485263b2df2f19d96040af44987703650dd), [0f68cf5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0f68cf508f3b6444c4c06634d4839d8eaee9c4a9), and bounded-workload hardening [ef2ccba](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef2ccbacb0433039f582af303db9452600579dae).
 - Draft PR: [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11). Exact-head CI status is checked separately below.
 
 ### Next priority
