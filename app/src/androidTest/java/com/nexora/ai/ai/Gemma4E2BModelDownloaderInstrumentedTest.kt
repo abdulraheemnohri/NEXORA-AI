@@ -44,7 +44,7 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
         assertTrue(installed.isFile)
         assertArrayEquals(payload, installed.readBytes())
         assertEquals(payload.size.toLong(), progress.last().downloadedBytes)
-        assertEquals(1f, progress.last().fraction)
+        assertEquals(1f, progress.last().fraction, 0f)
         assertFalse(File(modelDirectory, "${TEST_FILE_NAME}.part").exists())
     }
 
@@ -75,7 +75,7 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
     @Test
     fun oversizedResponseIsRejectedAndPartialFileIsRemoved() = runBlocking {
         val payload = "too-large".toByteArray()
-        val downloader = downloader(payload, expectedBytes = payload.size.toLong() - 1L)
+        val downloader = downloader(payload, expectedBytes = payload.size.toLong() - 1L, reportedLength = -1L)
 
         val failure = runCatching { downloader.download() }.exceptionOrNull()
 
@@ -113,7 +113,8 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
         payload: ByteArray,
         expectedBytes: Long = payload.size.toLong(),
         expectedHash: String = payload.sha256(),
-        finalUrl: URL = URL("https://cdn.example.test/model")
+        finalUrl: URL = URL("https://cdn.example.test/model"),
+        reportedLength: Long = payload.size.toLong()
     ): Gemma4E2BModelDownloader {
         val spec = ModelArtifactSpec(
             fileName = TEST_FILE_NAME,
@@ -123,19 +124,20 @@ class Gemma4E2BModelDownloaderInstrumentedTest {
             safetySpaceBytes = 0L
         )
         return Gemma4E2BModelDownloader(context, spec) { _ ->
-            FakeConnection(finalUrl, payload)
+            FakeConnection(finalUrl, payload, reportedLength)
         }
     }
 
     private class FakeConnection(
         url: URL,
-        private val payload: ByteArray
+        private val payload: ByteArray,
+        private val reportedLength: Long
     ) : HttpURLConnection(url) {
         override fun connect() = Unit
         override fun disconnect() = Unit
         override fun usingProxy(): Boolean = false
         override fun getResponseCode(): Int = HTTP_OK
-        override fun getContentLengthLong(): Long = payload.size.toLong()
+        override fun getContentLengthLong(): Long = reportedLength
         override fun getInputStream(): InputStream = ByteArrayInputStream(payload)
     }
 
