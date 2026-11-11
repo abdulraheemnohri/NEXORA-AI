@@ -12,12 +12,13 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Bounded multi-turn replay through LiteRT-LM v0.18.1: up to 16 recent user/assistant messages and 12,000 characters, with a two-entry native-session LRU. The character budget is not a tokenizer-aware context guarantee.
 - Locally persisted generation settings for 256 / 512 / 1,024 / 2,048 maximum output tokens (default 512).
 - API 35 Android emulator instrumentation for SQLite reopen persistence, ordering, recent-conversation ordering, and foreign-key cascade deletion.
-- Risk-based agent tool approval policy and a central `AgentToolExecutor` with one-shot, invocation-bound approval grants for future external/destructive handlers.
+- Risk-based agent tool approval policy and a central `AgentToolExecutor` with one-shot, invocation-bound approval grants; the current side-effect capability is explicitly approved local note creation, with no external/destructive handler registered.
 - User-enabled, manually invoked read-only search across locally stored user/assistant message text (system messages are excluded); disabled by default, bounded to the most recent 2,000 messages, the first 12,000 characters per message, and 20 results, and never passed to the model as an automatic tool call.
+- Opt-in local note creation as a real LOCAL_WRITE tool: each save first displays the derived title and exact full note content for explicit one-use approval; notes remain in app-private SQLite and deletion is separately confirmation-gated.
 - Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
 - LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
 - Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
-- Automatic LiteRT-LM tool calling is explicitly disabled; no model-generated app side effect is registered.
+- Automatic LiteRT-LM tool calling is explicitly disabled; only explicit user-originated UI actions can create local notes, and model-generated text is never treated as approval.
 - LiteRT-LM callback lifecycle hardening is merged in [PR #3](https://github.com/abdulraheemnohri/NEXORA-AI/pull/3) as `b399c6a`; main run [#68](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42385336171) passed debug APK assembly, Android lint, and JVM unit tests. Device inference and cancellation behavior remain unverified.
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, HTTPS redirect enforcement, exact byte-count and SHA-256 verification, and atomic finalization.
 - New API 35 instrumentation coverage exercises downloader success, checksum rejection, truncated/oversized responses, corrupt-file replacement, and HTTPS downgrade rejection using small deterministic fixtures; this does not substitute for a live 2.58 GB download.

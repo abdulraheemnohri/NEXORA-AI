@@ -12,7 +12,7 @@
 | Vision | Not implemented; candidate LiteRT Compiled Model API task | Model and preprocessing verified against fixed reference inputs on Pixel 6 |
 | Embeddings and retrieval | Not implemented; candidate local non-LLM model task | Embedding quality and retrieval evaluation pass on local corpus |
 | Accelerator strategy | CPU is baseline; Pixel 6 GPU path unverified; Google Tensor NPU path not enabled | Runtime residency and correctness recorded on target device; no silent fallback claims |
-| Agent tool permission system | Partial: central executor, one-shot invocation-bound approval grants, and a real user-enabled local read-only conversation search are implemented. Search is manually invoked; no model-generated tool calls or external/destructive handlers are registered. | Add a review/approval UI for a concrete side-effect tool and verify that approval is bound to its exact arguments and cannot be replayed |
+| Agent tool permission system | Partial: central executor, one-shot invocation-bound approval grants, local read-only conversation search, and an opt-in local note write with exact-content review and per-save approval are implemented. No model-generated tool calls or external/destructive handlers are registered. | Add a separately reviewed external/destructive action only after threat modeling and target-device verification; retain exact-argument, one-shot approval tests |
 | Memory and retrieval | Pending; keyword search is not semantic memory or embeddings | Select a licensed local embedding model and evaluate retrieval quality on a private local corpus |
 | Knowledge ingestion | Pending | PDF/TXT/MD/JSON extraction tests |
 | Agent planner | Pending | Plan, approval, and cancellation tests |

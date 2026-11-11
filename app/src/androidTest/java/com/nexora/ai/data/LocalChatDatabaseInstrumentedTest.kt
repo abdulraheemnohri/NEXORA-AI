@@ -100,6 +100,72 @@ class LocalChatDatabaseInstrumentedTest {
         assertTrue(database.searchMessages("needle").isEmpty())
     }
 
+
+    @Test
+    fun localNotesCanBeCreatedListedAndDeleted() {
+        val created = database.createLocalNote(
+            id = "note-1",
+            title = "Solar log",
+            content = "R phase = 230 V",
+            now = 10L
+        )
+
+        assertEquals("Solar log", created.title)
+        assertEquals("R phase = 230 V", created.content)
+        assertEquals(listOf("note-1"), database.listLocalNotes().map(LocalNote::id))
+        assertTrue(database.deleteLocalNote("note-1"))
+        assertTrue(database.listLocalNotes().isEmpty())
+    }
+
+
+    @Test
+    fun localNoteStoreRejectsMoreThanTwoHundredNotes() {
+        repeat(200) { index ->
+            database.createLocalNote(
+                id = "quota-note-$index",
+                title = "Note $index",
+                content = "Bounded local note",
+                now = index.toLong()
+            )
+        }
+
+        try {
+            database.createLocalNote("quota-overflow", "Overflow", "Must not be stored")
+            throw AssertionError("The local note count must be bounded.")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals(
+                "Local notes limit reached (200). Delete a note before adding another.",
+                expected.message
+            )
+        }
+        assertEquals(200, database.listLocalNotes().size)
+    }
+
+    @Test
+    fun versionOneMigrationPreservesChatsAndAddsLocalNotesTable() {
+        database.close()
+        context.deleteDatabase(DATABASE_NAME)
+        val legacy = context.openOrCreateDatabase(DATABASE_NAME, Context.MODE_PRIVATE, null)
+        legacy.execSQL(
+            "CREATE TABLE conversations (id TEXT PRIMARY KEY NOT NULL,title TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)"
+        )
+        legacy.execSQL(
+            "CREATE TABLE messages (id TEXT PRIMARY KEY NOT NULL,conversation_id TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('user','assistant','system')),content TEXT NOT NULL,created_at INTEGER NOT NULL,FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE)"
+        )
+        legacy.execSQL("CREATE INDEX index_messages_conversation_time ON messages(conversation_id, created_at)")
+        legacy.execSQL("INSERT INTO conversations(id,title,created_at,updated_at) VALUES('legacy','Legacy chat',1,2)")
+        legacy.execSQL("INSERT INTO messages(id,conversation_id,role,content,created_at) VALUES('legacy-message','legacy','user','Keep this chat',2)")
+        legacy.version = 1
+        legacy.close()
+
+        database = LocalChatDatabase(context)
+
+        assertEquals("Legacy chat", database.listConversations().single().title)
+        assertEquals("Keep this chat", database.listMessages("legacy").single().content)
+        database.createLocalNote("migrated-note", "Migrated note", "New table is available", 3L)
+        assertEquals("Migrated note", database.listLocalNotes().single().title)
+    }
+
     private companion object {
         const val DATABASE_NAME = "nexora_local.db"
     }

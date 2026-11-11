@@ -545,3 +545,59 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
 - Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
 - Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
+
+## 2026-11-12 — Explicit approval for local note writes
+
+### Repository checkpoint
+- Re-inspected current main, standalone open issues, recent commits, open pull requests, all branch heads, and recent GitHub Actions before editing.
+- At the start of this run, main was abd66700dd6f7e6f119d84c6cd612aff4c40b71b, the merge commit for PR #11. PR #11 was merged only after exact-head Actions run #108 passed APK assembly, lint, JVM tests, KVM preflight, emulator boot, and instrumentation; the PR had no submitted reviews or inline review threads, and the branch was 8 commits ahead / 0 behind main.
+- PRs #1 and #4 remain open and untouched. No standalone open issues were returned. Thirteen existing branch heads were inspected before creating this feature branch; no branch was deleted and no force-push was performed.
+- Main post-merge run #109 was queued at the time of inspection.
+
+### Delivered on feat/approved-local-notes
+- Added CreateLocalNoteTool, a real Kotlin LOCAL_WRITE handler backed by the app-private SQLite repository.
+- The feature is disabled by default and its enablement is persisted locally. Enabling the tool does not approve a write.
+- Every save first creates a user-originated invocation and receives NEEDS_APPROVAL. The Compose approval dialog displays the derived title and the exact complete content in a scrollable view. Only the explicit Approve & save control issues a one-use grant for that exact invocation.
+- The executor re-checks the tool's current enabled state and risk policy immediately before the handler writes to SQLite. Model output is never converted into an invocation or approval.
+- Added local note listing and separate confirmation-gated deletion. Notes are not inserted into Gemma prompts; retrieval/context injection remains a separate future feature.
+- Added SQLite schema version 2 with an additive version-1 migration. Existing conversations and messages are preserved.
+- Bounded notes to 4,000 characters each and 200 notes total. The quota is enforced transactionally to avoid concurrent over-limit writes.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/agent/CreateLocalNoteTool.kt
+- app/src/main/java/com/nexora/ai/agent/AgentToolExecutor.kt
+- app/src/main/java/com/nexora/ai/data/LocalChatDatabase.kt
+- app/src/main/java/com/nexora/ai/data/ChatRepository.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraHome.kt
+- app/src/test/java/com/nexora/ai/agent/AgentToolExecutorTest.kt
+- app/src/androidTest/java/com/nexora/ai/data/LocalChatDatabaseInstrumentedTest.kt
+- README.md, ROADMAP.md
+- docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/DAILY_PROGRESS.md
+
+### Tests and verification
+- Added three JVM tests for exact one-use approval, disabled-tool denial, and blank/oversized content rejection.
+- Added three API 35 instrumentation tests for note create/list/delete, the 200-note quota, and version-1 migration preserving existing chats/messages.
+- Source diff was reviewed for secrets, model weights, dependency changes, Android permission changes, and prohibited inference backends. No new dependency, manifest permission, model artifact, secret, cloud AI service, Firebase, Docker, Ollama, llama.cpp, or external inference server was added.
+- Local Gradle build/lint/tests were not run: the available environment has JDK 21 but no Gradle executable, Android SDK, or ADB.
+- Exact-head GitHub Actions run [#110](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096098409) was queued for source head a3ce60d57fd880c2287a0d161ac9ef1f47fc1a59. Run [#111](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096316246) was queued for the first daily-progress head 61a3660590517605d29b1da38f326008bc29851b. Neither had a final result at the time of this update; no PR #12 CI pass is claimed.
+- No real Gemma download/load/inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Safety and data handling
+- The local note tool is opt-in and requires per-save approval. Deletion requires a separate confirmation.
+- Notes are app-private SQLite data, but database encryption is not implemented. Deletion does not guarantee secure flash erasure.
+- No model-generated tool calls are enabled; LiteRT-LM automatic tool calling remains disabled.
+- No external or destructive tool is registered.
+
+### Commit / PR
+- Feature branch: feat/approved-local-notes.
+- Source implementation: https://github.com/abdulraheemnohri/NEXORA-AI/commit/31842cbecbf3269da90dac63b0086c1afc82e214.
+- Approval test literal fix: https://github.com/abdulraheemnohri/NEXORA-AI/commit/bc55d9bd417fb4a0d367a320650d49be20ad872b.
+- Final source/docs consistency commit: https://github.com/abdulraheemnohri/NEXORA-AI/commit/648b371f97aa59efb97adde35f4f9f6e5f18a027.
+- Daily-progress update base: https://github.com/abdulraheemnohri/NEXORA-AI/commit/61a3660590517605d29b1da38f326008bc29851b.
+- Pull request: https://github.com/abdulraheemnohri/NEXORA-AI/pull/12 — Explicitly approved local notes; draft and not merged.
+
+### Next priority
+- Complete exact-head CI for PR #12 and resolve any build, lint, JVM, or API 35 instrumentation failures before marking it ready.
+- Review the final diff and merge only after CI passes and the branch remains conflict-free.
+- The primary release gate remains real Gemma 4 E2B LiteRT-LM load, multi-turn inference, offline-after-download, callback lifecycle, and memory/thermal verification on the physical 6 GB Pixel 6. Emulator CI is not a substitute.

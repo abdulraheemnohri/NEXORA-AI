@@ -1,6 +1,7 @@
 package com.nexora.ai.agent
 
 import com.nexora.ai.data.ConversationSearchHit
+import com.nexora.ai.data.LocalNote
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
@@ -41,6 +42,7 @@ internal class ToolApprovalIssuer {
 sealed interface ToolOutput {
     data class Text(val value: String) : ToolOutput
     data class ConversationMatches(val matches: List<ConversationSearchHit>) : ToolOutput
+    data class LocalNoteCreated(val note: LocalNote) : ToolOutput
 }
 
 interface AgentTool {
