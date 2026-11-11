@@ -391,6 +391,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelSaveLocalNote() {
+        if (mutableUiState.value.isLocalNoteOperationRunning) return
         pendingLocalNoteInvocation = null
         mutableUiState.update { it.copy(pendingLocalNoteContent = null) }
     }

@@ -175,18 +175,32 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         val safeContent = content.trim()
         require(safeContent.isNotEmpty()) { "Note content cannot be empty." }
         require(safeContent.length <= MAX_LOCAL_NOTE_CHARACTERS) { "Note exceeds the 4,000 character limit." }
-        val values = ContentValues().apply {
-            put("id", id)
-            put("title", safeTitle)
-            put("content", safeContent)
-            put("created_at", now)
-            put("updated_at", now)
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val count = db.rawQuery("SELECT COUNT(*) FROM local_notes", null).use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
+            require(count < MAX_LOCAL_NOTES) {
+                "Local notes limit reached (200). Delete a note before adding another."
+            }
+            val values = ContentValues().apply {
+                put("id", id)
+                put("title", safeTitle)
+                put("content", safeContent)
+                put("created_at", now)
+                put("updated_at", now)
+            }
+            db.insertOrThrow("local_notes", null, values)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
         }
-        writableDatabase.insertOrThrow("local_notes", null, values)
         return LocalNote(id, safeTitle, safeContent, now, now)
     }
 
-    fun listLocalNotes(limit: Int = 100): List<LocalNote> {
+    fun listLocalNotes(limit: Int = MAX_LOCAL_NOTES): List<LocalNote> {
         val safeLimit = limit.coerceIn(1, 200)
         val result = mutableListOf<LocalNote>()
         readableDatabase.rawQuery(
@@ -225,6 +239,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         private const val DATABASE_VERSION = 2
         private const val MAX_LOCAL_NOTE_TITLE_CHARACTERS = 80
         private const val MAX_LOCAL_NOTE_CHARACTERS = 4_000
+        private const val MAX_LOCAL_NOTES = 200
         private const val MIN_SEARCH_QUERY_LENGTH = 2
         private const val MAX_SEARCH_QUERY_LENGTH = 128
         private const val MAX_SEARCH_RESULTS = 50

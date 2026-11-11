@@ -117,6 +117,30 @@ class LocalChatDatabaseInstrumentedTest {
         assertTrue(database.listLocalNotes().isEmpty())
     }
 
+
+    @Test
+    fun localNoteStoreRejectsMoreThanTwoHundredNotes() {
+        repeat(200) { index ->
+            database.createLocalNote(
+                id = "quota-note-$index",
+                title = "Note $index",
+                content = "Bounded local note",
+                now = index.toLong()
+            )
+        }
+
+        try {
+            database.createLocalNote("quota-overflow", "Overflow", "Must not be stored")
+            throw AssertionError("The local note count must be bounded.")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals(
+                "Local notes limit reached (200). Delete a note before adding another.",
+                expected.message
+            )
+        }
+        assertEquals(200, database.listLocalNotes().size)
+    }
+
     @Test
     fun versionOneMigrationPreservesChatsAndAddsLocalNotesTable() {
         database.close()

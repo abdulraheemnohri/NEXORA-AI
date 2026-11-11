@@ -259,7 +259,10 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             onDismissRequest = viewModel::dismissTools,
             title = { Text("Local tools") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Search saved conversations", color = Color.White)
@@ -345,7 +348,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                             onValueChange = viewModel::updateLocalNoteDraft,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Note content") },
-                            supportingText = { Text("Up to 4,000 characters · first non-empty line becomes the title") },
+                            supportingText = { Text("Up to 4,000 characters · first non-empty line becomes the title · 200 notes max") },
                             minLines = 3,
                             maxLines = 5
                         )
@@ -357,7 +360,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                         }
                     }
                     state.localNoteStatus?.let { status ->
-                        Text(status, color = Color(0xFF9CF0D8), style = MaterialTheme.typography.bodySmall)
+                        Text(status, color = Color(0xFFB9B4CA), style = MaterialTheme.typography.bodySmall)
                     }
                     if (state.localNotes.isNotEmpty()) {
                         Text("Saved local notes", color = Color.White, style = MaterialTheme.typography.titleSmall)
