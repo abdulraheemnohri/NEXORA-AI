@@ -29,6 +29,7 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
             )""".trimIndent()
         )
         db.execSQL("CREATE INDEX index_messages_conversation_time ON messages(conversation_id, created_at)")
+        createLocalNotesTable(db)
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -38,8 +39,8 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // Schema migrations must be additive. Never silently erase a user's local conversations.
-        if (oldVersion < 2) {
-            // Reserved for the first additive migration.
+        if (oldVersion < 2 && newVersion >= 2) {
+            createLocalNotesTable(db)
         }
     }
 
@@ -164,12 +165,66 @@ class LocalChatDatabase(context: Context) : SQLiteOpenHelper(
         return result
     }
 
+    fun createLocalNote(
+        id: String,
+        title: String,
+        content: String,
+        now: Long = System.currentTimeMillis()
+    ): LocalNote {
+        val safeTitle = title.trim().take(MAX_LOCAL_NOTE_TITLE_CHARACTERS).ifEmpty { "Untitled note" }
+        val safeContent = content.trim()
+        require(safeContent.isNotEmpty()) { "Note content cannot be empty." }
+        require(safeContent.length <= MAX_LOCAL_NOTE_CHARACTERS) { "Note exceeds the 4,000 character limit." }
+        val values = ContentValues().apply {
+            put("id", id)
+            put("title", safeTitle)
+            put("content", safeContent)
+            put("created_at", now)
+            put("updated_at", now)
+        }
+        writableDatabase.insertOrThrow("local_notes", null, values)
+        return LocalNote(id, safeTitle, safeContent, now, now)
+    }
+
+    fun listLocalNotes(limit: Int = 100): List<LocalNote> {
+        val safeLimit = limit.coerceIn(1, 200)
+        val result = mutableListOf<LocalNote>()
+        readableDatabase.rawQuery(
+            "SELECT id,title,content,created_at,updated_at FROM local_notes ORDER BY updated_at DESC,rowid DESC LIMIT ?",
+            arrayOf(safeLimit.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) result += LocalNote(
+                cursor.getString(0), cursor.getString(1), cursor.getString(2),
+                cursor.getLong(3), cursor.getLong(4)
+            )
+        }
+        return result
+    }
+
+    fun deleteLocalNote(id: String): Boolean =
+        writableDatabase.delete("local_notes", "id=?", arrayOf(id)) > 0
+
+    private fun createLocalNotesTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS local_notes (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )""".trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_local_notes_updated ON local_notes(updated_at)")
+    }
+
     fun deleteConversation(id: String): Boolean =
         writableDatabase.delete("conversations", "id=?", arrayOf(id)) > 0
 
     companion object {
         private const val DATABASE_NAME = "nexora_local.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
+        private const val MAX_LOCAL_NOTE_TITLE_CHARACTERS = 80
+        private const val MAX_LOCAL_NOTE_CHARACTERS = 4_000
         private const val MIN_SEARCH_QUERY_LENGTH = 2
         private const val MAX_SEARCH_QUERY_LENGTH = 128
         private const val MAX_SEARCH_RESULTS = 50
@@ -189,6 +244,14 @@ data class ConversationSearchHit(
     val role: String,
     val snippet: String,
     val createdAt: Long
+)
+
+data class LocalNote(
+    val id: String,
+    val title: String,
+    val content: String,
+    val createdAt: Long,
+    val updatedAt: Long
 )
 
 data class StoredMessage(

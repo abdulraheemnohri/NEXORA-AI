@@ -2,6 +2,8 @@ package com.nexora.ai.ui
 
 import com.nexora.ai.ai.GenerationSettings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -320,8 +322,76 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                             Text("No matching saved messages.", color = Color(0xFF9B9CB2), style = MaterialTheme.typography.bodySmall)
                         }
                     }
+
+                    Text("Create a local note", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Local note creation", color = Color.White)
+                            Text(
+                                "Writes are disabled by default and require a separate review for every save.",
+                                color = Color(0xFF9B9CB2),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Switch(
+                            checked = state.localNoteEnabled,
+                            onCheckedChange = viewModel::setLocalNoteEnabled,
+                            enabled = !state.isLocalNoteOperationRunning
+                        )
+                    }
+                    if (state.localNoteEnabled) {
+                        OutlinedTextField(
+                            value = state.localNoteDraft,
+                            onValueChange = viewModel::updateLocalNoteDraft,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Note content") },
+                            supportingText = { Text("Up to 4,000 characters · first non-empty line becomes the title") },
+                            minLines = 3,
+                            maxLines = 5
+                        )
+                        Button(
+                            onClick = viewModel::requestSaveLocalNote,
+                            enabled = !state.isLocalNoteOperationRunning && state.localNoteDraft.isNotBlank()
+                        ) {
+                            Text(if (state.isLocalNoteOperationRunning) "Preparing…" else "Review & save locally")
+                        }
+                    }
+                    state.localNoteStatus?.let { status ->
+                        Text(status, color = Color(0xFF9CF0D8), style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (state.localNotes.isNotEmpty()) {
+                        Text("Saved local notes", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                        LazyColumn(modifier = Modifier.heightIn(max = 180.dp)) {
+                            items(state.localNotes, key = { it.id }) { note ->
+                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Text(note.title, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        note.content.take(140),
+                                        color = Color(0xFF9B9CB2),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                        TextButton(
+                                            onClick = { viewModel.requestDeleteLocalNote(note.id) },
+                                            enabled = !state.isLocalNoteOperationRunning
+                                        ) {
+                                            Text("Delete", color = Color(0xFFFF9EAD))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Text(
-                        "This tool is manually invoked by you. It does not send data outside the device or enable model-generated tool calls.",
+                        "Local notes are stored in app-private SQLite. Saving requires approval each time; note content is not sent to Gemma.",
+                        color = Color(0xFF70748C),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    Text(
+                        "Conversation search is manually invoked by you. It does not send data outside the device or enable model-generated tool calls.",
                         color = Color(0xFF70748C),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -329,6 +399,77 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissTools) { Text("Done") }
+            }
+        )
+    }
+
+
+    state.pendingLocalNoteContent?.let { content ->
+        val derivedTitle = content.lineSequence()
+            .firstOrNull { it.isNotBlank() }
+            ?.trim()
+            ?.take(80)
+            ?: "Untitled note"
+        AlertDialog(
+            onDismissRequest = viewModel::cancelSaveLocalNote,
+            title = { Text("Approve local note creation?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Title: $derivedTitle", color = Color.White)
+                    Text(
+                        "This writes one note to the app-private database. Review the exact content below. This approval applies only to this note.",
+                        color = Color(0xFF9B9CB2),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        content,
+                        color = Color.White,
+                        modifier = Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::confirmSaveLocalNote,
+                    enabled = state.localNoteEnabled && !state.isLocalNoteOperationRunning
+                ) {
+                    Text(if (state.isLocalNoteOperationRunning) "Saving…" else "Approve & save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::cancelSaveLocalNote,
+                    enabled = !state.isLocalNoteOperationRunning
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    state.pendingDeleteLocalNoteId?.let { noteId ->
+        val noteTitle = state.localNotes.firstOrNull { it.id == noteId }?.title ?: "this note"
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDeleteLocalNote,
+            title = { Text("Delete local note?") },
+            text = {
+                Text("“$noteTitle” and its content will be removed from the app's local notes table. Secure flash erasure is not guaranteed.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::confirmDeleteLocalNote,
+                    enabled = !state.isLocalNoteOperationRunning
+                ) {
+                    Text(if (state.isLocalNoteOperationRunning) "Deleting…" else "Delete", color = Color(0xFFFF9EAD))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::cancelDeleteLocalNote,
+                    enabled = !state.isLocalNoteOperationRunning
+                ) {
+                    Text("Cancel")
+                }
             }
         )
     }

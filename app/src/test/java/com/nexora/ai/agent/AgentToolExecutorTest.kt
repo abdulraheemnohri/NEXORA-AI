@@ -1,5 +1,7 @@
 package com.nexora.ai.agent
 
+import com.nexora.ai.data.LocalNote
+import com.nexora.ai.data.LocalNoteStore
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -76,6 +78,87 @@ class AgentToolExecutorTest {
 
         assertTrue(outcome is ToolExecutionOutcome.NeedsApproval)
         assertEquals(0, tool.calls)
+    }
+
+
+
+    private class FakeLocalNoteStore : LocalNoteStore {
+        val notes = mutableListOf<LocalNote>()
+
+        override suspend fun createLocalNote(title: String, content: String): LocalNote {
+            val note = LocalNote(
+                id = "note-\${notes.size + 1}",
+                title = title,
+                content = content,
+                createdAt = 1L,
+                updatedAt = 1L
+            )
+            notes += note
+            return note
+        }
+
+        override suspend fun localNotes(): List<LocalNote> = notes.toList()
+
+        override suspend fun deleteLocalNote(id: String): Boolean =
+            notes.removeAll { it.id == id }
+    }
+
+    @Test
+    fun localNoteWriteRequiresExactOneShotApprovalBeforeSaving() = runBlocking {
+        val store = FakeLocalNoteStore()
+        val tool = CreateLocalNoteTool(store, enabledByUser = true)
+        val invocation = ToolInvocation.userInitiated(
+            CreateLocalNoteTool.TOOL_ID,
+            "\\nSolar log\\nR phase = 230 V"
+        )
+        val executor = AgentToolExecutor(
+            listOf(tool),
+            ToolPermissionPolicy(allowLocalWritesWithoutPrompt = false)
+        )
+
+        assertTrue(executor.execute(invocation) is ToolExecutionOutcome.NeedsApproval)
+        assertTrue(store.notes.isEmpty())
+
+        val grant = ToolApprovalIssuer().approveAfterExplicitUserConfirmation(invocation)
+        val approved = executor.execute(invocation, grant)
+
+        assertTrue(approved is ToolExecutionOutcome.Completed)
+        assertEquals("Solar log", store.notes.single().title)
+        assertEquals("Solar log\\nR phase = 230 V", store.notes.single().content)
+        assertTrue(executor.execute(invocation, grant) is ToolExecutionOutcome.NeedsApproval)
+        assertEquals(1, store.notes.size)
+    }
+
+    @Test
+    fun disabledLocalNoteToolCannotWriteEvenWithApproval() = runBlocking {
+        val store = FakeLocalNoteStore()
+        val tool = CreateLocalNoteTool(store, enabledByUser = false)
+        val invocation = ToolInvocation.userInitiated(CreateLocalNoteTool.TOOL_ID, "Private note")
+        val grant = ToolApprovalIssuer().approveAfterExplicitUserConfirmation(invocation)
+
+        val outcome = AgentToolExecutor(listOf(tool)).execute(invocation, grant)
+
+        assertTrue(outcome is ToolExecutionOutcome.Denied)
+        assertTrue(store.notes.isEmpty())
+    }
+
+    @Test
+    fun localNoteToolRejectsBlankAndOversizedContent() = runBlocking {
+        val tool = CreateLocalNoteTool(FakeLocalNoteStore(), enabledByUser = true)
+
+        try {
+            tool.execute("   ")
+            throw AssertionError("Blank notes must be rejected.")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals("Note content cannot be empty.", expected.message)
+        }
+
+        try {
+            tool.execute("x".repeat(CreateLocalNoteTool.MAX_NOTE_CHARACTERS + 1))
+            throw AssertionError("Oversized notes must be rejected.")
+        } catch (expected: IllegalArgumentException) {
+            assertEquals("Note exceeds the 4,000 character limit.", expected.message)
+        }
     }
 
     @Test

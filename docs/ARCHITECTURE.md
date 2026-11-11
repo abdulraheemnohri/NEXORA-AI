@@ -59,3 +59,10 @@ Tool invocation is separate from LiteRT-LM generation. Model text is never parse
 Approval grants are one-use and tied to the exact invocation object. A grant cannot be reused for another request or replayed after consumption. The current registered capability is a user-enabled, manually invoked, read-only search over user/assistant message text in the app-private SQLite conversation store; system-role messages are excluded. It runs through the repository IO boundary, uses bound SQL parameters, limits query length, scans at most the most recent 2,000 user/assistant messages and the first 12,000 characters of each, and limits result count, and does not transmit data outside the device.
 
 No external, destructive, or local-write tool is registered. The approval primitive is infrastructure, not permission to execute arbitrary code. Any future side-effect tool must have a concrete handler, an explicit user-facing review step, immediate policy re-check, and focused tests before registration.
+
+
+## Approved local note writes
+
+The local note tool is registered as LOCAL_WRITE and is disabled by default. Enabling it in the Compose Tools dialog only makes the capability available; it does not approve a write. Each save first creates a user-originated invocation and receives NEEDS_APPROVAL from the executor. The Compose review dialog displays the derived title and the complete note content in a scrollable view. Only the explicit Approve & save control issues a one-use grant for that exact invocation. The executor re-checks the user-enabled descriptor and risk policy immediately before the SQLite write. Model-generated text is never converted into this invocation.
+
+Notes are stored in an additive schema-version-2 SQLite table. The version-1 migration creates the new table without rewriting or deleting conversations/messages. The UI lists saved notes and requires a separate confirmation before deletion. Notes are not automatically inserted into Gemma prompts; retrieval/context injection is a separate future feature.

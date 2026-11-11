@@ -29,3 +29,8 @@ The history picker lists at most 100 recently updated conversations and loads up
 ## Local conversation search boundaries
 
 Search reads only message bodies already stored in the app-private SQLite database. It does not access files, contacts, microphone, location, or network services. The setting is off by default and is persisted locally. The query is treated as literal text, limited to 2–128 characters, and the tool returns at most 20 message matches with short excerpts. SQLite's built-in `lower()` provides ASCII case folding; exact-case substring matching also works for non-ASCII text. This is bounded keyword search, not semantic or cross-language case-folded retrieval.
+
+
+## Local note write approval
+
+Local note creation is the first registered LOCAL_WRITE capability. It is disabled by default. Enabling the setting is not approval: every save must pass through a Compose review dialog that shows the derived title and the exact complete content, followed by an explicit per-invocation approval. The grant is one-use and tied to the same invocation object; the executor re-evaluates the enabled state and risk policy immediately before writing. The note is stored in app-private SQLite only and is not sent to Gemma or a network service. The note list is user-visible, and deletion requires a separate confirmation. SQLite schema version 2 adds the notes table through an additive migration; version-1 conversations and messages are preserved. This does not provide database encryption or secure flash erasure.

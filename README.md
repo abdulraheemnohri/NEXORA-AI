@@ -14,6 +14,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - API 35 Android emulator instrumentation for SQLite reopen persistence, ordering, recent-conversation ordering, and foreign-key cascade deletion.
 - Risk-based agent tool approval policy and a central `AgentToolExecutor` with one-shot, invocation-bound approval grants for future external/destructive handlers.
 - User-enabled, manually invoked read-only search across locally stored user/assistant message text (system messages are excluded); disabled by default, bounded to the most recent 2,000 messages, the first 12,000 characters per message, and 20 results, and never passed to the model as an automatic tool call.
+- Opt-in local note creation as a real LOCAL_WRITE tool: each save first displays the derived title and exact full note content for explicit one-use approval; notes remain in app-private SQLite and deletion is separately confirmation-gated.
 - Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
 - LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
 - Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
