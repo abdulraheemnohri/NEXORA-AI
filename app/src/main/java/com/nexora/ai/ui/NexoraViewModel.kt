@@ -4,6 +4,11 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nexora.ai.agent.AgentToolExecutor
+import com.nexora.ai.agent.SearchSavedConversationsTool
+import com.nexora.ai.agent.ToolExecutionOutcome
+import com.nexora.ai.agent.ToolInvocation
+import com.nexora.ai.agent.ToolOutput
 import com.nexora.ai.ai.Gemma4E2BModelDownloader
 import com.nexora.ai.ai.GenerationEvent
 import com.nexora.ai.ai.GenerationHistoryMessage
@@ -11,6 +16,7 @@ import com.nexora.ai.ai.GenerationRequest
 import com.nexora.ai.ai.GenerationSettings
 import com.nexora.ai.ai.LiteRtLocalModelRuntime
 import com.nexora.ai.data.ChatRepository
+import com.nexora.ai.data.ConversationSearchHit
 import com.nexora.ai.data.LocalChatDatabase
 import java.io.File
 import java.util.UUID
@@ -41,6 +47,12 @@ data class NexoraUiState(
     val pendingDeleteConversationId: String? = null,
     val isDeletingConversation: Boolean = false,
     val showSettings: Boolean = false,
+    val showTools: Boolean = false,
+    val localSearchEnabled: Boolean = false,
+    val localSearchQuery: String = "",
+    val localSearchResults: List<ConversationSearchHit> = emptyList(),
+    val isLocalSearchRunning: Boolean = false,
+    val localSearchError: String? = null,
     val maxOutputTokens: Int = GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS,
     val input: String = "",
     val conversationReady: Boolean = false,
@@ -65,8 +77,13 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         )
     }.getOrDefault(GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS)
 
+    private val initialLocalSearchEnabled = settingsPreferences.getBoolean(KEY_LOCAL_SEARCH_ENABLED, false)
+
     private val mutableUiState = MutableStateFlow(
-        NexoraUiState(maxOutputTokens = initialMaxOutputTokens)
+        NexoraUiState(
+            maxOutputTokens = initialMaxOutputTokens,
+            localSearchEnabled = initialLocalSearchEnabled
+        )
     )
     val uiState = mutableUiState.asStateFlow()
 
@@ -143,6 +160,83 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissSettings() {
         mutableUiState.update { it.copy(showSettings = false) }
+    }
+
+    fun openTools() {
+        mutableUiState.update { it.copy(showTools = true, localSearchError = null) }
+    }
+
+    fun dismissTools() {
+        mutableUiState.update { it.copy(showTools = false) }
+    }
+
+    fun setLocalSearchEnabled(enabled: Boolean) {
+        settingsPreferences.edit().putBoolean(KEY_LOCAL_SEARCH_ENABLED, enabled).apply()
+        mutableUiState.update {
+            it.copy(
+                localSearchEnabled = enabled,
+                localSearchQuery = if (enabled) it.localSearchQuery else "",
+                localSearchResults = if (enabled) it.localSearchResults else emptyList(),
+                localSearchError = null
+            )
+        }
+    }
+
+    fun updateLocalSearchQuery(value: String) {
+        mutableUiState.update {
+            it.copy(localSearchQuery = value.take(128), localSearchError = null)
+        }
+    }
+
+    fun searchLocalConversations() {
+        val snapshot = mutableUiState.value
+        if (!snapshot.localSearchEnabled || snapshot.isLocalSearchRunning) return
+        val query = snapshot.localSearchQuery.trim()
+        if (query.length !in 2..128) {
+            mutableUiState.update { it.copy(localSearchError = "Enter 2–128 characters to search.") }
+            return
+        }
+        val tool = SearchSavedConversationsTool(repository, enabledByUser = snapshot.localSearchEnabled)
+        val invocation = ToolInvocation.userInitiated(SearchSavedConversationsTool.TOOL_ID, query)
+        val executor = AgentToolExecutor(listOf(tool))
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isLocalSearchRunning = true, localSearchError = null, localSearchResults = emptyList())
+            }
+            try {
+                when (val outcome = executor.execute(invocation)) {
+                    is ToolExecutionOutcome.Completed -> {
+                        val matches = outcome.output as? ToolOutput.ConversationMatches
+                            ?: error("Local search returned an unsupported result.")
+                        mutableUiState.update { it.copy(localSearchResults = matches.matches) }
+                    }
+                    is ToolExecutionOutcome.NeedsApproval -> {
+                        mutableUiState.update { it.copy(localSearchError = outcome.reason) }
+                    }
+                    is ToolExecutionOutcome.Denied -> {
+                        mutableUiState.update { it.copy(localSearchError = outcome.reason) }
+                    }
+                    is ToolExecutionOutcome.Failed -> {
+                        mutableUiState.update { it.copy(localSearchError = outcome.reason) }
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(localSearchError = error.message ?: "Local search failed.")
+                }
+            } finally {
+                mutableUiState.update { it.copy(isLocalSearchRunning = false) }
+            }
+        }
+    }
+
+    fun openSearchResult(conversationId: String) {
+        val state = mutableUiState.value
+        if (state.isGenerating || state.isDeletingConversation || state.isLocalSearchRunning) return
+        dismissTools()
+        openConversation(conversationId)
     }
 
     fun setMaxOutputTokens(value: Int) {
@@ -341,5 +435,6 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     private companion object {
         const val PREFERENCES_NAME = "nexora_generation_settings"
         const val KEY_MAX_OUTPUT_TOKENS = "max_output_tokens"
+        const val KEY_LOCAL_SEARCH_ENABLED = "local_conversation_search_enabled"
     }
 }

@@ -65,6 +65,41 @@ class LocalChatDatabaseInstrumentedTest {
         )
     }
 
+    @Test
+    fun searchReturnsRecentMatchingMessagesWithinRequestedLimit() {
+        database.createConversation("search-1", "Search", now = 1L)
+        database.addMessage(StoredMessage("match-old", "search-1", "user", "Local model first", 10L))
+        database.addMessage(StoredMessage("match-new", "search-1", "assistant", "LOCAL MODEL ready", 20L))
+        database.addMessage(StoredMessage("no-match", "search-1", "assistant", "Cloud only", 30L))
+        database.addMessage(StoredMessage("system-match", "search-1", "system", "Internal model instructions", 40L))
+
+        val results = database.searchMessages("model", limit = 1)
+
+        assertEquals(1, results.size)
+        assertEquals("match-new", results.single().messageId)
+        assertEquals("search-1", results.single().conversationId)
+    }
+
+    @Test
+    fun searchTreatsSqlWildcardCharactersAsLiteralQueryText() {
+        database.createConversation("search-2", "Literal search", now = 1L)
+        database.addMessage(StoredMessage("literal", "search-2", "user", "Transfer reached 100% locally", 10L))
+        database.addMessage(StoredMessage("different", "search-2", "assistant", "Transfer reached 100 percent", 20L))
+
+        val results = database.searchMessages("100%")
+
+        assertEquals(listOf("literal"), results.map { it.messageId })
+    }
+
+    @Test
+    fun searchOnlyScansTheBoundedPrefixOfEachMessage() {
+        database.createConversation("search-3", "Bounded search", now = 1L)
+        val content = "a".repeat(12_000) + "needle"
+        database.addMessage(StoredMessage("long-message", "search-3", "user", content, 10L))
+
+        assertTrue(database.searchMessages("needle").isEmpty())
+    }
+
     private companion object {
         const val DATABASE_NAME = "nexora_local.db"
     }

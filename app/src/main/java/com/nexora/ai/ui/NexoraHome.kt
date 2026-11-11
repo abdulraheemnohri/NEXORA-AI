@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -109,6 +111,9 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 }
                 TextButton(onClick = viewModel::newConversation, enabled = state.conversationReady && !state.isGenerating && !state.isDeletingConversation) {
                     Text("New chat", color = Color(0xFFB9A2FF))
+                }
+                TextButton(onClick = viewModel::openTools) {
+                    Text("Tools", color = Color(0xFF75D7E8))
                 }
                 TextButton(onClick = viewModel::openSettings) {
                     Text("Settings", color = Color(0xFFD4C8FF))
@@ -243,6 +248,87 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 TextButton(onClick = viewModel::dismissSettings) {
                     Text("Done")
                 }
+            }
+        )
+    }
+
+    if (state.showTools) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissTools,
+            title = { Text("Local tools") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Search saved conversations", color = Color.White)
+                            Text(
+                                "Read-only · searches message text stored on this device",
+                                color = Color(0xFF9B9CB2),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Switch(
+                            checked = state.localSearchEnabled,
+                            onCheckedChange = viewModel::setLocalSearchEnabled,
+                            enabled = !state.isLocalSearchRunning
+                        )
+                    }
+                    if (state.localSearchEnabled) {
+                        OutlinedTextField(
+                            value = state.localSearchQuery,
+                            onValueChange = viewModel::updateLocalSearchQuery,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Search message text") },
+                            supportingText = { Text("Recent 2,000 messages · first 12k characters each · 20 matches max") },
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = viewModel::searchLocalConversations,
+                            enabled = !state.isLocalSearchRunning && state.localSearchQuery.trim().length in 2..128
+                        ) {
+                            Text(if (state.isLocalSearchRunning) "Searching…" else "Search on device")
+                        }
+                        state.localSearchError?.let { error ->
+                            Text(error, color = Color(0xFFFF9EAD), style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (state.localSearchResults.isNotEmpty()) {
+                            LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
+                                items(state.localSearchResults, key = { it.messageId }) { match ->
+                                    TextButton(
+                                        onClick = { viewModel.openSearchResult(match.conversationId) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                            Text(
+                                                match.title,
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                "${match.role.uppercase()} · ${match.snippet}",
+                                                color = Color(0xFF9B9CB2),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (!state.isLocalSearchRunning && state.localSearchQuery.trim().length >= 2 && state.localSearchError == null) {
+                            Text("No matching saved messages.", color = Color(0xFF9B9CB2), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Text(
+                        "This tool is manually invoked by you. It does not send data outside the device or enable model-generated tool calls.",
+                        color = Color(0xFF70748C),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissTools) { Text("Done") }
             }
         )
     }

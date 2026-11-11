@@ -12,7 +12,8 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Bounded multi-turn replay through LiteRT-LM v0.18.1: up to 16 recent user/assistant messages and 12,000 characters, with a two-entry native-session LRU. The character budget is not a tokenizer-aware context guarantee.
 - Locally persisted generation settings for 256 / 512 / 1,024 / 2,048 maximum output tokens (default 512).
 - API 35 Android emulator instrumentation for SQLite reopen persistence, ordering, recent-conversation ordering, and foreign-key cascade deletion.
-- Risk-based agent tool approval policy.
+- Risk-based agent tool approval policy and a central `AgentToolExecutor` with one-shot, invocation-bound approval grants for future external/destructive handlers.
+- User-enabled, manually invoked read-only search across locally stored user/assistant message text (system messages are excluded); disabled by default, bounded to the most recent 2,000 messages, the first 12,000 characters per message, and 20 results, and never passed to the model as an automatic tool call.
 - Pinned LiteRT-LM Android dependency and Kotlin/Android toolchain.
 - LiteRT-LM CPU runtime adapter using the pinned callback API, streamed generation events, and per-request output-token limits.
 - Native callback completion gate: cancelling a collector stops UI delivery but keeps the generation lock until LiteRT-LM reports a terminal callback, preventing premature conversation reuse or unload.
@@ -80,3 +81,6 @@ Project source licensing must be finalized before public release. Gemma model te
 
 
 PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
+
+
+PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.

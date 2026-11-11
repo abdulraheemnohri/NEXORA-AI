@@ -29,6 +29,9 @@ class ChatRepository(private val database: LocalChatDatabase) {
     suspend fun messages(conversationId: String): List<StoredMessage> =
         withContext(Dispatchers.IO) { database.listMessages(conversationId) }
 
+    suspend fun searchConversations(query: String, limit: Int = 20): List<ConversationSearchHit> =
+        withContext(Dispatchers.IO) { database.searchMessages(query, limit) }
+
     suspend fun deleteConversation(conversationId: String): Boolean =
         withContext(Dispatchers.IO) { database.deleteConversation(conversationId) }
 }
