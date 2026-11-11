@@ -109,9 +109,7 @@ class AgentToolExecutorTest {
         val tool = CreateLocalNoteTool(store, enabledByUser = true)
         val invocation = ToolInvocation.userInitiated(
             CreateLocalNoteTool.TOOL_ID,
-            "
-Solar log
-R phase = 230 V"
+            "\nSolar log\nR phase = 230 V"
         )
         val executor = AgentToolExecutor(
             listOf(tool),
@@ -126,8 +124,7 @@ R phase = 230 V"
 
         assertTrue(approved is ToolExecutionOutcome.Completed)
         assertEquals("Solar log", store.notes.single().title)
-        assertEquals("Solar log
-R phase = 230 V", store.notes.single().content)
+        assertEquals("Solar log\nR phase = 230 V", store.notes.single().content)
         assertTrue(executor.execute(invocation, grant) is ToolExecutionOutcome.NeedsApproval)
         assertEquals(1, store.notes.size)
     }
