@@ -580,7 +580,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added three API 35 instrumentation tests for note create/list/delete, the 200-note quota, and version-1 migration preserving existing chats/messages.
 - Source diff was reviewed for secrets, model weights, dependency changes, Android permission changes, and prohibited inference backends. No new dependency, manifest permission, model artifact, secret, cloud AI service, Firebase, Docker, Ollama, llama.cpp, or external inference server was added.
 - Local Gradle build/lint/tests were not run: the available environment has JDK 21 but no Gradle executable, Android SDK, or ADB.
-- Exact-head GitHub Actions run #110 was queued for source head a3ce60d57fd880c2287a0d161ac9ef1f47fc1a59 at the time of this record; no CI pass is claimed here. The daily-progress commit triggers a new exact-head workflow for the final PR head.
+- Exact-head GitHub Actions run [#110](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096098409) was queued for source head a3ce60d57fd880c2287a0d161ac9ef1f47fc1a59. Run [#111](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096316246) was queued for the first daily-progress head 61a3660590517605d29b1da38f326008bc29851b. Neither had a final result at the time of this update; no PR #12 CI pass is claimed.
 - No real Gemma download/load/inference, offline-after-download, or physical Pixel 6 verification was performed.
 
 ### Safety and data handling
@@ -591,10 +591,11 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Commit / PR
 - Feature branch: feat/approved-local-notes.
-- Source implementation: 31842cb.
-- Approval test literal fix: bc55d9b.
-- Final source/docs consistency commit: 648b371.
-- Pull request: #12 — Explicitly approved local notes, draft and not merged.
+- Source implementation: https://github.com/abdulraheemnohri/NEXORA-AI/commit/31842cbecbf3269da90dac63b0086c1afc82e214.
+- Approval test literal fix: https://github.com/abdulraheemnohri/NEXORA-AI/commit/bc55d9bd417fb4a0d367a320650d49be20ad872b.
+- Final source/docs consistency commit: https://github.com/abdulraheemnohri/NEXORA-AI/commit/648b371f97aa59efb97adde35f4f9f6e5f18a027.
+- Daily-progress update base: https://github.com/abdulraheemnohri/NEXORA-AI/commit/61a3660590517605d29b1da38f326008bc29851b.
+- Pull request: https://github.com/abdulraheemnohri/NEXORA-AI/pull/12 — Explicitly approved local notes; draft and not merged.
 
 ### Next priority
 - Complete exact-head CI for PR #12 and resolve any build, lint, JVM, or API 35 instrumentation failures before marking it ready.

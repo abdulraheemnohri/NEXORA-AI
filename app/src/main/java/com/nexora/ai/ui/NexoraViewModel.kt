@@ -420,7 +420,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                 check(repository.deleteLocalNote(targetId)) { "This note is no longer available." }
                 refreshLocalNotes()
                 mutableUiState.update {
-                    it.copy(pendingDeleteLocalNoteId = null, localNoteStatus = "Note deleted from this device.")
+                    it.copy(pendingDeleteLocalNoteId = null, localNoteStatus = "Note removed from local notes.")
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
