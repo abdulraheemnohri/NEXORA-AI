@@ -350,7 +350,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                             it.copy(
                                 pendingLocalNoteContent = null,
                                 localNoteDraft = "",
-                                localNoteStatus = "Saved locally: \${created.title}"
+                                localNoteStatus = "Saved locally: " + created.title
                             )
                         }
                         refreshLocalNotes()

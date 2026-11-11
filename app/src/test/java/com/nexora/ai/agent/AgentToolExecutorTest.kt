@@ -87,7 +87,7 @@ class AgentToolExecutorTest {
 
         override suspend fun createLocalNote(title: String, content: String): LocalNote {
             val note = LocalNote(
-                id = "note-\${notes.size + 1}",
+                id = "note-" + (notes.size + 1),
                 title = title,
                 content = content,
                 createdAt = 1L,
@@ -109,7 +109,9 @@ class AgentToolExecutorTest {
         val tool = CreateLocalNoteTool(store, enabledByUser = true)
         val invocation = ToolInvocation.userInitiated(
             CreateLocalNoteTool.TOOL_ID,
-            "\\nSolar log\\nR phase = 230 V"
+            "
+Solar log
+R phase = 230 V"
         )
         val executor = AgentToolExecutor(
             listOf(tool),
@@ -124,7 +126,8 @@ class AgentToolExecutorTest {
 
         assertTrue(approved is ToolExecutionOutcome.Completed)
         assertEquals("Solar log", store.notes.single().title)
-        assertEquals("Solar log\\nR phase = 230 V", store.notes.single().content)
+        assertEquals("Solar log
+R phase = 230 V", store.notes.single().content)
         assertTrue(executor.execute(invocation, grant) is ToolExecutionOutcome.NeedsApproval)
         assertEquals(1, store.notes.size)
     }
