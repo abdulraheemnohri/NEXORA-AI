@@ -117,7 +117,6 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             setDefaultSetting("tasks.max_attempts", "2", now)
             setDefaultSetting("security.require_approval_for_writes", "true", now)
             setDefaultSetting("memory.allow_user_approved", "false", now)
-            setDefaultSetting("security.audit_enabled", "true", now)
             setDefaultToolPermission("local.conversation.search", ToolRisk.READ_ONLY, false, false, now)
             setDefaultToolPermission("local.notes.create", ToolRisk.LOCAL_WRITE, false, true, now)
             setDefaultToolPermission("local.file.write", ToolRisk.LOCAL_WRITE, false, true, now)
