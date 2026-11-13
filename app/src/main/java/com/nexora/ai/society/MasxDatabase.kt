@@ -108,18 +108,21 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     fun seedBuiltIns(now: Long = System.currentTimeMillis()) {
         writableDatabase.beginTransaction()
         try {
-            MasxAgentCatalog.builtIns.forEach { upsertAgent(it, now) }
-            setSetting("society.enabled", "true", now)
-            setSetting("society.mode", "SUPERVISOR", now)
-            setSetting("society.max_agents", "24", now)
-            setSetting("inference.max_concurrent", "1", now)
-            setSetting("tasks.max_attempts", "2", now)
-            setSetting("security.require_approval_for_writes", "true", now)
-            setToolPermission("local.conversation.search", ToolRisk.READ_ONLY, false, false)
-            setToolPermission("local.notes.create", ToolRisk.LOCAL_WRITE, false, true)
-            setToolPermission("local.file.write", ToolRisk.LOCAL_WRITE, false, true)
-            setToolPermission("android.device.read", ToolRisk.READ_ONLY, false, false)
-            upsertModel(ModelProfile(
+            val existingAgentIds=agents().map { it.id }.toSet()
+            MasxAgentCatalog.builtIns.filterNot { it.id in existingAgentIds }.forEach { upsertAgent(it, now) }
+            setDefaultSetting("society.enabled", "true", now)
+            setDefaultSetting("society.mode", "SUPERVISOR", now)
+            setDefaultSetting("society.max_agents", "24", now)
+            setDefaultSetting("inference.max_concurrent", "1", now)
+            setDefaultSetting("tasks.max_attempts", "2", now)
+            setDefaultSetting("security.require_approval_for_writes", "true", now)
+            setDefaultSetting("memory.allow_user_approved", "false", now)
+            setDefaultSetting("security.audit_enabled", "true", now)
+            setDefaultToolPermission("local.conversation.search", ToolRisk.READ_ONLY, false, false, now)
+            setDefaultToolPermission("local.notes.create", ToolRisk.LOCAL_WRITE, false, true, now)
+            setDefaultToolPermission("local.file.write", ToolRisk.LOCAL_WRITE, false, true, now)
+            setDefaultToolPermission("android.device.read", ToolRisk.READ_ONLY, false, false, now)
+            if (models().none { it.id=="gemma-4-e2b-it-litertlm" }) upsertModel(ModelProfile(
                 id="gemma-4-e2b-it-litertlm",name="Gemma 4 E2B IT",family="Gemma",
                 runtimeId="litertlm-android-v0.18.1",format="litertlm",
                 source="litert-community/gemma-4-E2B-it-litert-lm",localPath=null,
@@ -127,7 +130,6 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
                 capabilities=setOf("text-generation"),status=ModelInstallStatus.CANDIDATE,
                 checksum=null,license="Verify upstream license before distribution",updatedAt=now
             ))
-            setSetting("memory.allow_user_approved", "false", now)
             writableDatabase.setTransactionSuccessful()
         } finally { writableDatabase.endTransaction() }
     }
@@ -398,6 +400,19 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             put("state",state);put("detail",detail.take(2_000));put("created_at",System.currentTimeMillis())
         }
         writableDatabase.insertOrThrow("model_operations",null,values)
+    }
+
+    private fun setDefaultSetting(key: String,value: String,now: Long) {
+        val values=ContentValues().apply { put("setting_key",key);put("setting_value",value);put("updated_at",now) }
+        writableDatabase.insertWithOnConflict("settings",null,values,SQLiteDatabase.CONFLICT_IGNORE)
+    }
+
+    private fun setDefaultToolPermission(toolId: String,risk: ToolRisk,enabled: Boolean,approvalRequired: Boolean,now: Long) {
+        val values=ContentValues().apply {
+            put("tool_id",toolId);put("risk",risk.name);put("enabled",if(enabled)1 else 0)
+            put("approval_required",if(approvalRequired)1 else 0);put("updated_at",now)
+        }
+        writableDatabase.insertWithOnConflict("tool_permissions",null,values,SQLiteDatabase.CONFLICT_IGNORE)
     }
 
     fun setSetting(key: String, value: String, now: Long = System.currentTimeMillis()) {
