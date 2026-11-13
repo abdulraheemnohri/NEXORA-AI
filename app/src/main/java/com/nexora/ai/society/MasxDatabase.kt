@@ -438,6 +438,51 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertOrThrow("audit",null,v)
     }
 
+    fun auditEvents(limit: Int = 200): List<MasxAuditEvent> = readableDatabase.rawQuery(
+        "SELECT id,actor_id,action,subject_id,outcome,details,created_at FROM audit ORDER BY created_at DESC LIMIT ?",
+        arrayOf(limit.coerceIn(1,1000).toString())
+    ).use { c -> buildList {
+        while(c.moveToNext()) add(MasxAuditEvent(c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),c.getString(5),c.getLong(6)))
+    } }
+
+    fun metrics(limit: Int = 500): List<MasxMetricRecord> = readableDatabase.rawQuery(
+        "SELECT id,agent_id,task_id,metric,value,recorded_at FROM metrics ORDER BY recorded_at DESC LIMIT ?",
+        arrayOf(limit.coerceIn(1,2000).toString())
+    ).use { c -> buildList {
+        while(c.moveToNext()) add(MasxMetricRecord(c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getDouble(4),c.getLong(5)))
+    } }
+
+    fun createEvolutionProposal(title: String, description: String): String {
+        require(title.isNotBlank() && title.length<=120)
+        require(description.isNotBlank() && description.length<=8_000)
+        val id=UUID.randomUUID().toString()
+        val values=ContentValues().apply {
+            put("id",id);put("title",title.trim());put("description",description.trim())
+            put("status","PROPOSED");put("created_at",System.currentTimeMillis())
+        }
+        writableDatabase.insertOrThrow("evolution_proposals",null,values)
+        appendAudit("user","EVOLUTION_PROPOSED",id,"PENDING_REVIEW",title)
+        return id
+    }
+
+    fun evolutionProposals(limit: Int = 100): List<EvolutionProposal> = readableDatabase.rawQuery(
+        "SELECT id,title,description,status,created_at,reviewed_at FROM evolution_proposals ORDER BY created_at DESC LIMIT ?",
+        arrayOf(limit.coerceIn(1,500).toString())
+    ).use { c -> buildList {
+        while(c.moveToNext()) add(EvolutionProposal(c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getLong(4),if(c.isNull(5))null else c.getLong(5)))
+    } }
+
+    fun reviewEvolutionProposal(id: String, approved: Boolean, explicitlyReviewed: Boolean): Boolean {
+        require(explicitlyReviewed) { "Evolution proposals require explicit user review." }
+        val values=ContentValues().apply {
+            put("status",if(approved)"APPROVED_FOR_IMPLEMENTATION" else "REJECTED")
+            put("reviewed_at",System.currentTimeMillis())
+        }
+        val changed=writableDatabase.update("evolution_proposals",values,"id=? AND status='PROPOSED'",arrayOf(id))>0
+        if(changed) appendAudit("user","EVOLUTION_REVIEWED",id,if(approved)"USER_APPROVED" else "USER_REJECTED","Proposal review recorded; no code or security policy was changed.")
+        return changed
+    }
+
     fun recordMetric(metric: AgentMetric) {
         val v=ContentValues().apply {
             put("id",UUID.randomUUID().toString()); put("agent_id",metric.agentId); put("task_id",metric.taskId)
