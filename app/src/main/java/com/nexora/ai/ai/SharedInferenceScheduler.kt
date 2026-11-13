@@ -47,7 +47,7 @@ class SharedInferenceScheduler(private val maxWaiting: Int = 8) {
                 }
             }
         } catch (error: Throwable) {
-            if (waiting.get() >= position) waiting.decrementAndGet()
+            if (waitingSlot) waiting.decrementAndGet()
             throw error
         }
     }
