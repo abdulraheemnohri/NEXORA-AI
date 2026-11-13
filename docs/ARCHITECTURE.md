@@ -59,3 +59,10 @@ Tool invocation is separate from LiteRT-LM generation. Model text is never parse
 Approval grants are one-use and tied to the exact invocation object. A grant cannot be reused for another request or replayed after consumption. The current registered capability is a user-enabled, manually invoked, read-only search over user/assistant message text in the app-private SQLite conversation store; system-role messages are excluded. It runs through the repository IO boundary, uses bound SQL parameters, limits query length, scans at most the most recent 2,000 user/assistant messages and the first 12,000 characters of each, and limits result count, and does not transmit data outside the device.
 
 No external, destructive, or local-write tool is registered. The approval primitive is infrastructure, not permission to execute arbitrary code. Any future side-effect tool must have a concrete handler, an explicit user-facing review step, immediate policy re-check, and focused tests before registration.
+
+
+## MAS-X application services
+
+`NexoraApplication` owns the single `LiteRtLocalModelRuntime` and `SharedInferenceScheduler`. Both chat and MAS-X route generation through this scheduler, which serializes heavyweight inference and bounds the waiting queue. MAS-X uses a separate `SQLiteOpenHelper` database so its schema can evolve without modifying existing conversation data.
+
+The society includes an agent catalog, LAMP message envelopes, task state machine and recovery, scope-filtered memory, declarative skills, tool permission metadata, model catalog/roles, resource governor, audit, metrics and user-reviewed evolution proposals. See [MAS-X implementation](MASX_IMPLEMENTATION.md) for the current implemented/unsupported boundary.
