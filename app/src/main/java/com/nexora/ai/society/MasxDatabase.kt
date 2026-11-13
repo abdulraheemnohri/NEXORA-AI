@@ -165,7 +165,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     ).use { c -> buildList { while (c.moveToNext()) add(c.toTask()) } }
 
     fun recoverableTasks(): List<MasxTask> = readableDatabase.rawQuery(
-        "SELECT id,title,input,status,priority,created_at,updated_at,assigned_agent_id,parent_task_id,attempt,max_attempts,result,error FROM tasks WHERE status IN ('CREATED','PLANNING','READY','ASSIGNED','RUNNING','RECOVERING','REWORK','REVIEW') ORDER BY priority DESC,created_at ASC",
+        "SELECT id,title,input,status,priority,created_at,updated_at,assigned_agent_id,parent_task_id,attempt,max_attempts,result,error FROM tasks WHERE status IN ('CREATED','PLANNING','READY','ASSIGNED','RUNNING','RECOVERING','REWORK','REVIEW','FAILED') ORDER BY priority DESC,created_at ASC",
         null
     ).use { c -> buildList { while (c.moveToNext()) add(c.toTask()) } }
 
