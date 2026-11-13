@@ -52,6 +52,20 @@ class MasxGovernanceInstrumentedTest {
         assertEquals(AgentStatus.ACTIVE,factory.approveAndActivate(agent.id,true).status)
     }
 
+    @Test fun updatingAgentAndModelPreservesForeignKeyRoleAssignments() {
+        val agent=database.agents().first { it.id=="engineering.developer" }
+        val now=System.currentTimeMillis()
+        val task=MasxTask("assigned-task","Assigned","Keep assignment",TaskStatus.CREATED,TaskPriority.NORMAL,now,now,assignedAgentId=agent.id)
+        database.createTask(task)
+        database.upsertAgent(agent.copy(status=AgentStatus.PAUSED,version=agent.version+1))
+        assertEquals(agent.id,database.task(task.id)?.assignedAgentId)
+
+        val model=database.models().single()
+        database.assignModelRole(ModelRole.AGENT_SOCIETY,model.id)
+        database.upsertModel(model.copy(status=ModelInstallStatus.READY,localPath="/private/model.litertlm",updatedAt=now))
+        assertEquals(model.id,database.modelRoleAssignments()[ModelRole.AGENT_SOCIETY])
+    }
+
     @Test fun evolutionReviewIsExplicitAndDoesNotExecuteChanges() {
         val id=database.createEvolutionProposal("Optimize prompts","Compare prompt variants with a regression test set.")
         try {\n            database.reviewEvolutionProposal(id,true,explicitlyReviewed=false)\n            throw AssertionError("Explicit review is required.")\n        } catch (_: IllegalArgumentException) { }\n        assertEquals("PROPOSED",database.evolutionProposals().single().status)\n        assertTrue(database.reviewEvolutionProposal(id,true,explicitlyReviewed=true))\n        assertEquals("APPROVED_FOR_IMPLEMENTATION",database.evolutionProposals().single().status)
