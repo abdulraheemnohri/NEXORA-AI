@@ -224,7 +224,12 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertOrThrow("messages", null, values)
     }
 
-    fun expireMessages(now: Long = System.currentTimeMillis()): Int {\n        val values=ContentValues().apply { put("delivery_state","EXPIRED"); put("last_error","Message TTL expired") }\n        return writableDatabase.update("messages",values,"delivery_state=? AND expires_at IS NOT NULL AND expires_at<=?",arrayOf("PENDING",now.toString()))\n    }\n\n    fun pendingMessages(now: Long = System.currentTimeMillis(), limit: Int = 100): List<LampMessage> =
+    fun expireMessages(now: Long = System.currentTimeMillis()): Int {
+        val values=ContentValues().apply { put("delivery_state","EXPIRED"); put("last_error","Message TTL expired") }
+        return writableDatabase.update("messages",values,"delivery_state=? AND expires_at IS NOT NULL AND expires_at<=?",arrayOf("PENDING",now.toString()))
+    }
+
+    fun pendingMessages(now: Long = System.currentTimeMillis(), limit: Int = 100): List<LampMessage> =
         readableDatabase.rawQuery(
             """SELECT id,task_id,correlation_id,sender,recipient,type,priority,created_at,expires_at,payload,attempt
                FROM messages WHERE delivery_state='PENDING' AND (expires_at IS NULL OR expires_at>?)
@@ -270,7 +275,12 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    fun allMemories(limit: Int = 200): List<AgentMemory> = readableDatabase.rawQuery(\n        "SELECT id,scope,owner_id,memory_key,value,provenance,created_at,updated_at FROM memories ORDER BY updated_at DESC LIMIT ?",\n        arrayOf(limit.coerceIn(1,500).toString())\n    ).use { c -> buildList { while(c.moveToNext()) add(c.toMemory()) } }\n\n    fun putMemory(memory: AgentMemory, explicitlyUserApproved: Boolean = false) {
+    fun allMemories(limit: Int = 200): List<AgentMemory> = readableDatabase.rawQuery(
+        "SELECT id,scope,owner_id,memory_key,value,provenance,created_at,updated_at FROM memories ORDER BY updated_at DESC LIMIT ?",
+        arrayOf(limit.coerceIn(1,500).toString())
+    ).use { c -> buildList { while(c.moveToNext()) add(c.toMemory()) } }
+
+    fun putMemory(memory: AgentMemory, explicitlyUserApproved: Boolean = false) {
         require(memory.scope != MemoryScope.USER_APPROVED || explicitlyUserApproved) {
             "User-approved memory can only be written through an explicit approval path."
         }
@@ -321,7 +331,11 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertWithOnConflict("tool_permissions",null,values,SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    fun toolPermissions(): List<ToolPermissionRecord> = readableDatabase.rawQuery(\n        "SELECT tool_id,risk,enabled,approval_required FROM tool_permissions ORDER BY tool_id",null\n    ).use { c -> buildList { while(c.moveToNext()) add(ToolPermissionRecord(c.getString(0),ToolRisk.valueOf(c.getString(1)),c.getInt(2)==1,c.getInt(3)==1)) } }\n\n    fun toolAllowed(toolId: String, risk: ToolRisk): Boolean = readableDatabase.rawQuery(
+    fun toolPermissions(): List<ToolPermissionRecord> = readableDatabase.rawQuery(
+        "SELECT tool_id,risk,enabled,approval_required FROM tool_permissions ORDER BY tool_id",null
+    ).use { c -> buildList { while(c.moveToNext()) add(ToolPermissionRecord(c.getString(0),ToolRisk.valueOf(c.getString(1)),c.getInt(2)==1,c.getInt(3)==1)) } }
+
+    fun toolAllowed(toolId: String, risk: ToolRisk): Boolean = readableDatabase.rawQuery(
         "SELECT enabled,risk,approval_required FROM tool_permissions WHERE tool_id=?",arrayOf(toolId)
     ).use { c -> c.moveToFirst() && c.getInt(0)==1 && c.getString(1)==risk.name }
 
