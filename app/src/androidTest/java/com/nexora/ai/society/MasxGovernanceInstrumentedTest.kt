@@ -54,6 +54,6 @@ class MasxGovernanceInstrumentedTest {
 
     @Test fun evolutionReviewIsExplicitAndDoesNotExecuteChanges() {
         val id=database.createEvolutionProposal("Optimize prompts","Compare prompt variants with a regression test set.")
-        assertFalse(database.reviewEvolutionProposal(id,true,explicitlyReviewed=false))
+        try {\n            database.reviewEvolutionProposal(id,true,explicitlyReviewed=false)\n            throw AssertionError("Explicit review is required.")\n        } catch (_: IllegalArgumentException) { }\n        assertEquals("PROPOSED",database.evolutionProposals().single().status)\n        assertTrue(database.reviewEvolutionProposal(id,true,explicitlyReviewed=true))\n        assertEquals("APPROVED_FOR_IMPLEMENTATION",database.evolutionProposals().single().status)
     }
 }
