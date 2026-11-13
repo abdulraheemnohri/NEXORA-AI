@@ -27,8 +27,9 @@ class MasxMessageBus(private val database: MasxDatabase) {
         database.expireMessages()
         var delivered = 0
         database.pendingMessages(limit = limit).forEach { message ->
-            val recipients = message.recipientAgentId?.let { listOfNotNull(it to handlers[it]) }
-                ?: handlers.entries.map { it.key to it.value }
+            val recipients: List<Pair<String, LampHandler>> = message.recipientAgentId?.let { id ->
+                handlers[id]?.let { listOf(id to it) } ?: emptyList()
+            } ?: handlers.entries.map { it.key to it.value }
             if (recipients.isEmpty()) {
                 database.failMessage(message.id, "No active recipient handler is registered.")
             } else {
