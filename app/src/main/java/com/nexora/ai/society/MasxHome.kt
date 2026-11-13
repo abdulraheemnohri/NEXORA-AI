@@ -183,8 +183,16 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                 Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text("Selected task · ${task?.status?.name ?: "loading"}",color=MasxAccent)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Button(onClick=viewModel::runSelectedTask,enabled=!state.isBusy && state.modelReady && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED) { Text("Run locally") }
-                        TextButton(onClick=viewModel::cancelSelectedTask,enabled=!state.isBusy && task?.status !in setOf(TaskStatus.COMPLETED,TaskStatus.CANCELLED)) { Text("Cancel") }
+                        Button(onClick=viewModel::runSelectedTask,enabled=!state.isBusy && state.modelReady && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED && task?.status != TaskStatus.PAUSED) { Text("Run locally") }
+                        TextButton(onClick=viewModel::pauseSelectedTask,enabled=!state.isBusy && (task?.status==TaskStatus.READY || task?.status==TaskStatus.ASSIGNED || task?.status==TaskStatus.RUNNING || task?.status==TaskStatus.PLANNING)) { Text("Pause") }
+                        TextButton(onClick=viewModel::resumeSelectedTask,enabled=!state.isBusy && task?.status==TaskStatus.PAUSED) { Text("Resume") }
+                        TextButton(onClick=viewModel::cancelSelectedTask,enabled=!state.isBusy && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED) { Text("Cancel") }
+                    }
+                    Text("Add prerequisite task (selected task waits until it completes)",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
+                    Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                        state.tasks.filter { it.id!=selected && it.status!=TaskStatus.COMPLETED && it.status!=TaskStatus.CANCELLED }.forEach { dependency ->
+                            FilterChip(selected=false,onClick={viewModel.addTaskDependency(selected,dependency.id)},label={Text(dependency.title.take(18))})
+                        }
                     }
                     state.result?.let { Text(it,color=Color.White,style=MaterialTheme.typography.bodySmall) }
                 }
