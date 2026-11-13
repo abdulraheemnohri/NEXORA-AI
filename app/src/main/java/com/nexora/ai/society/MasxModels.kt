@@ -142,6 +142,21 @@ data class ModelProfile(
     val status: ModelInstallStatus, val checksum: String?, val license: String?, val updatedAt: Long
 )
 
+data class MasxAuditEvent(
+    val id: String, val actorId: String?, val action: String, val subjectId: String?,
+    val outcome: String, val details: String, val createdAt: Long
+)
+
+data class MasxMetricRecord(
+    val id: String, val agentId: String, val taskId: String?, val metric: String,
+    val value: Double, val recordedAt: Long
+)
+
+data class EvolutionProposal(
+    val id: String, val title: String, val description: String, val status: String,
+    val createdAt: Long, val reviewedAt: Long?
+)
+
 data class ToolPermissionRecord(\n    val toolId: String, val risk: ToolRisk, val enabled: Boolean, val approvalRequired: Boolean\n)\n\ndata class AgentMetric(
     val agentId: String,
     val taskId: String?,
