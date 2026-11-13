@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexora.ai.NexoraApplication
 import com.nexora.ai.ai.RuntimeState
+import com.nexora.ai.ai.Gemma4E2BModelDownloader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -62,7 +63,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     if (model != null) {
                         database.upsertModel(model.copy(
                             status=ModelInstallStatus.READY,
-                            localPath=application.filesDir.resolve("models/Gemma-4-E2B-it.litertlm").absolutePath,
+                            localPath=application.filesDir.resolve("models/${Gemma4E2BModelDownloader.MODEL_FILE_NAME}").absolutePath,
                             updatedAt=System.currentTimeMillis()
                         ))
                         database.assignModelRole(ModelRole.MAIN_ASSISTANT,model.id)
