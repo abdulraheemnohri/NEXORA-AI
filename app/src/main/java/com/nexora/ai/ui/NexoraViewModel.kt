@@ -19,6 +19,7 @@ import com.nexora.ai.ai.GenerationSettings
 import com.nexora.ai.data.ChatRepository
 import com.nexora.ai.data.ConversationSearchHit
 import com.nexora.ai.data.LocalChatDatabase
+import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
