@@ -85,7 +85,7 @@ class MasxOrchestrator(
         }.recoverCatching { error ->
             withContext(Dispatchers.IO) {
                 val current = database.task(taskId)
-                if (current != null && current.status in setOf(TaskStatus.RUNNING, TaskStatus.ASSIGNED)) {
+                if (current != null && current.status in setOf(TaskStatus.RUNNING, TaskStatus.ASSIGNED, TaskStatus.REVIEW)) {
                     val nextAttempt = current.attempt + 1
                     database.transitionTask(taskId, TaskStatus.FAILED, error = error.message ?: "Execution failed", attempt = nextAttempt)
                     if (nextAttempt <= current.maxAttempts) {
@@ -100,7 +100,7 @@ class MasxOrchestrator(
 
     suspend fun recoverInterruptedTasks(): Int = withContext(Dispatchers.IO) {
         var recovered = 0
-        database.recoverableTasks().filter { it.status == TaskStatus.RUNNING || it.status == TaskStatus.ASSIGNED }.forEach { task ->
+        database.recoverableTasks().forEach { task ->
             runCatching {
                 database.transitionTask(task.id, TaskStatus.RECOVERING, error = "Recovered after process interruption.")
                 database.transitionTask(task.id, TaskStatus.READY)
