@@ -165,7 +165,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     ).use { c -> buildList { while (c.moveToNext()) add(c.toTask()) } }
 
     fun recoverableTasks(): List<MasxTask> = readableDatabase.rawQuery(
-        "SELECT id,title,input,status,priority,created_at,updated_at,assigned_agent_id,parent_task_id,attempt,max_attempts,result,error FROM tasks WHERE status IN ('CREATED','PLANNING','READY','ASSIGNED','RUNNING','RECOVERING','REWORK') ORDER BY priority DESC,created_at ASC",
+        "SELECT id,title,input,status,priority,created_at,updated_at,assigned_agent_id,parent_task_id,attempt,max_attempts,result,error FROM tasks WHERE status IN ('CREATED','PLANNING','READY','ASSIGNED','RUNNING','RECOVERING','REWORK','REVIEW') ORDER BY priority DESC,created_at ASC",
         null
     ).use { c -> buildList { while (c.moveToNext()) add(c.toTask()) } }
 
@@ -402,7 +402,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             TaskStatus.CREATED to setOf(TaskStatus.PLANNING,TaskStatus.READY,TaskStatus.CANCELLED),
             TaskStatus.PLANNING to setOf(TaskStatus.READY,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED),
             TaskStatus.READY to setOf(TaskStatus.ASSIGNED,TaskStatus.CANCELLED,TaskStatus.PAUSED),
-            TaskStatus.ASSIGNED to setOf(TaskStatus.RUNNING,TaskStatus.WAITING_APPROVAL,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED),
+            TaskStatus.ASSIGNED to setOf(TaskStatus.RUNNING,TaskStatus.WAITING_APPROVAL,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED,TaskStatus.RECOVERING),
             TaskStatus.RUNNING to setOf(TaskStatus.REVIEW,TaskStatus.WAITING_APPROVAL,TaskStatus.FAILED,TaskStatus.PAUSED,TaskStatus.CANCELLED,TaskStatus.RECOVERING),
             TaskStatus.WAITING_APPROVAL to setOf(TaskStatus.ASSIGNED,TaskStatus.RUNNING,TaskStatus.CANCELLED,TaskStatus.FAILED),
             TaskStatus.REVIEW to setOf(TaskStatus.COMPLETED,TaskStatus.REWORK,TaskStatus.FAILED),
