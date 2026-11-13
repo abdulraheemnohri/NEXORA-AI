@@ -17,6 +17,8 @@ data class MasxUiState(
     val tasks: List<MasxTask> = emptyList(),
     val skills: List<SkillManifest> = emptyList(),
     val toolPermissions: List<ToolPermissionRecord> = emptyList(),
+    val models: List<ModelProfile> = emptyList(),
+    val modelRoles: Map<ModelRole,String> = emptyMap(),
     val memories: List<AgentMemory> = emptyList(),
     val queuedMessages: Int = 0,
     val settings: Map<String,String> = emptyMap(),
@@ -54,7 +56,21 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             app.localModelRuntime.state.collect { state ->
-                mutableState.update { it.copy(modelReady = state is RuntimeState.Ready) }
+                val ready = state is RuntimeState.Ready
+                if (ready) {
+                    val model = database.models().firstOrNull { it.id == "gemma-4-e2b-it-litertlm" }
+                    if (model != null) {
+                        database.upsertModel(model.copy(
+                            status=ModelInstallStatus.READY,
+                            localPath=application.filesDir.resolve("models/Gemma-4-E2B-it.litertlm").absolutePath,
+                            updatedAt=System.currentTimeMillis()
+                        ))
+                        database.assignModelRole(ModelRole.MAIN_ASSISTANT,model.id)
+                        database.assignModelRole(ModelRole.AGENT_SOCIETY,model.id)
+                    }
+                }
+                mutableState.update { it.copy(modelReady = ready) }
+                refresh()
             }
         }
     }
@@ -68,6 +84,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     tasks = snapshot.tasks,
                     skills = database.skills(),
                     toolPermissions = database.toolPermissions(),
+                    models = database.models(),
+                    modelRoles = database.modelRoleAssignments(),
                     memories = database.allMemories(),
                     queuedMessages = database.pendingMessages().size,
                     settings = snapshot.settings,
@@ -222,6 +240,14 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
             val record = database.toolPermissions().firstOrNull { it.toolId == toolId } ?: return@launch
             database.setToolPermission(record.toolId,record.risk,enabled,record.approvalRequired)
             database.appendAudit("user","TOOL_PERMISSION_CHANGED",toolId,"SUCCESS","enabled=$enabled")
+            refresh()
+        }
+    }
+
+    fun assignModelRole(role: ModelRole, modelId: String) {
+        viewModelScope.launch {
+            runCatching { database.assignModelRole(role,modelId) }
+                .onFailure { error -> mutableState.update { it.copy(error=error.message) } }
             refresh()
         }
     }
