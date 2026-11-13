@@ -22,6 +22,7 @@ data class MasxUiState(
     val toolPermissions: List<ToolPermissionRecord> = emptyList(),
     val models: List<ModelProfile> = emptyList(),
     val modelRoles: Map<ModelRole, String> = emptyMap(),
+    val compatibility: Map<String, ModelCompatibilityResult> = emptyMap(),
     val memories: List<AgentMemory> = emptyList(),
     val auditEvents: List<MasxAuditEvent> = emptyList(),
     val metrics: List<MasxMetricRecord> = emptyList(),
@@ -45,6 +46,7 @@ private data class MasxLoadedData(
     val tools: List<ToolPermissionRecord>,
     val models: List<ModelProfile>,
     val roles: Map<ModelRole, String>,
+    val compatibility: Map<String, ModelCompatibilityResult>,
     val memories: List<AgentMemory>,
     val auditEvents: List<MasxAuditEvent>,
     val metrics: List<MasxMetricRecord>,
@@ -126,6 +128,13 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     tools = database.toolPermissions(),
                     models = database.models(),
                     roles = database.modelRoleAssignments(),
+                    compatibility = database.models().associate { model ->
+                        model.id to MasxModelCompatibility.assess(
+                            model, governor.snapshot(), "litertlm-android-v0.18.1",
+                            model.localPath?.let { java.io.File(it).isFile } == true,
+                            application.filesDir.usableSpace
+                        )
+                    },
                     memories = database.allMemories(),
                     auditEvents = database.auditEvents(),
                     metrics = database.metrics(),
@@ -141,6 +150,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     toolPermissions = loaded.tools,
                     models = loaded.models,
                     modelRoles = loaded.roles,
+                    compatibility = loaded.compatibility,
                     memories = loaded.memories,
                     auditEvents = loaded.auditEvents,
                     metrics = loaded.metrics,
