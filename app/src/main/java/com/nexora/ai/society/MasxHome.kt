@@ -180,7 +180,7 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                 Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text("Selected task · ${task?.status?.name ?: "loading"}",color=MasxAccent)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Button(onClick=viewModel::runSelectedTask,enabled=!state.isBusy && state.modelReady && task?.status !in setOf(TaskStatus.COMPLETED,TaskStatus.CANCELLED)) { Text("Run locally") }
+                        Button(onClick=viewModel::runSelectedTask,enabled=!state.isBusy && state.modelReady && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED) { Text("Run locally") }
                         TextButton(onClick=viewModel::cancelSelectedTask,enabled=!state.isBusy && task?.status !in setOf(TaskStatus.COMPLETED,TaskStatus.CANCELLED)) { Text("Cancel") }
                     }
                     state.result?.let { Text(it,color=Color.White,style=MaterialTheme.typography.bodySmall) }
