@@ -294,6 +294,14 @@ private fun SkillsPanel(
                         if(skill.status==SkillStatus.DRAFT || skill.status==SkillStatus.DISABLED) {
                             TextButton(onClick={viewModel.approveSkill(skill.id)}) { Text("Validate and approve") }
                         }
+                        if(skill.status==SkillStatus.ACTIVE) {
+                            Text("Assign to active agent",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
+                            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                state.agents.filter { it.status==AgentStatus.ACTIVE }.forEach { agent ->
+                                    FilterChip(selected=false,onClick={viewModel.assignSkillToAgent(skill.id,agent.id)},label={Text(agent.name)})
+                                }
+                            }
+                        }
                     }
                 }
             }
