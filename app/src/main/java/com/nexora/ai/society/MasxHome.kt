@@ -403,7 +403,7 @@ private fun SettingsPanel(state: MasxUiState,viewModel: MasxViewModel) {
         SettingSwitch("Society enabled","society.enabled",state,viewModel)
         SettingSwitch("Allow user-approved shared memory","memory.allow_user_approved",state,viewModel)
         SettingSwitch("Require approval for local writes","security.require_approval_for_writes",state,viewModel)
-        SettingSwitch("Enable audit logging","security.audit_enabled",state,viewModel,defaultValue=true)
+        Text("Security audit logging is always enabled in this build.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
         Text("Society mode",color=Color.White,fontWeight=FontWeight.SemiBold)
         val modes=listOf("SUPERVISOR","TEAM","DEBATE","RESEARCH","DEVELOPER","RECOVERY","SIMULATION")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
