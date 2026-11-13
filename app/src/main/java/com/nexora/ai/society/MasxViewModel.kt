@@ -23,6 +23,9 @@ data class MasxUiState(
     val models: List<ModelProfile> = emptyList(),
     val modelRoles: Map<ModelRole, String> = emptyMap(),
     val memories: List<AgentMemory> = emptyList(),
+    val auditEvents: List<MasxAuditEvent> = emptyList(),
+    val metrics: List<MasxMetricRecord> = emptyList(),
+    val evolutionProposals: List<EvolutionProposal> = emptyList(),
     val queuedMessages: Int = 0,
     val settings: Map<String, String> = emptyMap(),
     val modelReady: Boolean = false,
@@ -43,6 +46,9 @@ private data class MasxLoadedData(
     val models: List<ModelProfile>,
     val roles: Map<ModelRole, String>,
     val memories: List<AgentMemory>,
+    val auditEvents: List<MasxAuditEvent>,
+    val metrics: List<MasxMetricRecord>,
+    val proposals: List<EvolutionProposal>,
     val queuedMessages: Int
 )
 
@@ -121,6 +127,9 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     models = database.models(),
                     roles = database.modelRoleAssignments(),
                     memories = database.allMemories(),
+                    auditEvents = database.auditEvents(),
+                    metrics = database.metrics(),
+                    proposals = database.evolutionProposals(),
                     queuedMessages = database.pendingMessages().size
                 )
             }
@@ -133,6 +142,9 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     models = loaded.models,
                     modelRoles = loaded.roles,
                     memories = loaded.memories,
+                    auditEvents = loaded.auditEvents,
+                    metrics = loaded.metrics,
+                    evolutionProposals = loaded.proposals,
                     queuedMessages = loaded.queuedMessages,
                     settings = loaded.snapshot.settings,
                     resources = governor.snapshot()
@@ -350,6 +362,26 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
             result.onFailure { error ->
                 mutableState.update { it.copy(error = error.message) }
             }
+            refresh()
+        }
+    }
+
+    fun createEvolutionProposal(title: String, description: String) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { database.createEvolutionProposal(title,description) }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message ?: "Unable to save evolution proposal.") } }
+            refresh()
+        }
+    }
+
+    fun reviewEvolutionProposal(id: String, approved: Boolean) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { check(database.reviewEvolutionProposal(id,approved,explicitlyReviewed=true)) { "Proposal was already reviewed or no longer exists." } }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message ?: "Unable to review proposal.") } }
             refresh()
         }
     }
