@@ -545,3 +545,17 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
 - Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
 - Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
+
+
+## MAS-X core foundation branch — `feat/masx-core-foundation`
+
+- Added a separate MAS-X SQLite store with agent, task, dependency, LAMP message, memory, skill, tool permission, checkpoint, settings, audit, metrics, model registry, role assignment and evolution proposal tables.
+- Added 18 declarative agent profiles across 12 departments and a user-approved temporary agent factory.
+- Added LAMP v1 encoding/decoding, TTL expiry, durable delivery acknowledgements and bounded retries.
+- Added a shared app-scoped LiteRT-LM runtime and inference scheduler used by chat and society requests.
+- Added supervisor task routing to one specialist worker, task state validation, checkpoints, bounded retries and startup recovery.
+- Added scope-filtered memory, explicit user-approved memory, skill static validation/approval, model role registry, compatibility preflight, Android RAM/battery/thermal governor, audit and metrics screens.
+- Added society UI tabs for Overview, Agents, Tasks, Models, Memory, Skills, Tools, Security, Performance, Evolution and Settings.
+- Added JVM and Android instrumentation tests for catalog, skill validation, compatibility, scheduler serialization, LAMP, database, memory isolation, task orchestration and governance.
+- Tests have not yet been verified by a completed exact-head GitHub Actions run. Physical Pixel 6 verification is not claimed.
+- Remaining: full LLM planner/debate, richer task DAG execution, executable skill sandbox (not supported by this instruction-only design), actual additional tool handlers, dynamic multi-model loading, full benchmark suite, and physical device profiling.
