@@ -103,6 +103,10 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             setSetting("inference.max_concurrent", "1", now)
             setSetting("tasks.max_attempts", "2", now)
             setSetting("security.require_approval_for_writes", "true", now)
+            setToolPermission("local.conversation.search", ToolRisk.READ_ONLY, false, false)
+            setToolPermission("local.notes.create", ToolRisk.LOCAL_WRITE, false, true)
+            setToolPermission("local.file.write", ToolRisk.LOCAL_WRITE, false, true)
+            setToolPermission("android.device.read", ToolRisk.READ_ONLY, false, false)
             setSetting("memory.allow_user_approved", "false", now)
             writableDatabase.setTransactionSuccessful()
         } finally { writableDatabase.endTransaction() }
@@ -317,7 +321,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertWithOnConflict("tool_permissions",null,values,SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    fun toolAllowed(toolId: String, risk: ToolRisk): Boolean = readableDatabase.rawQuery(
+    fun toolPermissions(): List<ToolPermissionRecord> = readableDatabase.rawQuery(\n        "SELECT tool_id,risk,enabled,approval_required FROM tool_permissions ORDER BY tool_id",null\n    ).use { c -> buildList { while(c.moveToNext()) add(ToolPermissionRecord(c.getString(0),ToolRisk.valueOf(c.getString(1)),c.getInt(2)==1,c.getInt(3)==1)) } }\n\n    fun toolAllowed(toolId: String, risk: ToolRisk): Boolean = readableDatabase.rawQuery(
         "SELECT enabled,risk,approval_required FROM tool_permissions WHERE tool_id=?",arrayOf(toolId)
     ).use { c -> c.moveToFirst() && c.getInt(0)==1 && c.getString(1)==risk.name }
 
