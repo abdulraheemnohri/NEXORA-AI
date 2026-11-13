@@ -369,6 +369,21 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteMemory(memoryId: String) {
+        if (memoryId.isBlank()) return
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    check(database.deleteMemory(memoryId)) { "This memory record is no longer available." }
+                }
+            }
+            result.onFailure { error ->
+                mutableState.update { it.copy(error = error.message ?: "Unable to delete memory.") }
+            }
+            refresh()
+        }
+    }
+
     fun saveApprovedMemory(key: String, value: String) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {

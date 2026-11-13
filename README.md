@@ -95,6 +95,7 @@ The Android app now includes a local society control center with:
 - Persistent task state transitions, checkpoints and startup recovery.
 - A single application-scoped LiteRT-LM runtime and shared inference scheduler used by chat and MAS-X.
 - Agent/task memory scopes, user-approved shared memory, skill validation and approval.
+- User-confirmed deletion of individual MAS-X memory records, with audit metadata that never copies memory values.
 - Tool risk metadata, model registry/roles, resource preflight, audit trail, performance metrics and evolution proposal review.
 
 Open the **MAS-X** button in the chat header to access the society screens.

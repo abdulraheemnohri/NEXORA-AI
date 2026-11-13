@@ -557,7 +557,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added scope-filtered memory, explicit user-approved memory, skill static validation/approval, model role registry, compatibility preflight, Android RAM/battery/thermal governor, audit and metrics screens.
 - Added society UI tabs for Overview, Agents, Tasks, Models, Memory, Skills, Tools, Security, Performance, Evolution and Settings.
 - Added JVM and Android instrumentation tests for catalog, skill validation, compatibility, scheduler serialization, LAMP, database, memory isolation, task orchestration and governance.
-- Tests have not yet been verified by a completed exact-head GitHub Actions run. Physical Pixel 6 verification is not claimed.
+- At the initial MAS-X branch checkpoint, tests had not yet been verified by a completed exact-head run. The later 2026-11-14 entries record subsequent CI results. Physical Pixel 6 verification is not claimed.
 - Remaining: full LLM planner/debate, richer task DAG execution, executable skill sandbox (not supported by this instruction-only design), actual additional tool handlers, dynamic multi-model loading, full benchmark suite, and physical device profiling.
 
 
@@ -608,3 +608,42 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Confirm the new exact-head Android-test Kotlin compilation, JVM tests and API 35 instrumentation all pass. Fix any further test/runtime failures from their logs before merge.
 - After CI and conflict review, merge PR #13 only when its full change set has been reviewed.
 - Next product gate remains real Gemma 4 E2B inference, offline operation, cancellation/native callback drain and resource measurements on a physical 6 GB Pixel 6.
+
+
+## 2026-11-14 — Add user-confirmed MAS-X memory deletion
+
+### Repository checkpoint
+- Re-inspected repository metadata, current main, open issues, recent commits, all branch heads, open pull requests and latest Actions before editing.
+- Main remained `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`. No standalone open issues were returned. Fifteen branch heads were enumerated and preserved.
+- Open PRs at this run: #1, #4, #12 and #13. PR #1 and #4 retain unique commits and were not modified. PR #12 remains open on `feat/approved-local-notes`. PR #13 is the MAS-X foundation branch, 98 commits ahead and zero behind main before this increment.
+- Exact-head PR #13 run [#133](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43506372565) passed debug APK assembly, Android lint, JVM unit tests, KVM setup and all Android instrumentation tests on API 35 before the memory-deletion follow-up.
+- PR #12 exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) remained queued. No source failure was established from that queued run.
+
+### Delivered on `feat/masx-core-foundation`
+- Added a transactional `MasxDatabase.deleteMemory` operation using a bound ID parameter.
+- The operation writes a deletion audit event in the same SQLite transaction and records only the record ID/action metadata, never the memory value.
+- Added a per-record Delete action to the MAS-X Memory screen with a confirmation dialog showing the selected memory key.
+- Added a ViewModel IO-bound delete operation and stale-record handling.
+- Added an API 35 instrumentation test proving the selected record is removed, an unrelated shared-memory record is preserved, deletion is idempotently rejected after the first removal, and private memory content is not copied into the audit details.
+- Updated README, roadmap, implementation/security docs and this progress record.
+
+### Verification actually run
+- Repository source was inspected and exact source transformations were checked before creating the Git commit.
+- This automation environment has no Gradle executable or Android SDK/ADB; no local compilation, lint, JVM tests or instrumentation tests were run.
+- Prior exact-head run #133 validates the parent head only; it does not validate this memory-deletion change. A new exact-head Actions run is required and will be checked separately.
+- No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+
+### Safety and preservation
+- Memory deletion requires an explicit Compose confirmation. The database delete and audit event are transactional; the memory value is never copied into the audit log.
+- No new Android permission, dependency, model weight, secret, cloud service, alternate inference engine, or executable skill/tool handler was added.
+- No force-push, branch deletion, or modification of PR #1, #4 or #12 was performed.
+
+### Commit / PR
+- Branch: `feat/masx-core-foundation`.
+- Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
+- The implementation commit is recorded in the PR branch history; the exact commit link is added in the follow-up progress-only commit.
+
+### Blockers and next priority
+- Require exact-head build, lint, JVM and API 35 instrumentation success for this memory-deletion head before merge.
+- After CI, review the complete PR and merge only if the base remains conflict-free.
+- Next product gate: physical Pixel 6 Gemma load/inference/offline validation and measured RAM/latency/thermal behavior.

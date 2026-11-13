@@ -77,3 +77,8 @@ The repository contains JVM tests for catalog, skill validation, compatibility p
 ## Task cancellation contract
 
 A running task is owned by a cancellable ViewModel job. User cancellation cancels that job and waits for its completion before the UI refreshes the durable state. MasxOrchestrator propagates CancellationException after a non-cancellable database cleanup to CANCELLED; it does not mark cancellation as FAILED, schedule a retry, or report a successful result. The LiteRT-LM adapter holds its generation gate until the native callback reaches a terminal state, so user cancellation can wait for native drain. It does not claim to forcibly terminate the native request. The API 35 instrumentation test uses a suspending gateway to verify task-state and retry semantics; it does not substitute for a real-device native cancellation test.
+
+
+## User-controlled memory deletion
+
+The Memory screen exposes a per-record Delete action. The user must confirm the selected record before the ViewModel invokes the IO-bound database delete. The delete and metadata-only audit event are committed in one SQLite transaction. A stale or already-deleted ID is reported rather than silently treated as a successful deletion. This does not provide secure flash erasure or encrypted-at-rest storage.

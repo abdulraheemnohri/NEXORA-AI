@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -255,6 +256,7 @@ private fun ModelPanel(state: MasxUiState,viewModel: MasxViewModel) {
 private fun MemoryPanel(state: MasxUiState,viewModel: MasxViewModel) {
     var key by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
+    var pendingDelete by remember { mutableStateOf<AgentMemory?>(null) }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text("User-approved shared memory is isolated from agent-private and task memory. Agents can read it only when the corresponding setting is enabled.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
         OutlinedTextField(key,{key=it.take(160)},label={Text("Memory key")},modifier=Modifier.fillMaxWidth(),singleLine=true)
@@ -268,10 +270,27 @@ private fun MemoryPanel(state: MasxUiState,viewModel: MasxViewModel) {
                         Text("${memory.scope} · ${memory.ownerId ?: "shared"}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
                         Text(memory.value,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
                         Text("Source: ${memory.provenance}",color=Color(0xFF70748C),style=MaterialTheme.typography.labelSmall)
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+                            TextButton(onClick={pendingDelete=memory}) { Text("Delete") }
+                        }
                     }
                 }
             }
         }
+    }
+    pendingDelete?.let { memory ->
+        AlertDialog(
+            onDismissRequest={pendingDelete=null},
+            title={Text("Delete saved memory?")},
+            text={Text("Delete “${memory.key}” from this device? This cannot be undone.")},
+            confirmButton={
+                TextButton(onClick={
+                    pendingDelete=null
+                    viewModel.deleteMemory(memory.id)
+                }) { Text("Delete") }
+            },
+            dismissButton={TextButton(onClick={pendingDelete=null}) { Text("Cancel") }}
+        )
     }
 }
 

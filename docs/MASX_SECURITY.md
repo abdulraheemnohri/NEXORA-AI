@@ -44,3 +44,8 @@ The app does not claim a separate OS sandbox per agent, encrypted SQLite storage
 ## Task cancellation
 
 The Tasks UI exposes cancellation while a task is running. Cancellation is propagated through the Kotlin job and persisted as CANCELLED in a non-cancellable cleanup block; it is not treated as a retryable failure. The LiteRT-LM callback adapter may continue native work until its terminal callback, and the scheduler/session gate remains held during that drain. The UI and documentation must not describe this as an immediate native kill. A cancelled task is terminal and cannot be resumed; users may create a new task if they want to retry.
+
+
+## User-controlled memory deletion
+
+Every displayed MAS-X memory record has an explicit Delete action and a confirmation dialog. The database removes only the selected record by bound ID inside a transaction. A local audit event records the action and record identifier, but never copies the memory key or value into audit details. This is app-level deletion, not a claim of secure flash erasure; SQLite storage is not encrypted in this build.

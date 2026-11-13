@@ -321,6 +321,22 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         arrayOf(limit.coerceIn(1,500).toString())
     ).use { c -> buildList { while(c.moveToNext()) add(c.toMemory()) } }
 
+    /** Deletes one local memory record and records metadata only, never its value. */
+    fun deleteMemory(id: String): Boolean {
+        require(id.isNotBlank())
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val deleted = db.delete("memories", "id=?", arrayOf(id)) > 0
+            if (!deleted) return false
+            appendAudit("user", "MEMORY_DELETED", id, "SUCCESS", "One local memory record deleted by user.")
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun putMemory(memory: AgentMemory, explicitlyUserApproved: Boolean = false) {
         require(memory.scope != MemoryScope.USER_APPROVED || explicitlyUserApproved) {
             "User-approved memory can only be written through an explicit approval path."

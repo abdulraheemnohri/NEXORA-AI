@@ -104,4 +104,25 @@ class MasxDatabaseInstrumentedTest {
         assertTrue(database.setSkillStatus(skill.id,SkillStatus.ACTIVE,approvedByUser=true))
         assertEquals(SkillStatus.ACTIVE,database.skills().single().status)
     }
+
+    @Test fun deletingMemoryRemovesOnlySelectedRecordAndAuditsWithoutContent() {
+        val now=System.currentTimeMillis()
+        val privateMemory=AgentMemory(
+            "memory-private",MemoryScope.AGENT,"engineering.developer",
+            "private-key","private-value-must-not-enter-audit","test",now,now
+        )
+        val sharedMemory=AgentMemory(
+            "memory-shared",MemoryScope.USER_APPROVED,null,
+            "shared-key","shared-value","test",now,now
+        )
+        database.putMemory(privateMemory)
+        database.putMemory(sharedMemory,explicitlyUserApproved=true)
+
+        assertTrue(database.deleteMemory(privateMemory.id))
+        assertEquals(listOf(sharedMemory.id),database.allMemories().map { it.id })
+        val deletionAudit=database.auditEvents().first { it.action=="MEMORY_DELETED" }
+        assertEquals(privateMemory.id,deletionAudit.subjectId)
+        assertFalse(deletionAudit.details.contains("private-value-must-not-enter-audit"))
+        assertFalse(database.deleteMemory(privateMemory.id))
+    }
 }
