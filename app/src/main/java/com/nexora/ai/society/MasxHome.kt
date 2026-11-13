@@ -48,7 +48,7 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
     var skillName by remember { mutableStateOf("") }
     var skillDescription by remember { mutableStateOf("") }
     var skillInstructions by remember { mutableStateOf("") }
-    val tabs = listOf("Overview","Agents","Tasks","Models","Memory","Skills","Tools","Settings")
+    val tabs = listOf("Overview","Agents","Tasks","Models","Memory","Skills","Tools","Security","Performance","Evolution","Settings")
 
     Column(Modifier.fillMaxSize().background(MasxBackground).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
@@ -74,6 +74,9 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
             "Memory" -> MemoryPanel(state,viewModel)
             "Skills" -> SkillsPanel(state,viewModel,skillName,{skillName=it},skillDescription,{skillDescription=it},skillInstructions,{skillInstructions=it})
             "Tools" -> ToolsPanel(state,viewModel)
+            "Security" -> SecurityPanel(state)
+            "Performance" -> PerformancePanel(state)
+            "Evolution" -> EvolutionPanel(state,viewModel)
             "Settings" -> SettingsPanel(state,viewModel)
         }
     }
@@ -308,6 +311,76 @@ private fun ToolsPanel(state: MasxUiState,viewModel: MasxViewModel) {
                         Text("${tool.risk} · approval required: ${tool.approvalRequired}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
                     }
                     Switch(checked=tool.enabled,onCheckedChange={viewModel.setToolEnabled(tool.toolId,it)})
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecurityPanel(state: MasxUiState) {
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("Local audit trail · permission changes, task transitions, skill activation and proposal reviews.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            items(state.auditEvents,key={it.id}) { event ->
+                Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        Text(event.action,color=Color.White,fontWeight=FontWeight.SemiBold)
+                        Text("${event.outcome} · ${event.actorId ?: "system"} · ${event.subjectId ?: "no subject"}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
+                        Text(event.details,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                        Text("Recorded: ${event.createdAt}",color=Color(0xFF70748C),style=MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PerformancePanel(state: MasxUiState) {
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        state.resources?.let { resource ->
+            MetricCard("Available RAM", "${resource.availableMemoryMb} MB",Modifier.fillMaxWidth())
+            Text("Battery ${resource.batteryPercent?.let { "$it%" } ?: "N/A"} · Thermal ${resource.thermalStatus ?: "N/A"} · Power saver ${resource.powerSaveMode}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
+        }
+        Text("Measured task and inference metrics",color=Color.White,fontWeight=FontWeight.SemiBold)
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            items(state.metrics,key={it.id}) { metric ->
+                Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp)) {
+                        Text(metric.metric.replace('_',' '),color=Color.White,fontWeight=FontWeight.Medium)
+                        Text("${metric.value} · ${metric.agentId}",color=MasxAccent,style=MaterialTheme.typography.bodySmall)
+                        Text("Task: ${metric.taskId ?: "device"} · ${metric.recordedAt}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EvolutionPanel(state: MasxUiState,viewModel: MasxViewModel) {
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("Controlled evolution only: MAS-X can propose changes, but proposals do not edit source code, permissions, model weights or security policy.",color=Color(0xFFFFD28A),style=MaterialTheme.typography.bodySmall)
+        OutlinedTextField(title,{title=it.take(120)},label={Text("Proposal title")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+        OutlinedTextField(description,{description=it.take(8000)},label={Text("Change, reason and verification plan")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4)
+        Button(onClick={viewModel.createEvolutionProposal(title,description);title="";description=""},enabled=title.isNotBlank() && description.isNotBlank()) { Text("Submit proposal for review") }
+        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            items(state.evolutionProposals,key={it.id}) { proposal ->
+                Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text(proposal.title,color=Color.White,fontWeight=FontWeight.SemiBold)
+                        Text(proposal.status,color=MasxAccent,style=MaterialTheme.typography.labelSmall)
+                        Text(proposal.description,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                        if(proposal.status=="PROPOSED") {
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick={viewModel.reviewEvolutionProposal(proposal.id,true)}) { Text("Approve for implementation") }
+                                TextButton(onClick={viewModel.reviewEvolutionProposal(proposal.id,false)}) { Text("Reject") }
+                            }
+                        }
+                    }
                 }
             }
         }
