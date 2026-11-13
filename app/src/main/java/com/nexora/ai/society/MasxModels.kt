@@ -132,6 +132,16 @@ data class SkillManifest(
     }
 }
 
+enum class ModelInstallStatus { CANDIDATE, DOWNLOADING, INSTALLED, READY, FAILED, REMOVED }
+enum class ModelRole { MAIN_ASSISTANT, REASONING, FAST_RESPONSE, CODING, RESEARCH, FALLBACK, AGENT_SOCIETY }
+
+data class ModelProfile(
+    val id: String, val name: String, val family: String, val runtimeId: String,
+    val format: String, val source: String, val localPath: String?, val quantization: String?,
+    val sizeBytes: Long?, val contextLength: Int?, val capabilities: Set<String>,
+    val status: ModelInstallStatus, val checksum: String?, val license: String?, val updatedAt: Long
+)
+
 data class ToolPermissionRecord(\n    val toolId: String, val risk: ToolRisk, val enabled: Boolean, val approvalRequired: Boolean\n)\n\ndata class AgentMetric(
     val agentId: String,
     val taskId: String?,
