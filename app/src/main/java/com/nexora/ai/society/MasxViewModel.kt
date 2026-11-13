@@ -15,7 +15,8 @@ import java.util.UUID
 data class MasxUiState(
     val agents: List<AgentProfile> = emptyList(),
     val tasks: List<MasxTask> = emptyList(),
-    val skills: List<SkillManifest> = emptyList(),\n    val toolPermissions: List<ToolPermissionRecord> = emptyList(),
+    val skills: List<SkillManifest> = emptyList(),
+    val toolPermissions: List<ToolPermissionRecord> = emptyList(),
     val settings: Map<String,String> = emptyMap(),
     val modelReady: Boolean = false,
     val isBusy: Boolean = false,
@@ -60,7 +61,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     agents = snapshot.agents,
                     tasks = snapshot.tasks,
-                    skills = database.skills(),\n                    toolPermissions = database.toolPermissions(),
+                    skills = database.skills(),
+                    toolPermissions = database.toolPermissions(),
                     settings = snapshot.settings,
                     resources = governor.snapshot()
                 )
@@ -163,7 +165,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                 val skill = database.skills().firstOrNull { it.id == skillId } ?: error("Skill not found.")
                 val validation = MasxSkillValidator.validate(skill, database.toolPermissions().map { it.toolId }.toSet())
                 check(validation.valid) { validation.reason }
-                database.setSkillStatus(skillId,SkillStatus.ACTIVE,approvedByUser=true)\n            }
+                database.setSkillStatus(skillId,SkillStatus.ACTIVE,approvedByUser=true)
+            }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message) } }
             database.appendAudit("user","SKILL_ACTIVATED",skillId,"USER_APPROVED","Explicit approval from society screen.")
             refresh()
@@ -177,7 +180,9 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
             database.appendAudit("user","TOOL_PERMISSION_CHANGED",toolId,"SUCCESS","enabled=$enabled")
             refresh()
         }
-    }\n\n    fun refreshResources() {
+    }
+
+    fun refreshResources() {
         mutableState.update { it.copy(resources=governor.snapshot()) }
     }
 }
