@@ -132,7 +132,7 @@ data class SkillManifest(
     }
 }
 
-data class AgentMetric(
+data class ToolPermissionRecord(\n    val toolId: String, val risk: ToolRisk, val enabled: Boolean, val approvalRequired: Boolean\n)\n\ndata class AgentMetric(
     val agentId: String,
     val taskId: String?,
     val metric: String,
