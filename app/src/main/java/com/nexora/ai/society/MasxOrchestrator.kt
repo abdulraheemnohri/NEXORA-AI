@@ -47,6 +47,7 @@ class MasxOrchestrator(
                 val afterPlan = database.task(taskId) ?: error("Task disappeared.")
                 if (afterPlan.status == TaskStatus.PLANNING) database.transitionTask(taskId, TaskStatus.READY)
                 val ready = database.task(taskId) ?: error("Task disappeared.")
+                if (ready.status == TaskStatus.FAILED) check(ready.attempt < ready.maxAttempts) { "Task exhausted its retry budget." }
                 val agent = chooseWorker(ready.input)
                 if (ready.status == TaskStatus.READY || ready.status == TaskStatus.REWORK || ready.status == TaskStatus.RECOVERING) {
                     if (ready.status != TaskStatus.READY) database.transitionTask(taskId, TaskStatus.READY)
@@ -68,12 +69,15 @@ class MasxOrchestrator(
                     append("\n\nReturn a useful result. State uncertainty. Do not claim external actions.")
                 }
                 database.saveCheckpoint(taskId, """{"stage":"worker_started","agent":"${agent.id}"}""")
+                val inferenceStartedAt = System.currentTimeMillis()
                 val output = inference.generate(agent, taskId, prompt, 768)
+                val inferenceDuration = System.currentTimeMillis() - inferenceStartedAt
                 database.transitionTask(taskId, TaskStatus.REVIEW, result = output)
                 // Deterministic gate: non-empty bounded output and valid worker identity.
                 check(output.isNotBlank() && output.length <= 40_000) { "Output did not pass the local result gate." }
                 database.transitionTask(taskId, TaskStatus.COMPLETED, result = output)
                 database.recordMetric(AgentMetric(agent.id, taskId, "output_characters", output.length.toDouble(), System.currentTimeMillis()))
+                database.recordMetric(AgentMetric(agent.id, taskId, "inference_duration_ms", inferenceDuration.toDouble(), System.currentTimeMillis()))
                 database.saveCheckpoint(taskId, """{"stage":"completed","agent":"${agent.id}"}""")
                 database.enqueue(LampProtocol.newMessage(
                     sender = agent.id, recipient = "executive.commander",
@@ -101,11 +105,34 @@ class MasxOrchestrator(
     suspend fun recoverInterruptedTasks(): Int = withContext(Dispatchers.IO) {
         var recovered = 0
         database.recoverableTasks().forEach { task ->
-            runCatching {
-                database.transitionTask(task.id, TaskStatus.RECOVERING, error = "Recovered after process interruption.")
-                database.transitionTask(task.id, TaskStatus.READY)
-                recovered++
+            val result = runCatching {
+                when (task.status) {
+                    TaskStatus.CREATED -> {
+                        database.transitionTask(task.id,TaskStatus.PLANNING)
+                        database.transitionTask(task.id,TaskStatus.READY)
+                    }
+                    TaskStatus.PLANNING -> database.transitionTask(task.id,TaskStatus.READY)
+                    TaskStatus.READY -> Unit
+                    TaskStatus.ASSIGNED, TaskStatus.RUNNING -> {
+                        database.transitionTask(task.id,TaskStatus.RECOVERING,error="Recovered after process interruption.")
+                        database.transitionTask(task.id,TaskStatus.READY)
+                    }
+                    TaskStatus.RECOVERING, TaskStatus.REWORK -> database.transitionTask(task.id,TaskStatus.READY)
+                    TaskStatus.REVIEW -> {
+                        if (!task.result.isNullOrBlank()) database.transitionTask(task.id,TaskStatus.COMPLETED,result=task.result)
+                        else {
+                            database.transitionTask(task.id,TaskStatus.REWORK)
+                            database.transitionTask(task.id,TaskStatus.READY)
+                        }
+                    }
+                    TaskStatus.FAILED -> if (task.attempt < task.maxAttempts) {
+                        database.transitionTask(task.id,TaskStatus.RECOVERING)
+                        database.transitionTask(task.id,TaskStatus.READY)
+                    }
+                    else -> Unit
+                }
             }
+            if (result.isSuccess) recovered++
         }
         recovered
     }
