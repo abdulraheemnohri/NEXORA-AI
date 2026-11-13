@@ -61,6 +61,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     private val governor = MasxResourceGovernor(application)
     private val messageBus = MasxMessageBus(database)
     private val agentFactory = MasxAgentFactory(database)
+    private val toolPolicy = MasxToolPolicy(database)
     private val orchestrator = MasxOrchestrator(
         database,
         LiteRtMasxInferenceGateway(app.localModelRuntime, app.inferenceScheduler)
@@ -191,6 +192,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             mutableState.update { it.copy(isBusy = true, error = null) }
             try {
+                check(withContext(Dispatchers.IO) { database.setting("society.enabled","true")=="true" }) { "Micro-Agent Society is disabled in settings." }
                 val id = orchestrator.submit(title, input)
                 messageBus.dispatchBatch()
                 mutableState.update { it.copy(taskTitle = "", taskInput = "", selectedTaskId = id) }
@@ -209,6 +211,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             mutableState.update { it.copy(isBusy = true, error = null, result = null) }
             try {
+                check(withContext(Dispatchers.IO) { database.setting("society.enabled","true")=="true" }) { "Micro-Agent Society is disabled in settings." }
                 val resources = withContext(Dispatchers.IO) { governor.snapshot() }
                 mutableState.update { it.copy(resources = resources) }
                 val (allowed, reason) = governor.canStartInference(resources)
@@ -373,6 +376,9 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
             refresh()
         }
     }
+
+    suspend fun evaluateToolPermission(toolId: String, invocationId: String, grant: MasxToolApprovalGrant? = null): MasxToolDecision =
+        withContext(Dispatchers.IO) { toolPolicy.evaluate(toolId,invocationId,grant) }
 
     fun assignModelRole(role: ModelRole, modelId: String) {
         viewModelScope.launch {
