@@ -341,6 +341,8 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     } }
 
     fun assignSkill(agentId: String, skillId: String, enabled: Boolean) {
+        require(agents().any { it.id==agentId }) { "Agent is not registered." }
+        require(skills().any { it.id==skillId && it.status==SkillStatus.ACTIVE }) { "Only validated active skills can be assigned." }
         val values = ContentValues().apply { put("agent_id",agentId); put("skill_id",skillId); put("enabled",if(enabled)1 else 0) }
         writableDatabase.insertWithOnConflict("agent_skills",null,values,SQLiteDatabase.CONFLICT_REPLACE)
     }
