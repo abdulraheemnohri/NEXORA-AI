@@ -10,7 +10,6 @@ All settings are stored in the MAS-X app-private database.
 | `inference.max_concurrent` | `1` | Documented shared-runtime concurrency target |
 | `tasks.max_attempts` | `2` | Bounded task retry allowance |
 | `security.require_approval_for_writes` | `true` | Local-write approval policy preference |
-| `security.audit_enabled` | `true` | Audit setting |
 | `memory.allow_user_approved` | `false` | Allow explicitly approved shared memory in agent context |
 
 The actual shared scheduler is currently hard-limited to one active inference. The concurrency setting is descriptive and does not override the scheduler.
