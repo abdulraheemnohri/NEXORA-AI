@@ -641,7 +641,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Branch: `feat/masx-core-foundation`.
 - Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
-- The implementation commit is recorded in the PR branch history; the exact commit link is added in the follow-up progress-only commit.
+- Implementation commit: [c68b61e](https://github.com/abdulraheemnohri/NEXORA-AI/commit/c68b61e5325d06342097cb61d90c20bb52b04163).
 
 ### Blockers and next priority
 - Require exact-head build, lint, JVM and API 35 instrumentation success for this memory-deletion head before merge.
