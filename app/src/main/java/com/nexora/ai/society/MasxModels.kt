@@ -157,7 +157,11 @@ data class EvolutionProposal(
     val createdAt: Long, val reviewedAt: Long?
 )
 
-data class ToolPermissionRecord(\n    val toolId: String, val risk: ToolRisk, val enabled: Boolean, val approvalRequired: Boolean\n)\n\ndata class AgentMetric(
+data class ToolPermissionRecord(
+    val toolId: String, val risk: ToolRisk, val enabled: Boolean, val approvalRequired: Boolean
+)
+
+data class AgentMetric(
     val agentId: String,
     val taskId: String?,
     val metric: String,
