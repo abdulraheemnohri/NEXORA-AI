@@ -14,7 +14,7 @@ import java.util.UUID
 
 data class MasxUiState(
     val agents: List<AgentProfile> = emptyList(),
-    val tasks: List<MasxTask> = emptyList(),
+    val tasks: List<MasxTask> = emptyList(),\n    val skills: List<SkillManifest> = emptyList(),\n    val toolPermissions: List<ToolPermissionRecord> = emptyList(),
     val settings: Map<String,String> = emptyMap(),
     val modelReady: Boolean = false,
     val isBusy: Boolean = false,
@@ -58,7 +58,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
             mutableState.update {
                 it.copy(
                     agents = snapshot.agents,
-                    tasks = snapshot.tasks,
+                    tasks = snapshot.tasks,\n                    skills = database.skills(),\n                    toolPermissions = database.toolPermissions(),
                     settings = snapshot.settings,
                     resources = governor.snapshot()
                 )
@@ -157,14 +157,14 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun approveSkill(skillId: String) {
         viewModelScope.launch {
-            runCatching { database.setSkillStatus(skillId,SkillStatus.ACTIVE,approvedByUser=true) }
+            runCatching {\n                val skill = database.skills().firstOrNull { it.id == skillId } ?: error("Skill not found.")\n                val validation = MasxSkillValidator.validate(skill, database.toolPermissions().map { it.toolId }.toSet())\n                check(validation.valid) { validation.reason }\n                database.setSkillStatus(skillId,SkillStatus.ACTIVE,approvedByUser=true)\n            }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message) } }
             database.appendAudit("user","SKILL_ACTIVATED",skillId,"USER_APPROVED","Explicit approval from society screen.")
             refresh()
         }
     }
 
-    fun refreshResources() {
+    fun setToolEnabled(toolId: String, enabled: Boolean) {\n        viewModelScope.launch {\n            val record = database.toolPermissions().firstOrNull { it.toolId == toolId } ?: return@launch\n            database.setToolPermission(record.toolId,record.risk,enabled,record.approvalRequired)\n            database.appendAudit("user","TOOL_PERMISSION_CHANGED",toolId,"SUCCESS","enabled=$enabled")\n            refresh()\n        }\n    }\n\n    fun refreshResources() {
         mutableState.update { it.copy(resources=governor.snapshot()) }
     }
 }
