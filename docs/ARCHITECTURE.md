@@ -66,3 +66,8 @@ No external, destructive, or local-write tool is registered. The approval primit
 `NexoraApplication` owns the single `LiteRtLocalModelRuntime` and `SharedInferenceScheduler`. Both chat and MAS-X route generation through this scheduler, which serializes heavyweight inference and bounds the waiting queue. MAS-X uses a separate `SQLiteOpenHelper` database so its schema can evolve without modifying existing conversation data.
 
 The society includes an agent catalog, LAMP message envelopes, task state machine and recovery, scope-filtered memory, declarative skills, tool permission metadata, model catalog/roles, resource governor, audit, metrics and user-reviewed evolution proposals. See [MAS-X implementation](MASX_IMPLEMENTATION.md) for the current implemented/unsupported boundary.
+
+
+## MAS-X task execution and cancellation
+
+MAS-X uses the same application-scoped LiteRT-LM runtime and serialized scheduler as chat. A task's coroutine is tracked by the society ViewModel. The Tasks screen can cancel the selected running task; the ViewModel cancels and joins that job rather than only changing its database status. The orchestrator handles CancellationException separately from ordinary failures, persists CANCELLED in a non-cancellable IO cleanup section, and does not consume a retry attempt. The runtime's callback adapter deliberately waits for the native terminal callback before releasing its generation gate, so cancellation stops the app-level request but may wait for native inference to drain.

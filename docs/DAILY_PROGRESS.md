@@ -559,3 +559,52 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added JVM and Android instrumentation tests for catalog, skill validation, compatibility, scheduler serialization, LAMP, database, memory isolation, task orchestration and governance.
 - Tests have not yet been verified by a completed exact-head GitHub Actions run. Physical Pixel 6 verification is not claimed.
 - Remaining: full LLM planner/debate, richer task DAG execution, executable skill sandbox (not supported by this instruction-only design), actual additional tool handlers, dynamic multi-model loading, full benchmark suite, and physical device profiling.
+
+
+## 2026-11-14 — Fix MAS-X instrumentation compilation and make task cancellation real
+
+### Repository checkpoint
+- Re-inspected repository metadata, main, open issues, recent commits, all branch heads, open PRs and latest Actions before editing.
+- Main remained abd66700dd6f7e6f119d84c6cd612aff4c40b71b. No standalone open issues were returned. Fifteen branch heads were enumerated and preserved.
+- Open PRs: #1, #4, #12 and #13. PR #1 and #4 remain untouched with unique commits. PR #12 remains a draft on feat/approved-local-notes. PR #13 is the active MAS-X foundation draft on feat/masx-core-foundation, 95 commits ahead and zero behind main at the start of this increment.
+- Latest PR #13 run [#130](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43365499732) completed with APK assembly, Android lint, JVM tests, KVM preflight and emulator boot successful, but :app:compileDebugAndroidTestKotlin failed. The compiler identified literal backslash-n sequences in MasxGovernanceInstrumentedTest.kt line 71 as Kotlin syntax errors. This was a test-source compile failure, not an emulator or SQLite assertion failure.
+- PR #12 exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) remained queued at the time of inspection. Main run #109 reported failure while its build job remained queued; no job execution log was available to establish a source failure.
+
+### Delivered on feat/masx-core-foundation
+- Corrected the malformed multiline try block in MasxGovernanceInstrumentedTest.kt.
+- Fixed a task-control defect: the previous Cancel action changed only the SQLite status while the active inference coroutine continued. The ViewModel now owns and cancels the selected task job, joins it, and persists terminal cancellation for queued/recovered tasks.
+- MasxOrchestrator.runTask now handles CancellationException separately, performs non-cancellable IO cleanup to CANCELLED, propagates cancellation, and does not increment retry attempts. Ordinary exceptions remain retryable according to the existing bounded policy.
+- Added cancellation transitions from REVIEW and FAILED, and kept the Compose Cancel action available during a running task.
+- Added an API 35 instrumentation test proving that cancellation during a suspended worker request results in CANCELLED with no retry increment.
+- Documented the native callback-drain limitation: the app-level job is cancelled, but the LiteRT-LM adapter deliberately holds its generation gate until the native terminal callback. Cancellation is not represented as an immediate native kill.
+
+### Files changed
+- app/src/androidTest/java/com/nexora/ai/society/MasxGovernanceInstrumentedTest.kt
+- app/src/androidTest/java/com/nexora/ai/society/MasxOrchestratorInstrumentedTest.kt
+- app/src/main/java/com/nexora/ai/society/MasxOrchestrator.kt
+- app/src/main/java/com/nexora/ai/society/MasxViewModel.kt
+- app/src/main/java/com/nexora/ai/society/MasxDatabase.kt
+- app/src/main/java/com/nexora/ai/society/MasxHome.kt
+- README.md, ROADMAP.md
+- docs/ARCHITECTURE.md, docs/MASX_IMPLEMENTATION.md, docs/MASX_SECURITY.md, docs/MASX_PIXEL6_VALIDATION.md, docs/DAILY_PROGRESS.md
+
+### Verification actually run
+- Source inspection and exact-string transformations were checked before creating the commit. No Gradle executable or Android SDK is available in this automation environment, so no local compilation, lint, JVM tests or instrumentation tests were run.
+- The prior exact-head run #130 did not compile Android instrumentation tests; it is a baseline failure, not validation of this fix.
+- The follow-up exact-head Actions run is triggered by this branch update. Its result must be inspected before PR #13 is considered ready. No passing CI is claimed in this progress entry.
+- No real Gemma inference, offline-after-download, native callback cancellation on hardware, or physical Pixel 6 memory/thermal verification was performed.
+
+### Safety and preservation
+- No runtime engine, dependency, model weights, secrets, Android permissions, network service or external tool handler was added.
+- Existing LiteRT-LM callback drain behavior and shared single-inference scheduler were preserved. The cancellation fix does not call native cancelProcess() or reuse a potentially poisoned conversation.
+- No force-push, branch deletion, or change to PR #1, #4 or #12 was performed.
+
+### Commit / PR
+- Branch: feat/masx-core-foundation.
+- Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
+- Source/test fix commit: [054d65c](https://github.com/abdulraheemnohri/NEXORA-AI/commit/054d65c7cf8f0fbc8527d2289abc487779f5d550). Documentation follow-up is committed separately on the same feature branch.
+
+### Blockers and next priority
+- Confirm the new exact-head Android-test Kotlin compilation, JVM tests and API 35 instrumentation all pass. Fix any further test/runtime failures from their logs before merge.
+- After CI and conflict review, merge PR #13 only when its full change set has been reviewed.
+- Next product gate remains real Gemma 4 E2B inference, offline operation, cancellation/native callback drain and resource measurements on a physical 6 GB Pixel 6.

@@ -72,3 +72,8 @@ MAS-X owns a separate SQLite database. It currently uses `SQLiteOpenHelper`, not
 ## Verification status
 
 The repository contains JVM tests for catalog, skill validation, compatibility preflight and scheduler serialization, plus Android instrumentation tests for LAMP, persistence, task orchestration and governance. These are test sources, not evidence of passing CI. A successful CI run is required before claiming tests pass. Physical Pixel 6 model load, inference, offline restart, sustained RAM and thermal behavior remain unverified until run on the actual device.
+
+
+## Task cancellation contract
+
+A running task is owned by a cancellable ViewModel job. User cancellation cancels that job and waits for its completion before the UI refreshes the durable state. MasxOrchestrator propagates CancellationException after a non-cancellable database cleanup to CANCELLED; it does not mark cancellation as FAILED, schedule a retry, or report a successful result. The LiteRT-LM adapter holds its generation gate until the native callback reaches a terminal state, so user cancellation can wait for native drain. It does not claim to forcibly terminate the native request. The API 35 instrumentation test uses a suspending gateway to verify task-state and retry semantics; it does not substitute for a real-device native cancellation test.

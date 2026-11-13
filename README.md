@@ -106,3 +106,8 @@ See:
 - [Security model](docs/MASX_SECURITY.md)
 - [Settings reference](docs/MASX_SETTINGS.md)
 - [Pixel 6 validation checklist](docs/MASX_PIXEL6_VALIDATION.md)
+
+
+### MAS-X task cancellation
+
+The MAS-X task runner treats coroutine cancellation as a user control signal, not a retryable inference failure. Cancelling a running task cancels its Kotlin request, waits for the pinned LiteRT-LM callback lifecycle to drain, then persists CANCELLED without incrementing the retry counter. The Tasks screen keeps Cancel run available while a task is running. A native request may take until its terminal callback to drain; this is not an immediate native-process kill. The behavior is covered by an API 35 instrumentation test and remains subject to the exact-head CI result in PR #13.

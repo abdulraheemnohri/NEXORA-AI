@@ -39,3 +39,8 @@ Task state transitions, message receipt, tool-policy changes, agent activation, 
 ## Limitations
 
 The app does not claim a separate OS sandbox per agent, encrypted SQLite storage, tamper-proof audit logs, cryptographic memory compartments, secure flash erasure, or arbitrary-code sandboxing. Android app-private storage and in-process policy are not substitutes for those controls.
+
+
+## Task cancellation
+
+The Tasks UI exposes cancellation while a task is running. Cancellation is propagated through the Kotlin job and persisted as CANCELLED in a non-cancellable cleanup block; it is not treated as a retryable failure. The LiteRT-LM callback adapter may continue native work until its terminal callback, and the scheduler/session gate remains held during that drain. The UI and documentation must not describe this as an immediate native kill. A cancelled task is terminal and cannot be resumed; users may create a new task if they want to retry.

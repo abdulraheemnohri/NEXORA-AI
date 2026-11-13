@@ -28,3 +28,12 @@ Device model, Android build fingerprint, app commit, model artifact SHA-256, Lit
 ## Not assumed
 
 Pixel 6 GPU/NPU acceleration, unrestricted background work, multi-heavyweight-model concurrency, foundation-model training, or continuous autonomous execution are not assumed.
+
+
+## Cancellation-specific device check
+
+- [ ] Start a real Gemma-backed MAS-X task and cancel it while tokens are being generated.
+- [ ] Confirm the UI reflects cancellation only after the native callback has drained.
+- [ ] Confirm a subsequent chat request waits for the shared scheduler and succeeds after the prior callback terminates.
+- [ ] Confirm the cancelled task remains CANCELLED, does not increment its retry attempt, and is not automatically re-enqueued.
+- [ ] Record cancellation latency separately from model generation latency; do not assume native inference stops at the instant the user taps Cancel.
