@@ -48,7 +48,7 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
     var skillName by remember { mutableStateOf("") }
     var skillDescription by remember { mutableStateOf("") }
     var skillInstructions by remember { mutableStateOf("") }
-    val tabs = listOf("Overview","Agents","Tasks","Skills","Tools","Settings")
+    val tabs = listOf("Overview","Agents","Tasks","Memory","Skills","Tools","Settings")
 
     Column(Modifier.fillMaxSize().background(MasxBackground).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
@@ -70,6 +70,7 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
             "Overview" -> OverviewPanel(state,viewModel)
             "Agents" -> AgentsPanel(state,viewModel)
             "Tasks" -> TasksPanel(state,viewModel)
+            "Memory" -> MemoryPanel(state,viewModel)
             "Skills" -> SkillsPanel(state,viewModel,skillName,{skillName=it},skillDescription,{skillDescription=it},skillInstructions,{skillInstructions=it})
             "Tools" -> ToolsPanel(state,viewModel)
             "Settings" -> SettingsPanel(state,viewModel)
@@ -104,6 +105,7 @@ private fun OverviewPanel(state: MasxUiState, viewModel: MasxViewModel) {
             }
         }
         Text("Departments",color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Text("Queued LAMP messages: ${state.queuedMessages}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
         MasxDepartment.entries.forEach { department ->
             val count=state.agents.count { it.department==department }
             Text("${department.title} · $count agents",color=Color(0xFFB9B4CA),modifier=Modifier.padding(vertical=3.dp))
@@ -124,7 +126,23 @@ private fun MetricCard(title: String,value: String,modifier: Modifier=Modifier) 
 @Composable
 private fun AgentsPanel(state: MasxUiState,viewModel: MasxViewModel) {
     var department by remember { mutableStateOf<MasxDepartment?>(null) }
+    var newName by remember { mutableStateOf("") }
+    var newRole by remember { mutableStateOf("") }
+    var newInstructions by remember { mutableStateOf("") }
+    var newDepartment by remember { mutableStateOf(MasxDepartment.PRODUCTIVITY) }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text("Create temporary agent (starts paused)",color=Color.White,fontWeight=FontWeight.SemiBold)
+                OutlinedTextField(newName,{newName=it.take(80)},label={Text("Agent name")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+                OutlinedTextField(newRole,{newRole=it.take(120)},label={Text("Role")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+                OutlinedTextField(newInstructions,{newInstructions=it.take(8000)},label={Text("Instructions")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=3)
+                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    MasxDepartment.entries.forEach { d -> FilterChip(selected=newDepartment==d,onClick={newDepartment=d},label={Text(d.title)}) }
+                }
+                Button(onClick={viewModel.proposeTemporaryAgent(newName,newDepartment,newRole,newInstructions);newName="";newRole="";newInstructions=""},enabled=newName.isNotBlank() && newRole.isNotBlank() && newInstructions.isNotBlank()) { Text("Save paused agent") }
+            }
+        }
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             FilterChip(selected=department==null,onClick={department=null},label={Text("All")})
             MasxDepartment.entries.forEach { d -> FilterChip(selected=department==d,onClick={department=if(department==d)null else d},label={Text(d.title)}) }
@@ -138,7 +156,7 @@ private fun AgentsPanel(state: MasxUiState,viewModel: MasxViewModel) {
                                 Text(agent.name,color=Color.White,fontWeight=FontWeight.SemiBold)
                                 Text("${agent.department.title} · ${agent.level.name} · ${agent.role}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
                             }
-                            Switch(checked=agent.status==AgentStatus.ACTIVE,onCheckedChange={viewModel.setAgentStatus(agent.id,if(it)AgentStatus.ACTIVE else AgentStatus.PAUSED)})
+                            Switch(checked=agent.status==AgentStatus.ACTIVE,onCheckedChange={ enabled -> if(agent.level==AgentLevel.TEMPORARY && enabled) viewModel.approveTemporaryAgent(agent.id) else viewModel.setAgentStatus(agent.id,if(enabled)AgentStatus.ACTIVE else AgentStatus.PAUSED)})
                         }
                         Text(agent.instructions,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
                         Text("Capabilities: ${agent.capabilities.sorted().joinToString()}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
@@ -177,6 +195,30 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                         Text(task.title,color=Color.White,fontWeight=FontWeight.Medium)
                         Text("${task.status} · ${task.priority} · attempt ${task.attempt}/${task.maxAttempts}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
                         task.error?.let { Text(it,color=Color(0xFFFF9EAD),style=MaterialTheme.typography.bodySmall) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MemoryPanel(state: MasxUiState,viewModel: MasxViewModel) {
+    var key by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("User-approved shared memory is isolated from agent-private and task memory. Agents can read it only when the corresponding setting is enabled.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
+        OutlinedTextField(key,{key=it.take(160)},label={Text("Memory key")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+        OutlinedTextField(value,{value=it.take(20_000)},label={Text("Memory value")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4)
+        Button(onClick={viewModel.saveApprovedMemory(key,value);key="";value=""},enabled=key.isNotBlank() && value.isNotBlank()) { Text("Save user-approved memory") }
+        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            items(state.memories,key={it.id}) { memory ->
+                Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        Text(memory.key,color=Color.White,fontWeight=FontWeight.SemiBold)
+                        Text("${memory.scope} · ${memory.ownerId ?: "shared"}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
+                        Text(memory.value,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                        Text("Source: ${memory.provenance}",color=Color(0xFF70748C),style=MaterialTheme.typography.labelSmall)
                     }
                 }
             }
