@@ -141,7 +141,8 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             put("memory_scopes", json(agent.memoryScopes.map { it.name }.toSet()))
             put("status", agent.status.name); put("version", agent.version); put("updated_at", now)
         }
-        val changed = writableDatabase.update("agents",values,"id=?",arrayOf(agent.id))\n        if (changed == 0) writableDatabase.insertOrThrow("agents",null,values)
+        val changed = writableDatabase.update("agents",values,"id=?",arrayOf(agent.id))
+        if (changed == 0) writableDatabase.insertOrThrow("agents",null,values)
     }
 
     fun agents(): List<AgentProfile> = readableDatabase.rawQuery(
@@ -342,7 +343,8 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             put("required_tools",json(skill.requiredTools)); put("status",skill.status.name)
             put("checksum",skill.checksum); put("updated_at",now)
         }
-        val changed=writableDatabase.update("skills",values,"id=?",arrayOf(skill.id))\n        if(changed==0) writableDatabase.insertOrThrow("skills",null,values)
+        val changed=writableDatabase.update("skills",values,"id=?",arrayOf(skill.id))
+        if(changed==0) writableDatabase.insertOrThrow("skills",null,values)
     }
 
     fun setSkillStatus(skillId: String, status: SkillStatus, approvedByUser: Boolean): Boolean {
@@ -389,7 +391,8 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             put("capabilities",json(model.capabilities));put("status",model.status.name)
             put("checksum",model.checksum);put("license",model.license);put("updated_at",model.updatedAt)
         }
-        val changed=writableDatabase.update("models",values,"id=?",arrayOf(model.id))\n        if(changed==0) writableDatabase.insertOrThrow("models",null,values)
+        val changed=writableDatabase.update("models",values,"id=?",arrayOf(model.id))
+        if(changed==0) writableDatabase.insertOrThrow("models",null,values)
     }
 
     fun models(): List<ModelProfile> = readableDatabase.rawQuery(
