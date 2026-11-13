@@ -218,6 +218,8 @@ private fun ModelPanel(state: MasxUiState,viewModel: MasxViewModel) {
                     Text("Runtime: ${model.runtimeId}",color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
                     Text("Source: ${model.source}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
                     Text("License: ${model.license ?: "Not recorded"}",color=Color(0xFFFFD28A),style=MaterialTheme.typography.bodySmall)
+                    Text("Preflight: " + (state.compatibility[model.id]?.status?.name ?: "Pending"),color=Color(0xFF9CF0D8),style=MaterialTheme.typography.labelSmall)
+                    state.compatibility[model.id]?.reasons?.forEach { reason -> Text(reason,color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall) }
                 }
             }
         }
