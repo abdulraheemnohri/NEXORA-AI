@@ -1,9 +1,9 @@
 package com.nexora.ai.ai
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicInteger
 
 data class InferenceQueueState(
@@ -13,10 +13,7 @@ data class InferenceQueueState(
     val rejected: Long = 0
 )
 
-/**
- * App-wide gate shared by chat and MAS-X. The native LiteRT-LM runtime remains the single
- * owner of model state; callers must use this gate instead of starting competing generations.
- */
+/** App-wide gate shared by chat and MAS-X. */
 class SharedInferenceScheduler(private val maxWaiting: Int = 8) {
     private val mutex = Mutex()
     private val waiting = AtomicInteger(0)
@@ -32,9 +29,11 @@ class SharedInferenceScheduler(private val maxWaiting: Int = 8) {
             throw IllegalStateException("Local inference queue is full. Try again after the active task finishes.")
         }
         mutableState.value = mutableState.value.copy(waiting = (position - 1).coerceAtLeast(0))
+        var waitingSlot = true
         try {
             return mutex.withLock {
                 waiting.decrementAndGet()
+                waitingSlot = false
                 mutableState.value = mutableState.value.copy(activeOwner = owner, waiting = waiting.get().coerceAtLeast(0))
                 try {
                     block()
