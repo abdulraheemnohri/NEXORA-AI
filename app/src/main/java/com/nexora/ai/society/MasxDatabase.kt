@@ -549,11 +549,11 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             TaskStatus.ASSIGNED to setOf(TaskStatus.RUNNING,TaskStatus.WAITING_APPROVAL,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED,TaskStatus.RECOVERING),
             TaskStatus.RUNNING to setOf(TaskStatus.REVIEW,TaskStatus.WAITING_APPROVAL,TaskStatus.FAILED,TaskStatus.PAUSED,TaskStatus.CANCELLED,TaskStatus.RECOVERING),
             TaskStatus.WAITING_APPROVAL to setOf(TaskStatus.ASSIGNED,TaskStatus.RUNNING,TaskStatus.CANCELLED,TaskStatus.FAILED),
-            TaskStatus.REVIEW to setOf(TaskStatus.COMPLETED,TaskStatus.REWORK,TaskStatus.FAILED),
+            TaskStatus.REVIEW to setOf(TaskStatus.COMPLETED,TaskStatus.REWORK,TaskStatus.FAILED,TaskStatus.CANCELLED),
             TaskStatus.REWORK to setOf(TaskStatus.ASSIGNED,TaskStatus.FAILED,TaskStatus.CANCELLED),
             TaskStatus.RECOVERING to setOf(TaskStatus.READY,TaskStatus.ASSIGNED,TaskStatus.FAILED,TaskStatus.CANCELLED),
             TaskStatus.PAUSED to setOf(TaskStatus.READY,TaskStatus.CANCELLED),
-            TaskStatus.FAILED to setOf(TaskStatus.RECOVERING),
+            TaskStatus.FAILED to setOf(TaskStatus.RECOVERING,TaskStatus.CANCELLED),
             TaskStatus.COMPLETED to emptySet(),
             TaskStatus.CANCELLED to emptySet()
         )

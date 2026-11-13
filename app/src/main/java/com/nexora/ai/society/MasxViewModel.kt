@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.nexora.ai.NexoraApplication
 import com.nexora.ai.ai.Gemma4E2BModelDownloader
 import com.nexora.ai.ai.RuntimeState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -208,11 +211,13 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun runSelectedTask() {
         val id = mutableState.value.selectedTaskId ?: return
-        if (mutableState.value.isBusy) return
-        viewModelScope.launch {
+        if (mutableState.value.isBusy || activeTaskJob?.isActive == true) return
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             mutableState.update { it.copy(isBusy = true, error = null, result = null) }
             try {
-                check(withContext(Dispatchers.IO) { database.setting("society.enabled","true")=="true" }) { "Micro-Agent Society is disabled in settings." }
+                check(withContext(Dispatchers.IO) { database.setting("society.enabled","true")=="true" }) {
+                    "Micro-Agent Society is disabled in settings."
+                }
                 val resources = withContext(Dispatchers.IO) { governor.snapshot() }
                 mutableState.update { it.copy(resources = resources) }
                 val (allowed, reason) = governor.canStartInference(resources)
@@ -223,20 +228,35 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                 val result = orchestrator.runTask(id).getOrThrow()
                 messageBus.dispatchBatch()
                 mutableState.update { it.copy(result = result) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 mutableState.update { it.copy(error = error.message ?: "Task execution failed.") }
             } finally {
+                if (activeTaskId == id) {
+                    activeTaskId = null
+                    activeTaskJob = null
+                }
                 mutableState.update { it.copy(isBusy = false) }
                 refresh()
             }
         }
+        activeTaskId = id
+        activeTaskJob = job
+        job.start()
     }
 
     fun cancelSelectedTask() {
         val id = mutableState.value.selectedTaskId ?: return
+        val runningJob = activeTaskJob?.takeIf { activeTaskId == id && it.isActive }
         viewModelScope.launch {
+            if (runningJob != null) {
+                runningJob.cancel(CancellationException("Cancelled by user."))
+                runningJob.join()
+            }
             withContext(Dispatchers.IO) {
-                runCatching {
+                val current = database.task(id)
+                if (current != null && current.status !in setOf(TaskStatus.COMPLETED, TaskStatus.CANCELLED)) {
                     database.transitionTask(id, TaskStatus.CANCELLED, error = "Cancelled by user.")
                 }
             }

@@ -185,7 +185,9 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                         Button(onClick=viewModel::runSelectedTask,enabled=!state.isBusy && state.modelReady && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED && task?.status != TaskStatus.PAUSED) { Text("Run locally") }
                         TextButton(onClick=viewModel::pauseSelectedTask,enabled=!state.isBusy && (task?.status==TaskStatus.READY || task?.status==TaskStatus.ASSIGNED || task?.status==TaskStatus.RUNNING || task?.status==TaskStatus.PLANNING)) { Text("Pause") }
                         TextButton(onClick=viewModel::resumeSelectedTask,enabled=!state.isBusy && task?.status==TaskStatus.PAUSED) { Text("Resume") }
-                        TextButton(onClick=viewModel::cancelSelectedTask,enabled=!state.isBusy && task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED) { Text("Cancel") }
+                        TextButton(onClick=viewModel::cancelSelectedTask,enabled=task?.status != TaskStatus.COMPLETED && task?.status != TaskStatus.CANCELLED) {
+                            Text(if(state.isBusy && task?.status==TaskStatus.RUNNING) "Cancel run" else "Cancel")
+                        }
                     }
                     Text("Add prerequisite task (selected task waits until it completes)",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
                     Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {

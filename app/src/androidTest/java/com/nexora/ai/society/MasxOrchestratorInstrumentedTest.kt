@@ -3,6 +3,10 @@ package com.nexora.ai.society
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -38,4 +42,21 @@ class MasxOrchestratorInstrumentedTest {
         assertEquals(TaskStatus.COMPLETED,database.task(taskId)?.status)
         assertEquals("engineering.developer",database.task(taskId)?.assignedAgentId)
     }
+    @Test fun cancellingRunningTaskMarksItCancelledWithoutRetry() = runBlocking {
+        val inferenceStarted = CompletableDeferred<Unit>()
+        val orchestrator = MasxOrchestrator(database, MasxInferenceGateway { _, _, _, _ ->
+            inferenceStarted.complete(Unit)
+            awaitCancellation()
+        })
+        val taskId = orchestrator.submit("Cancelable task", "Wait for a cancellation test.")
+        val execution = launch { orchestrator.runTask(taskId) }
+
+        inferenceStarted.await()
+        execution.cancelAndJoin()
+
+        val cancelled = database.task(taskId)!!
+        assertEquals(TaskStatus.CANCELLED, cancelled.status)
+        assertEquals(0, cancelled.attempt)
+    }
+
 }

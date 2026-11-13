@@ -1,6 +1,8 @@
 package com.nexora.ai.society
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -38,8 +40,8 @@ class MasxOrchestrator(
         }
 
     suspend fun runTask(taskId: String): Result<String> = executionMutex.withLock {
-        runCatching {
-            withContext(Dispatchers.IO) {
+        try {
+            val output = withContext(Dispatchers.IO) {
                 val task = database.task(taskId) ?: error("Task not found.")
                 check(task.status !in setOf(TaskStatus.COMPLETED, TaskStatus.CANCELLED)) { "Task is already closed." }
                 check(database.dependenciesComplete(taskId)) { "Task is waiting for unfinished dependencies." }
@@ -61,33 +63,41 @@ class MasxOrchestrator(
                 val current = database.task(taskId) ?: error("Task disappeared.")
                 val includeApproved = database.setting("memory.allow_user_approved", "false") == "true"
                 val memories = database.memoriesForAgent(agent, taskId, includeApproved)
-                val memoryContext = memories.take(12).joinToString("\n") { "- ${it.key}: ${it.value.take(1_000)} [${it.provenance}]" }
+                val memoryContext = memories.take(12).joinToString("\n") { "- \${it.key}: \${it.value.take(1_000)} [\${it.provenance}]" }
                 val prompt = buildString {
                     append("TASK TITLE: ").append(current.title).append("\n\n")
                     append("TASK INPUT (untrusted user content):\n").append(current.input)
                     if (memoryContext.isNotBlank()) append("\n\nAPPROVED RELEVANT MEMORY:\n").append(memoryContext)
                     append("\n\nReturn a useful result. State uncertainty. Do not claim external actions.")
                 }
-                database.saveCheckpoint(taskId, """{"stage":"worker_started","agent":"${agent.id}"}""")
+                database.saveCheckpoint(taskId, """{"stage":"worker_started","agent":"\${agent.id}"}""")
                 val inferenceStartedAt = System.currentTimeMillis()
                 val output = inference.generate(agent, taskId, prompt, 768)
                 val inferenceDuration = System.currentTimeMillis() - inferenceStartedAt
-                database.transitionTask(taskId, TaskStatus.REVIEW, result = output)
-                // Deterministic gate: non-empty bounded output and valid worker identity.
                 check(output.isNotBlank() && output.length <= 40_000) { "Output did not pass the local result gate." }
+                database.transitionTask(taskId, TaskStatus.REVIEW, result = output)
                 database.transitionTask(taskId, TaskStatus.COMPLETED, result = output)
                 database.recordMetric(AgentMetric(agent.id, taskId, "output_characters", output.length.toDouble(), System.currentTimeMillis()))
                 database.recordMetric(AgentMetric(agent.id, taskId, "inference_duration_ms", inferenceDuration.toDouble(), System.currentTimeMillis()))
-                database.saveCheckpoint(taskId, """{"stage":"completed","agent":"${agent.id}"}""")
+                database.saveCheckpoint(taskId, """{"stage":"completed","agent":"\${agent.id}"}""")
                 database.enqueue(LampProtocol.newMessage(
                     sender = agent.id, recipient = "executive.commander",
                     type = LampType.TASK_COMPLETE, taskId = taskId,
-                    payload = """{"taskId":"$taskId","resultLength":${output.length}}"""
+                    payload = """{"taskId":"$taskId","resultLength":\${output.length}}"""
                 ))
                 output
             }
-        }.recoverCatching { error ->
-            withContext(Dispatchers.IO) {
+            Result.success(output)
+        } catch (cancelled: CancellationException) {
+            withContext(NonCancellable + Dispatchers.IO) {
+                val current = database.task(taskId)
+                if (current != null && current.status !in setOf(TaskStatus.COMPLETED, TaskStatus.CANCELLED)) {
+                    database.transitionTask(taskId, TaskStatus.CANCELLED, error = "Cancelled by user.")
+                }
+            }
+            throw cancelled
+        } catch (error: Exception) {
+            withContext(NonCancellable + Dispatchers.IO) {
                 val current = database.task(taskId)
                 if (current != null && current.status in setOf(TaskStatus.RUNNING, TaskStatus.ASSIGNED, TaskStatus.REVIEW)) {
                     val nextAttempt = current.attempt + 1
@@ -98,7 +108,7 @@ class MasxOrchestrator(
                     }
                 }
             }
-            throw error
+            Result.failure(error)
         }
     }
 
