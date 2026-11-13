@@ -301,6 +301,16 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun assignSkillToAgent(skillId: String, agentId: String) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { database.assignSkill(agentId,skillId,true) }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message ?: "Skill assignment failed.") } }
+            refresh()
+        }
+    }
+
     fun saveApprovedMemory(key: String, value: String) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
