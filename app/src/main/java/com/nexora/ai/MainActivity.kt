@@ -9,9 +9,16 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 import com.nexora.ai.ui.NexoraHome
 import com.nexora.ai.ui.NexoraViewModel
+import com.nexora.ai.society.MasxViewModel
+import com.nexora.ai.society.MasxHome
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
     private val nexoraViewModel: NexoraViewModel by viewModels()
+    private val masxViewModel: MasxViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +29,12 @@ class MainActivity : ComponentActivity() {
                 background = Color(0xFF0B0D16),
                 surface = Color(0xFF151827)
             )) {
-                NexoraHome(nexoraViewModel)
+                var showSociety by rememberSaveable { mutableStateOf(false) }
+                if (showSociety) {
+                    MasxHome(masxViewModel, onBack = { showSociety = false })
+                } else {
+                    NexoraHome(nexoraViewModel, onOpenSociety = { showSociety = true })
+                }
             }
         }
     }

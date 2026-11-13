@@ -84,3 +84,31 @@ PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader 
 
 
 PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
+
+
+## Micro-Agent Society (MAS-X)
+
+The Android app now includes a local society control center with:
+- 18 declarative agent profiles across 12 departments.
+- A separate app-private MAS-X SQLite database.
+- Versioned local LAMP messages with TTL, acknowledgement and retry/dead-letter states.
+- Persistent task state transitions, checkpoints and startup recovery.
+- A single application-scoped LiteRT-LM runtime and shared inference scheduler used by chat and MAS-X.
+- Agent/task memory scopes, user-approved shared memory, skill validation and approval.
+- User-confirmed deletion of individual MAS-X memory records, with audit metadata that never copies memory values.
+- Tool risk metadata, model registry/roles, resource preflight, audit trail, performance metrics and evolution proposal review.
+
+Open the **MAS-X** button in the chat header to access the society screens.
+
+Important limitations: the current task router uses deterministic keyword routing to one specialist worker; full LLM planning/debate and parallel workers are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Dynamic multi-model loading is not enabled. The actual Pixel 6 inference and thermal profile must still be verified on physical hardware.
+
+See:
+- [MAS-X implementation](docs/MASX_IMPLEMENTATION.md)
+- [Security model](docs/MASX_SECURITY.md)
+- [Settings reference](docs/MASX_SETTINGS.md)
+- [Pixel 6 validation checklist](docs/MASX_PIXEL6_VALIDATION.md)
+
+
+### MAS-X task cancellation
+
+The MAS-X task runner treats coroutine cancellation as a user control signal, not a retryable inference failure. Cancelling a running task cancels its Kotlin request, waits for the pinned LiteRT-LM callback lifecycle to drain, then persists CANCELLED without incrementing the retry counter. The Tasks screen keeps Cancel run available while a task is running. A native request may take until its terminal callback to drain; this is not an immediate native-process kill. The behavior is covered by an API 35 instrumentation test and remains subject to the exact-head CI result in PR #13.

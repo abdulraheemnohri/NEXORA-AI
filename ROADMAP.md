@@ -15,7 +15,8 @@
 | Agent tool permission system | Partial: central executor, one-shot invocation-bound approval grants, and a real user-enabled local read-only conversation search are implemented. Search is manually invoked; no model-generated tool calls or external/destructive handlers are registered. | Add a review/approval UI for a concrete side-effect tool and verify that approval is bound to its exact arguments and cannot be replayed |
 | Memory and retrieval | Pending; keyword search is not semantic memory or embeddings | Select a licensed local embedding model and evaluate retrieval quality on a private local corpus |
 | Knowledge ingestion | Pending | PDF/TXT/MD/JSON extraction tests |
-| Agent planner | Pending | Plan, approval, and cancellation tests |
+| MAS-X society foundation | Draft implementation in PR #13: separate SQLite store, declarative agents, durable LAMP, bounded single-model orchestration, scoped memory, explicit per-record memory deletion, settings and Compose control center. Exact-head run #133 passed APK assembly, lint, JVM tests, KVM preflight and Android instrumentation before the memory-deletion follow-up. | Exact-head build/lint/JVM/emulator instrumentation pass for the memory-deletion head, then review and merge; physical Pixel 6 inference remains a separate gate |
+| Agent planner | Partial: deterministic keyword routing to one specialist worker; full LLM planning/debate and parallel worker execution are not implemented. | Plan, approval, cancellation, recovery and dependency-DAG tests |
 | Skills laboratory | Pending | Schema validation and rollback |
 | Evolution engine | Pending | Evaluation, regression and rollback |
 | Pixel 6 performance | Pending | Physical-device RAM, speed and thermal report |

@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nexora.ai.NexoraApplication
+import com.nexora.ai.ai.SharedInferenceScheduler
 import com.nexora.ai.agent.AgentToolExecutor
 import com.nexora.ai.agent.SearchSavedConversationsTool
 import com.nexora.ai.agent.ToolExecutionOutcome
@@ -14,7 +16,6 @@ import com.nexora.ai.ai.GenerationEvent
 import com.nexora.ai.ai.GenerationHistoryMessage
 import com.nexora.ai.ai.GenerationRequest
 import com.nexora.ai.ai.GenerationSettings
-import com.nexora.ai.ai.LiteRtLocalModelRuntime
 import com.nexora.ai.data.ChatRepository
 import com.nexora.ai.data.ConversationSearchHit
 import com.nexora.ai.data.LocalChatDatabase
@@ -68,7 +69,9 @@ data class NexoraUiState(
 class NexoraViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ChatRepository(LocalChatDatabase(application))
     private val downloader = Gemma4E2BModelDownloader(application)
-    private val runtime = LiteRtLocalModelRuntime(File(application.cacheDir, "litertlm"))
+    private val app = application as NexoraApplication
+    private val runtime = app.localModelRuntime
+    private val inferenceScheduler = app.inferenceScheduler
     private var conversationId: String? = null
     private val settingsPreferences = application.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val initialMaxOutputTokens = runCatching {
@@ -375,7 +378,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                     it.copy(messages = it.messages + ChatBubble(assistantId, "assistant", ""))
                 }
                 val assistantText = StringBuilder()
-                runtime.generate(
+                inferenceScheduler.withSlot("chat:$activeConversation") {
+                    runtime.generate(
                     GenerationRequest(
                         conversationId = activeConversation,
                         prompt = prompt,
@@ -396,6 +400,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         }
                         GenerationEvent.Completed -> Unit
                         is GenerationEvent.Failed -> error(event.reason)
+                    }
                     }
                 }
                 if (assistantText.isNotBlank()) {
