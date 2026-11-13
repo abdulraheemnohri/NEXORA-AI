@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.nexora.ai.NexoraApplication
 import com.nexora.ai.ai.RuntimeState
 import com.nexora.ai.ai.Gemma4E2BModelDownloader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -50,15 +52,15 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            database.seedBuiltIns()
-            database.agents().forEach { agent ->
+            val seededAgents = withContext(Dispatchers.IO) { database.seedBuiltIns(); database.agents() }
+            seededAgents.forEach { agent ->
                 messageBus.register(agent.id) { message ->
                     database.appendAudit(agent.id,"LAMP_RECEIVED_${'
         }
         viewModelScope.launch {
             app.localModelRuntime.state.collect { state ->
                 val ready = state is RuntimeState.Ready
-                if (ready) {
+                if (ready) withContext(Dispatchers.IO) {
                     val model = database.models().firstOrNull { it.id == "gemma-4-e2b-it-litertlm" }
                     if (model != null) {
                         database.upsertModel(model.copy(
@@ -78,15 +80,19 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refresh() {
         viewModelScope.launch {
-            val snapshot = database.snapshot()
+            val loaded = withContext(Dispatchers.IO) {
+                val snapshot = database.snapshot()
+                Triple(snapshot,database.skills(),database.toolPermissions()) to Pair(database.models(),database.modelRoleAssignments())
+            }
+            val snapshot = loaded.first.first
             mutableState.update {
                 it.copy(
                     agents = snapshot.agents,
                     tasks = snapshot.tasks,
-                    skills = database.skills(),
-                    toolPermissions = database.toolPermissions(),
-                    models = database.models(),
-                    modelRoles = database.modelRoleAssignments(),
+                    skills = loaded.first.second,
+                    toolPermissions = loaded.first.third,
+                    models = loaded.second.first,
+                    modelRoles = loaded.second.second,
                     memories = database.allMemories(),
                     queuedMessages = database.pendingMessages().size,
                     settings = snapshot.settings,
@@ -151,14 +157,14 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelSelectedTask() {
         val id = mutableState.value.selectedTaskId ?: return
         viewModelScope.launch {
-            runCatching { database.transitionTask(id,TaskStatus.CANCELLED,error="Cancelled by user.") }
+            withContext(Dispatchers.IO) { runCatching { database.transitionTask(id,TaskStatus.CANCELLED,error="Cancelled by user.") } }
             refresh()
         }
     }
 
     fun setSetting(key: String, value: String) {
         viewModelScope.launch {
-            runCatching { database.setSetting(key,value) }
+            withContext(Dispatchers.IO) { runCatching { database.setSetting(key,value) } }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message) } }
             refresh()
         }
@@ -166,9 +172,11 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAgentStatus(agentId: String, status: AgentStatus) {
         viewModelScope.launch {
-            val current = database.agents().firstOrNull { it.id==agentId } ?: return@launch
-            database.upsertAgent(current.copy(status=status,version=current.version+1))
-            database.appendAudit("user","AGENT_STATUS_CHANGED",agentId,"SUCCESS",status.name)
+            withContext(Dispatchers.IO) {
+                val current = database.agents().firstOrNull { it.id==agentId } ?: return@withContext
+                database.upsertAgent(current.copy(status=status,version=current.version+1))
+                database.appendAudit("user","AGENT_STATUS_CHANGED",agentId,"SUCCESS",status.name)
+            }
             refresh()
         }
     }
@@ -176,10 +184,10 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     fun installSkillDraft(id: String, name: String, description: String, instructions: String) {
         viewModelScope.launch {
             try {
-                database.upsertSkill(
-                    SkillManifest(id,name,1,description,instructions, emptySet(),SkillStatus.DRAFT)
-                )
-                database.appendAudit("user","SKILL_DRAFT_CREATED",id,"SUCCESS","Awaiting validation and approval.")
+                withContext(Dispatchers.IO) {
+                    database.upsertSkill(SkillManifest(id,name,1,description,instructions, emptySet(),SkillStatus.DRAFT))
+                    database.appendAudit("user","SKILL_DRAFT_CREATED",id,"SUCCESS","Awaiting validation and approval.")
+                }
                 refresh()
             } catch (error: Exception) {
                 mutableState.update { it.copy(error=error.message ?: "Unable to save skill draft.") }
@@ -189,14 +197,14 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun approveSkill(skillId: String) {
         viewModelScope.launch {
-            runCatching {
+            withContext(Dispatchers.IO) { runCatching {
                 val skill = database.skills().firstOrNull { it.id == skillId } ?: error("Skill not found.")
                 val validation = MasxSkillValidator.validate(skill, database.toolPermissions().map { it.toolId }.toSet())
                 check(validation.valid) { validation.reason }
                 check(database.setSkillStatus(skillId,SkillStatus.ACTIVE,approvedByUser=true))
             }.onSuccess {
                 database.appendAudit("user","SKILL_ACTIVATED",skillId,"USER_APPROVED","Static validation passed; user approved activation.")
-            }.onFailure { error ->
+            } }.onFailure { error ->
                 mutableState.update { it.copy(error=error.message ?: "Skill activation failed.") }
             }
             refresh()
@@ -205,7 +213,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveApprovedMemory(key: String, value: String) {
         viewModelScope.launch {
-            runCatching {
+            withContext(Dispatchers.IO) { runCatching {
                 val now=System.currentTimeMillis()
                 database.putMemory(
                     AgentMemory(UUID.randomUUID().toString(),MemoryScope.USER_APPROVED,null,key.trim(),value.trim(),
@@ -213,7 +221,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     explicitlyUserApproved=true
                 )
                 database.appendAudit("user","USER_APPROVED_MEMORY_SAVED",key,"SUCCESS","User explicitly saved shared memory.")
-            }.onFailure { error ->
+            } }.onFailure { error ->
                 mutableState.update { it.copy(error=error.message ?: "Unable to save memory.") }
             }
             refresh()
@@ -222,7 +230,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun proposeTemporaryAgent(name: String, department: MasxDepartment, role: String, instructions: String) {
         viewModelScope.launch {
-            runCatching { agentFactory.propose(name,department,role,instructions) }
+            withContext(Dispatchers.IO) { runCatching { agentFactory.propose(name,department,role,instructions) } }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message ?: "Agent proposal failed.") } }
             refresh()
         }
@@ -230,7 +238,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun approveTemporaryAgent(agentId: String) {
         viewModelScope.launch {
-            runCatching { agentFactory.approveAndActivate(agentId,explicitlyApproved=true) }
+            withContext(Dispatchers.IO) { runCatching { agentFactory.approveAndActivate(agentId,explicitlyApproved=true) } }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message ?: "Agent activation failed.") } }
             refresh()
         }
@@ -238,16 +246,18 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setToolEnabled(toolId: String, enabled: Boolean) {
         viewModelScope.launch {
-            val record = database.toolPermissions().firstOrNull { it.toolId == toolId } ?: return@launch
-            database.setToolPermission(record.toolId,record.risk,enabled,record.approvalRequired)
-            database.appendAudit("user","TOOL_PERMISSION_CHANGED",toolId,"SUCCESS","enabled=$enabled")
+            withContext(Dispatchers.IO) {
+                val record = database.toolPermissions().firstOrNull { it.toolId == toolId } ?: return@withContext
+                database.setToolPermission(record.toolId,record.risk,enabled,record.approvalRequired)
+                database.appendAudit("user","TOOL_PERMISSION_CHANGED",toolId,"SUCCESS","enabled=$enabled")
+            }
             refresh()
         }
     }
 
     fun assignModelRole(role: ModelRole, modelId: String) {
         viewModelScope.launch {
-            runCatching { database.assignModelRole(role,modelId) }
+            withContext(Dispatchers.IO) { runCatching { database.assignModelRole(role,modelId) } }
                 .onFailure { error -> mutableState.update { it.copy(error=error.message) } }
             refresh()
         }
