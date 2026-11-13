@@ -71,6 +71,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         LiteRtMasxInferenceGateway(app.localModelRuntime, app.inferenceScheduler)
     )
     private val mutableState = MutableStateFlow(MasxUiState())
+    private var activeTaskId: String? = null
+    private var activeTaskJob: Job? = null
     val uiState = mutableState.asStateFlow()
 
     init {
