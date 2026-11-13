@@ -134,7 +134,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                         model.id to MasxModelCompatibility.assess(
                             model, governor.snapshot(), "litertlm-android-v0.18.1",
                             model.localPath?.let { java.io.File(it).isFile } == true,
-                            application.filesDir.usableSpace
+                            appFilesDir.usableSpace
                         )
                     },
                     memories = database.allMemories(),
