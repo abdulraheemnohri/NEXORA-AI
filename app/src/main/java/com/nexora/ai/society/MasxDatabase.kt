@@ -213,10 +213,29 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
 
     fun addDependency(taskId: String, dependsOn: String) {
         require(taskId != dependsOn) { "A task cannot depend on itself." }
+        require(task(taskId)!=null && task(dependsOn)!=null) { "Both tasks must exist before linking dependencies." }
+        check(!hasDependencyPath(dependsOn,taskId)) { "Dependency would create a cycle." }
         writableDatabase.execSQL(
             "INSERT OR IGNORE INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)",
             arrayOf(taskId, dependsOn)
         )
+    }
+
+    fun dependencyIds(taskId: String): List<String> = readableDatabase.rawQuery(
+        "SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id",
+        arrayOf(taskId)
+    ).use { c -> buildList { while(c.moveToNext()) add(c.getString(0)) } }
+
+    private fun hasDependencyPath(from: String,target: String): Boolean {
+        val visited=mutableSetOf<String>()
+        val pending=ArrayDeque<String>()
+        pending.add(from)
+        while(pending.isNotEmpty()) {
+            val current=pending.removeFirst()
+            if(current==target) return true
+            if(visited.add(current)) dependencyIds(current).forEach(pending::addLast)
+        }
+        return false
     }
 
     fun dependenciesComplete(taskId: String): Boolean = readableDatabase.rawQuery(
