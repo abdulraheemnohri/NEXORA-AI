@@ -243,6 +243,38 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun pauseSelectedTask() {
+        val id = mutableState.value.selectedTaskId ?: return
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { check(database.transitionTask(id,TaskStatus.PAUSED,error="Paused by user.")) }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message) } }
+            refresh()
+        }
+    }
+
+    fun resumeSelectedTask() {
+        val id = mutableState.value.selectedTaskId ?: return
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { check(database.transitionTask(id,TaskStatus.READY,error="Resumed by user.")) }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message) } }
+            refresh()
+        }
+    }
+
+    fun addTaskDependency(taskId: String, dependsOnTaskId: String) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { database.addDependency(taskId,dependsOnTaskId) }
+            }
+            result.onFailure { error -> mutableState.update { it.copy(error=error.message) } }
+            refresh()
+        }
+    }
+
     fun setSetting(key: String, value: String) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
