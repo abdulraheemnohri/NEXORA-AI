@@ -63,6 +63,28 @@ class MasxDatabaseInstrumentedTest {
         } catch (_: IllegalArgumentException) { }
     }
 
+    @Test fun taskDependenciesBlockUntilCompleteAndRejectCycles() {
+        val now=System.currentTimeMillis()
+        val a=MasxTask("task-a","A","Task A",TaskStatus.CREATED,TaskPriority.NORMAL,now,now)
+        val b=MasxTask("task-b","B","Task B",TaskStatus.CREATED,TaskPriority.NORMAL,now,now)
+        val d=MasxTask("task-c","C","Task C",TaskStatus.CREATED,TaskPriority.NORMAL,now,now)
+        database.createTask(a);database.createTask(b);database.createTask(d)
+        database.addDependency(a.id,b.id)
+        database.addDependency(b.id,d.id)
+        assertFalse(database.dependenciesComplete(a.id))
+        try {
+            database.addDependency(d.id,a.id)
+            throw AssertionError("Dependency cycle must be rejected.")
+        } catch (_: IllegalStateException) { }
+        database.transitionTask(d.id,TaskStatus.PLANNING)
+        database.transitionTask(d.id,TaskStatus.READY)
+        database.transitionTask(d.id,TaskStatus.ASSIGNED,agentId="engineering.developer")
+        database.transitionTask(d.id,TaskStatus.RUNNING)
+        database.transitionTask(d.id,TaskStatus.REVIEW,result="done")
+        database.transitionTask(d.id,TaskStatus.COMPLETED,result="done")
+        assertTrue(database.dependenciesComplete(b.id))
+    }
+
     @Test fun messagesAreDurableAndAcknowledgedExactlyOnce() {
         val message=LampProtocol.newMessage("executive.commander","engineering.developer",LampType.TASK_ASSIGN,"payload")
         database.enqueue(message)
