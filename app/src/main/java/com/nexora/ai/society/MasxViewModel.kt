@@ -57,6 +57,7 @@ private data class MasxLoadedData(
 /** Society state holder. Durable operations run away from Android's main thread. */
 class MasxViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as NexoraApplication
+    private val appFilesDir = application.filesDir
     private val database = app.masxDatabase
     private val governor = MasxResourceGovernor(application)
     private val messageBus = MasxMessageBus(database)
@@ -102,7 +103,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                             database.upsertModel(
                                 model.copy(
                                     status = ModelInstallStatus.READY,
-                                    localPath = application.filesDir.resolve(
+                                    localPath = appFilesDir.resolve(
                                         "models/" + Gemma4E2BModelDownloader.MODEL_FILE_NAME
                                     ).absolutePath,
                                     updatedAt = System.currentTimeMillis()
