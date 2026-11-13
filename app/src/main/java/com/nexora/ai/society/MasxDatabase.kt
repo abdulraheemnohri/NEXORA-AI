@@ -86,6 +86,18 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             priority TEXT NOT NULL, state TEXT NOT NULL, created_at INTEGER NOT NULL,
             started_at INTEGER, finished_at INTEGER)""")
         db.execSQL("CREATE INDEX index_inference_queue_state ON inference_queue(state, priority, created_at)")
+        db.execSQL("""CREATE TABLE models(
+            id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, family TEXT NOT NULL,
+            runtime_id TEXT NOT NULL, format TEXT NOT NULL, source TEXT NOT NULL,
+            local_path TEXT, quantization TEXT, size_bytes INTEGER, context_length INTEGER,
+            capabilities TEXT NOT NULL, status TEXT NOT NULL, checksum TEXT, license TEXT,
+            updated_at INTEGER NOT NULL)""")
+        db.execSQL("""CREATE TABLE model_roles(
+            role TEXT PRIMARY KEY NOT NULL, model_id TEXT NOT NULL,
+            updated_at INTEGER NOT NULL, FOREIGN KEY(model_id) REFERENCES models(id) ON DELETE CASCADE)""")
+        db.execSQL("""CREATE TABLE model_operations(
+            id TEXT PRIMARY KEY NOT NULL, model_id TEXT NOT NULL, operation TEXT NOT NULL,
+            state TEXT NOT NULL, detail TEXT NOT NULL, created_at INTEGER NOT NULL)""")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -107,6 +119,14 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             setToolPermission("local.notes.create", ToolRisk.LOCAL_WRITE, false, true)
             setToolPermission("local.file.write", ToolRisk.LOCAL_WRITE, false, true)
             setToolPermission("android.device.read", ToolRisk.READ_ONLY, false, false)
+            upsertModel(ModelProfile(
+                id="gemma-4-e2b-it-litertlm",name="Gemma 4 E2B IT",family="Gemma",
+                runtimeId="litertlm-android-v0.18.1",format="litertlm",
+                source="litert-community/gemma-4-E2B-it-litert-lm",localPath=null,
+                quantization=null,sizeBytes=null,contextLength=null,
+                capabilities=setOf("text-generation"),status=ModelInstallStatus.CANDIDATE,
+                checksum=null,license="Verify upstream license before distribution",updatedAt=now
+            ))
             setSetting("memory.allow_user_approved", "false", now)
             writableDatabase.setTransactionSuccessful()
         } finally { writableDatabase.endTransaction() }
@@ -338,6 +358,47 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     fun toolAllowed(toolId: String, risk: ToolRisk): Boolean = readableDatabase.rawQuery(
         "SELECT enabled,risk,approval_required FROM tool_permissions WHERE tool_id=?",arrayOf(toolId)
     ).use { c -> c.moveToFirst() && c.getInt(0)==1 && c.getString(1)==risk.name }
+
+    fun upsertModel(model: ModelProfile) {
+        val values=ContentValues().apply {
+            put("id",model.id);put("name",model.name);put("family",model.family);put("runtime_id",model.runtimeId)
+            put("format",model.format);put("source",model.source);put("local_path",model.localPath)
+            put("quantization",model.quantization);put("size_bytes",model.sizeBytes);put("context_length",model.contextLength)
+            put("capabilities",json(model.capabilities));put("status",model.status.name)
+            put("checksum",model.checksum);put("license",model.license);put("updated_at",model.updatedAt)
+        }
+        writableDatabase.insertWithOnConflict("models",null,values,SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun models(): List<ModelProfile> = readableDatabase.rawQuery(
+        "SELECT id,name,family,runtime_id,format,source,local_path,quantization,size_bytes,context_length,capabilities,status,checksum,license,updated_at FROM models ORDER BY name",null
+    ).use { c -> buildList {
+        while(c.moveToNext()) add(ModelProfile(
+            id=c.getString(0),name=c.getString(1),family=c.getString(2),runtimeId=c.getString(3),
+            format=c.getString(4),source=c.getString(5),localPath=c.getString(6),quantization=c.getString(7),
+            sizeBytes=if(c.isNull(8))null else c.getLong(8),contextLength=if(c.isNull(9))null else c.getInt(9),
+            capabilities=parseSet(c.getString(10)),status=ModelInstallStatus.valueOf(c.getString(11)),
+            checksum=c.getString(12),license=c.getString(13),updatedAt=c.getLong(14)
+        ))
+    } }
+
+    fun assignModelRole(role: ModelRole, modelId: String) {
+        check(models().any { it.id==modelId }) { "Model is not registered." }
+        val values=ContentValues().apply { put("role",role.name);put("model_id",modelId);put("updated_at",System.currentTimeMillis()) }
+        writableDatabase.insertWithOnConflict("model_roles",null,values,SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun modelRoleAssignments(): Map<ModelRole,String> = readableDatabase.rawQuery("SELECT role,model_id FROM model_roles",null).use { c ->
+        buildMap { while(c.moveToNext()) put(ModelRole.valueOf(c.getString(0)),c.getString(1)) }
+    }
+
+    fun recordModelOperation(modelId: String,operation: String,state: String,detail: String) {
+        val values=ContentValues().apply {
+            put("id",UUID.randomUUID().toString());put("model_id",modelId);put("operation",operation)
+            put("state",state);put("detail",detail.take(2_000));put("created_at",System.currentTimeMillis())
+        }
+        writableDatabase.insertOrThrow("model_operations",null,values)
+    }
 
     fun setSetting(key: String, value: String, now: Long = System.currentTimeMillis()) {
         require(key.matches(Regex("[a-zA-Z0-9._-]{2,100}")) && value.length <= 2_000)
