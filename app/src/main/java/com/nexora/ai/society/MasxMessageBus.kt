@@ -24,7 +24,7 @@ class MasxMessageBus(private val database: MasxDatabase) {
     }
 
     suspend fun dispatchBatch(limit: Int = 32): Int = withContext(Dispatchers.IO) {
-        var delivered = 0
+        database.expireMessages()\n        var delivered = 0
         database.pendingMessages(limit = limit).forEach { message ->
             val recipients = message.recipientAgentId?.let { listOfNotNull(it to handlers[it]) }
                 ?: handlers.entries.map { it.key to it.value }
