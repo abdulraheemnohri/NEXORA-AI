@@ -48,7 +48,7 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
     var skillName by remember { mutableStateOf("") }
     var skillDescription by remember { mutableStateOf("") }
     var skillInstructions by remember { mutableStateOf("") }
-    val tabs = listOf("Overview","Agents","Tasks","Memory","Skills","Tools","Settings")
+    val tabs = listOf("Overview","Agents","Tasks","Models","Memory","Skills","Tools","Settings")
 
     Column(Modifier.fillMaxSize().background(MasxBackground).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
@@ -70,6 +70,7 @@ fun MasxHome(viewModel: MasxViewModel, onBack: () -> Unit) {
             "Overview" -> OverviewPanel(state,viewModel)
             "Agents" -> AgentsPanel(state,viewModel)
             "Tasks" -> TasksPanel(state,viewModel)
+            "Models" -> ModelPanel(state,viewModel)
             "Memory" -> MemoryPanel(state,viewModel)
             "Skills" -> SkillsPanel(state,viewModel,skillName,{skillName=it},skillDescription,{skillDescription=it},skillInstructions,{skillInstructions=it})
             "Tools" -> ToolsPanel(state,viewModel)
@@ -199,6 +200,40 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModelPanel(state: MasxUiState,viewModel: MasxViewModel) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("AIMS-X model registry · model roles route to the one shared local runtime. Dynamic multi-model loading is not enabled yet.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
+        state.models.forEach { model ->
+            Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                    Text(model.name,color=Color.White,fontWeight=FontWeight.SemiBold)
+                    Text("${model.family} · ${model.format} · ${model.status}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
+                    Text("Runtime: ${model.runtimeId}",color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                    Text("Source: ${model.source}",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
+                    Text("License: ${model.license ?: "Not recorded"}",color=Color(0xFFFFD28A),style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        Text("Role assignments",color=Color.White,fontWeight=FontWeight.SemiBold)
+        ModelRole.entries.forEach { role ->
+            Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Text("${role.name.replace('_',' ')} · ${state.models.firstOrNull { it.id==state.modelRoles[role] }?.name ?: "Unassigned"}",color=Color.White)
+                Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    state.models.forEach { model ->
+                        FilterChip(
+                            selected=state.modelRoles[role]==model.id,
+                            onClick={viewModel.assignModelRole(role,model.id)},
+                            label={Text(model.name)}
+                        )
+                    }
+                }
+            }
+        }
+        Text("The primary Gemma artifact is installed and loaded from the chat model installer. Other entries must be explicitly imported and validated before they can be activated.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall)
     }
 }
 
