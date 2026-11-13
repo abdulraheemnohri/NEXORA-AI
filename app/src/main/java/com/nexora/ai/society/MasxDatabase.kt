@@ -224,7 +224,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         writableDatabase.insertOrThrow("messages", null, values)
     }
 
-    fun pendingMessages(now: Long = System.currentTimeMillis(), limit: Int = 100): List<LampMessage> =
+    fun expireMessages(now: Long = System.currentTimeMillis()): Int {\n        val values=ContentValues().apply { put("delivery_state","EXPIRED"); put("last_error","Message TTL expired") }\n        return writableDatabase.update("messages",values,"delivery_state=? AND expires_at IS NOT NULL AND expires_at<=?",arrayOf("PENDING",now.toString()))\n    }\n\n    fun pendingMessages(now: Long = System.currentTimeMillis(), limit: Int = 100): List<LampMessage> =
         readableDatabase.rawQuery(
             """SELECT id,task_id,correlation_id,sender,recipient,type,priority,created_at,expires_at,payload,attempt
                FROM messages WHERE delivery_state='PENDING' AND (expires_at IS NULL OR expires_at>?)
@@ -270,7 +270,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    fun putMemory(memory: AgentMemory, explicitlyUserApproved: Boolean = false) {
+    fun allMemories(limit: Int = 200): List<AgentMemory> = readableDatabase.rawQuery(\n        "SELECT id,scope,owner_id,memory_key,value,provenance,created_at,updated_at FROM memories ORDER BY updated_at DESC LIMIT ?",\n        arrayOf(limit.coerceIn(1,500).toString())\n    ).use { c -> buildList { while(c.moveToNext()) add(c.toMemory()) } }\n\n    fun putMemory(memory: AgentMemory, explicitlyUserApproved: Boolean = false) {
         require(memory.scope != MemoryScope.USER_APPROVED || explicitlyUserApproved) {
             "User-approved memory can only be written through an explicit approval path."
         }
