@@ -647,3 +647,48 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Require exact-head build, lint, JVM and API 35 instrumentation success for this memory-deletion head before merge.
 - After CI, review the complete PR and merge only if the base remains conflict-free.
 - Next product gate: physical Pixel 6 Gemma load/inference/offline validation and measured RAM/latency/thermal behavior.
+
+
+## 2026-11-15 — Recheck MAS-X resource admission after the shared inference queue
+
+### Repository checkpoint
+- Re-inspected current main, standalone open issues, recent commits, all 15 branch heads, open pull requests and latest relevant Actions before editing.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no standalone open issues were returned. Open PRs are #1, #4, #12 and #13. PR #1 and #4 retain unique, diverged work and remain untouched. PR #12 remains open on `feat/approved-local-notes`; its exact-head run #112 is still queued without a job. Main run #109 reports failure while its only build job remains queued, so no source failure is established.
+- Fifteen branch heads were enumerated and compared with main. Three stale branches have no unique commits but were left intact because branch deletion is not exposed. No branch was deleted.
+- PR #13 remains a draft on `feat/masx-core-foundation`. Its previous exact-head run [#135, attempt 2](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43509498157) passed debug APK assembly, Android lint, JVM tests, KVM preflight and all 27 API 35 instrumentation tests on parent head `dbd9f973`. The first attempt failed only at the hosted-runner KVM read/write preflight; retrying the failed job on a fresh hosted runner succeeded. Run #135 validates the parent head, not the resource-admission changes below.
+
+### Delivered on `feat/masx-core-foundation`
+- Extracted the 512 MiB available-memory reserve, Android low-memory flag and severe-thermal threshold into the pure `MasxResourcePolicy` so policy boundaries can be tested without Android services.
+- Added the suspend `MasxInferenceAdmission` contract. `MasxResourceGovernor.requireAllowed()` takes a fresh OS snapshot on `Dispatchers.IO`.
+- Updated `LiteRtMasxInferenceGateway` to acquire the application-wide `SharedInferenceScheduler` slot first, then re-check resource admission immediately before calling the existing LiteRT-LM runtime. A task that waited in the queue can no longer rely solely on an older ViewModel preflight snapshot.
+- Kept the existing early ViewModel preflight for immediate user feedback; the gateway check is the authoritative second gate.
+- Added five JVM tests: memory-reserve boundary, OS low-memory flag, thermal threshold/unknown status, rejection when resource conditions change while queued, and admission-before-work ordering. These tests exercise policy and scheduler control flow, not model inference.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/society/MasxResourceGovernor.kt`
+- `app/src/main/java/com/nexora/ai/society/MasxInferenceGateway.kt`
+- `app/src/main/java/com/nexora/ai/society/MasxViewModel.kt`
+- `app/src/test/java/com/nexora/ai/society/MasxResourcePolicyTest.kt`
+- `app/src/test/java/com/nexora/ai/society/MasxInferenceAdmissionTest.kt`
+- `README.md`, `ROADMAP.md`, `docs/MASX_IMPLEMENTATION.md`, `docs/MASX_SECURITY.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Inspected the source diff and verified that the existing single LiteRT-LM runtime, shared scheduler, 512 MiB threshold and Android thermal API guard remain in place. No new runtime API or Android permission was introduced.
+- This automation environment has no Gradle executable or Android SDK/ADB; no local build, lint, JVM tests or instrumentation tests were run.
+- Parent head `dbd9f973`: run #135 attempt 2 passed build, lint, JVM tests and 27 API 35 instrumentation tests. Intermediate run #136 was superseded/cancelled by the test determinism follow-up before lint/unit tests completed. The exact-head workflow for the final source/test commit is required; no new test pass is claimed here.
+- No real Gemma 4 E2B inference, offline-after-download behavior, or physical Pixel 6 RAM/thermal measurement was performed.
+
+### Safety and preservation
+- Resource admission is a best-effort pre-inference gate, not a guarantee against OOM or thermal changes during generation. It uses local Android OS readings only.
+- No model weights, secrets, dependencies, Android permissions, cloud AI services, Firebase, Docker, Ollama, llama.cpp or external inference server were added.
+- No force-push, merge, branch deletion or modification of PR #1, #4 or #12 was performed.
+
+### Commit / PR
+- Resource-admission source commit: [33572404](https://github.com/abdulraheemnohri/NEXORA-AI/commit/33572404a186567891721dc715436cec6f84a103).
+- Deterministic queued-test follow-up: [3d45f05](https://github.com/abdulraheemnohri/NEXORA-AI/commit/3d45f05385ac5c166c1037b3fe8aa8c169a34abd).
+- Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
+
+### Blockers and next priority
+- Complete exact-head build, lint, JVM and API 35 instrumentation for the resource-admission commits; fix only failures confirmed by logs.
+- After green exact-head CI, review the full PR #13 change set and merge only after conflict review.
+- Next product gate remains real Gemma load/inference, offline operation, cancellation/native callback drain, and measured memory/latency/thermal behavior on a physical 6 GB Pixel 6.

@@ -40,7 +40,7 @@ class MasxInferenceAdmissionTest {
             }
         }
 
-        // UNDIDSPATCHED runs the request until it suspends on the occupied scheduler mutex.
+        // UNDISPATCHED runs the request until it suspends on the occupied scheduler mutex.
         assertEquals(0, admissionChecks.get())
 
         currentlyAllowed.set(false)

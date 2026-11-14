@@ -49,3 +49,8 @@ The Tasks UI exposes cancellation while a task is running. Cancellation is propa
 ## User-controlled memory deletion
 
 Every displayed MAS-X memory record has an explicit Delete action and a confirmation dialog. The database removes only the selected record by bound ID inside a transaction. A local audit event records the action and record identifier, but never copies the memory key or value into audit details. This is app-level deletion, not a claim of secure flash erasure; SQLite storage is not encrypted in this build.
+
+
+## Resource admission
+
+MAS-X re-samples Android memory and thermal state after it acquires the shared inference slot, then rejects the request before calling LiteRT-LM when the OS low-memory flag is set, available memory is below 512 MiB, or an available thermal status is severe. This closes the stale-preflight window while a task waits in the queue. The check is best-effort and does not guarantee that memory or temperature will remain safe for the full generation; it is not an OS sandbox or a hard memory limit. The resource snapshot is read locally on `Dispatchers.IO` and is not sent to a service.
