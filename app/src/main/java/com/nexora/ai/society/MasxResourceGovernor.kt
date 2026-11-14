@@ -1,10 +1,12 @@
 package com.nexora.ai.society
 
+import android.app.ActivityManager
 import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
-import android.app.ActivityManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class DeviceResourceSnapshot(
     val availableMemoryBytes: Long,
@@ -17,8 +19,29 @@ data class DeviceResourceSnapshot(
     val availableMemoryMb: Long get() = availableMemoryBytes / (1024 * 1024)
 }
 
+/** A fresh admission decision is required immediately before a society inference starts. */
+fun interface MasxInferenceAdmission {
+    suspend fun requireAllowed()
+}
+
+/** Pure resource policy so the device thresholds can be tested without Android services. */
+object MasxResourcePolicy {
+    const val MIN_AVAILABLE_MEMORY_BYTES = 512L * 1024L * 1024L
+    private const val SEVERE_THERMAL_STATUS = 4
+
+    fun canStartInference(snapshot: DeviceResourceSnapshot): Pair<Boolean, String> {
+        if (snapshot.lowMemory || snapshot.availableMemoryBytes < MIN_AVAILABLE_MEMORY_BYTES) {
+            return false to "Insufficient available memory for another inference. Close other apps or unload the model."
+        }
+        if (snapshot.thermalStatus != null && snapshot.thermalStatus >= SEVERE_THERMAL_STATUS) {
+            return false to "Device thermal state is severe. Wait for the device to cool before starting inference."
+        }
+        return true to "Resource gate passed."
+    }
+}
+
 /** Conservative Android resource gate. It reports only OS-provided measurements. */
-class MasxResourceGovernor(context: Context) {
+class MasxResourceGovernor(context: Context) : MasxInferenceAdmission {
     private val app = context.applicationContext
 
     fun snapshot(): DeviceResourceSnapshot {
@@ -39,18 +62,18 @@ class MasxResourceGovernor(context: Context) {
         )
     }
 
-    fun canStartInference(snapshot: DeviceResourceSnapshot = snapshot()): Pair<Boolean, String> {
-        if (snapshot.lowMemory || snapshot.availableMemoryBytes < MIN_AVAILABLE_MEMORY_BYTES) {
-            return false to "Insufficient available memory for another inference. Close other apps or unload the model."
+    fun canStartInference(snapshot: DeviceResourceSnapshot = snapshot()): Pair<Boolean, String> =
+        MasxResourcePolicy.canStartInference(snapshot)
+
+    /** Re-sample on IO after the shared inference slot has been acquired. */
+    override suspend fun requireAllowed() {
+        val (allowed, reason) = withContext(Dispatchers.IO) {
+            canStartInference(snapshot())
         }
-        if (snapshot.thermalStatus != null && snapshot.thermalStatus >= SEVERE_THERMAL_STATUS) {
-            return false to "Device thermal state is severe. Wait for the device to cool before starting inference."
-        }
-        return true to "Resource gate passed."
+        check(allowed) { reason }
     }
 
     companion object {
-        const val MIN_AVAILABLE_MEMORY_BYTES = 512L * 1024L * 1024L
-        private const val SEVERE_THERMAL_STATUS = 4
+        const val MIN_AVAILABLE_MEMORY_BYTES = MasxResourcePolicy.MIN_AVAILABLE_MEMORY_BYTES
     }
 }

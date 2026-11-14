@@ -68,7 +68,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     private val toolPolicy = MasxToolPolicy(database)
     private val orchestrator = MasxOrchestrator(
         database,
-        LiteRtMasxInferenceGateway(app.localModelRuntime, app.inferenceScheduler)
+        LiteRtMasxInferenceGateway(app.localModelRuntime, app.inferenceScheduler, governor)
     )
     private val mutableState = MutableStateFlow(MasxUiState())
     private var activeTaskId: String? = null
