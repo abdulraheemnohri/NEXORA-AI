@@ -2,10 +2,9 @@ package com.nexora.ai.society
 
 import com.nexora.ai.ai.SharedInferenceScheduler
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,7 +31,7 @@ class MasxInferenceAdmissionTest {
             admissionChecks.incrementAndGet()
             check(currentlyAllowed.get()) { "Resource conditions changed while waiting." }
         }
-        val queuedRequest = async {
+        val queuedRequest = async(start = CoroutineStart.UNDISPATCHED) {
             runCatching {
                 withInferenceAdmission(scheduler, "masx:worker", admission) {
                     workCalls.incrementAndGet()
@@ -41,9 +40,7 @@ class MasxInferenceAdmissionTest {
             }
         }
 
-        withTimeout(2_000) {
-            while (scheduler.state.value.waiting == 0) yield()
-        }
+        // UNDIDSPATCHED runs the request until it suspends on the occupied scheduler mutex.
         assertEquals(0, admissionChecks.get())
 
         currentlyAllowed.set(false)
