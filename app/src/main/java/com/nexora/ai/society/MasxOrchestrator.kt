@@ -8,6 +8,14 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+data class TaskQueueRunReport(
+    val attemptedTaskIds: List<String>,
+    val completedTaskIds: List<String>,
+    val failedTaskIds: List<String>,
+    val remainingRunnableCount: Int,
+    val limitReached: Boolean
+)
+
 /**
  * Single-flight supervisor/worker orchestrator. Tasks and transitions are persisted before
  * inference, so an interrupted RUNNING task can be recovered after process restart.
@@ -17,6 +25,7 @@ class MasxOrchestrator(
     private val inference: MasxInferenceGateway
 ) {
     private val executionMutex = Mutex()
+    private val queueMutex = Mutex()
 
     suspend fun submit(title: String, input: String, priority: TaskPriority = TaskPriority.NORMAL): String =
         withContext(Dispatchers.IO) {
@@ -38,6 +47,39 @@ class MasxOrchestrator(
             )
             task.id
         }
+
+
+    /**
+     * Runs a bounded, user-started batch of dependency-ready tasks sequentially.
+     * Each task is attempted at most once per batch; a failed task can be retried by
+     * a later user action if its persisted retry budget still allows it.
+     */
+    suspend fun runReadyTasks(maxTasks: Int = 10): TaskQueueRunReport = queueMutex.withLock {
+        require(maxTasks in 1..10) { "A ready-queue batch must contain between 1 and 10 tasks." }
+        val attempted = linkedSetOf<String>()
+        val completed = mutableListOf<String>()
+        val failed = mutableListOf<String>()
+
+        while (attempted.size < maxTasks) {
+            val next = withContext(Dispatchers.IO) {
+                database.runnableTasks(limit = 500, excludedTaskIds = attempted).firstOrNull()
+            } ?: break
+            attempted += next.id
+            val result = runTask(next.id)
+            if (result.isSuccess) completed += next.id else failed += next.id
+        }
+
+        val remaining = withContext(Dispatchers.IO) {
+            database.runnableTasks(limit = 500).size
+        }
+        TaskQueueRunReport(
+            attemptedTaskIds = attempted.toList(),
+            completedTaskIds = completed,
+            failedTaskIds = failed,
+            remainingRunnableCount = remaining,
+            limitReached = attempted.size == maxTasks && remaining > 0
+        )
+    }
 
     suspend fun runTask(taskId: String): Result<String> = executionMutex.withLock {
         try {

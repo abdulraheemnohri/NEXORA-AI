@@ -692,3 +692,51 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Complete exact-head build, lint, JVM and API 35 instrumentation for the resource-admission commits; fix only failures confirmed by logs.
 - After green exact-head CI, review the full PR #13 change set and merge only after conflict review.
 - Next product gate remains real Gemma load/inference, offline operation, cancellation/native callback drain, and measured memory/latency/thermal behavior on a physical 6 GB Pixel 6.
+
+
+## 2026-11-16 — Bounded dependency-aware MAS-X ready queue
+
+### Repository checkpoint
+- Re-inspected repository metadata, current main, open issues, recent commits, all 15 branch heads, open pull requests, branch comparisons, and the latest relevant GitHub Actions before editing.
+- Main remains abd66700dd6f7e6f119d84c6cd612aff4c40b71b. No standalone open issues were returned. Open PRs are #1, #4, #12, and #13. PR #1 and #4 retain unique diverged work and were not modified. PR #12 remains open on feat/approved-local-notes; exact-head run #112 remains queued with no job. PR #13 is open on feat/masx-core-foundation, head de1c484dede7bd4ccba07da89ede28939a917e82, 103 commits ahead and zero behind main.
+- All 15 branch heads were enumerated and compared with main. No branch was deleted, no force-push was performed, and PR #1/#4/#12 branches were not changed.
+- PR #13 exact-head Actions run [#138](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43637373178) completed successfully on 2026-11-14: debug APK assembly, Android lint, JVM unit tests, KVM preflight, and API 35 instrumentation all passed. This validates the pre-change head only.
+- Main run [#109](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43095075914) reports failure while its build job remained queued; no source-level failure is established. PR #12 run #112 remains queued without a job.
+
+### Delivered on feat/masx-core-foundation
+- Added a database query for dependency-ready tasks, sorted deterministically by CRITICAL, HIGH, NORMAL, then LOW priority and creation order. It excludes paused/cancelled tasks, tasks with unfinished prerequisites, and failed tasks whose retry budget is exhausted.
+- Added a user-started ready-queue runner capped at 10 sequential tasks per invocation. It re-queries readiness after each task so a completed prerequisite can unlock its dependent later in the same batch.
+- Each task ID is attempted at most once per batch. Retryable failures are reported and left eligible for a later user action; the queue does not spin-retry the same failing task.
+- Added a Compose confirmation dialog explaining local model use and battery impact, a queue cancel action, current eligible-task count, and a completion/failure/remaining summary.
+- Made dependency mutation transactional: task existence, pre-assignment state, cycle-path check, and insertion share one SQLite write transaction. Dependency edits are rejected after assignment to avoid changing a task's prerequisites mid-execution.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/society/MasxDatabase.kt
+- app/src/main/java/com/nexora/ai/society/MasxOrchestrator.kt
+- app/src/main/java/com/nexora/ai/society/MasxViewModel.kt
+- app/src/main/java/com/nexora/ai/society/MasxHome.kt
+- app/src/androidTest/java/com/nexora/ai/society/MasxOrchestratorInstrumentedTest.kt
+- README.md, ROADMAP.md, docs/MASX_IMPLEMENTATION.md, docs/MASX_SECURITY.md, docs/DAILY_PROGRESS.md
+
+### Tests and verification
+- Added four API 35 instrumentation cases: prerequisite chains execute topologically; priority ordering and the 10-task cap are honored; a failing task is not retried twice in one batch; and dependencies cannot be edited after assignment.
+- Existing database cycle-rejection coverage remains in place.
+- Source changes were reviewed for bounded SQL parameters, task-state gating, cancellation propagation, and use of the existing shared LiteRT-LM runtime. No new dependency, Android permission, model artifact, network service, or inference engine was introduced.
+- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment (no Gradle executable or Android SDK/ADB).
+- No real Gemma inference, offline-after-download behavior, or physical Pixel 6 verification was performed. Run #138 is a parent-head baseline, not validation of this increment. A new exact-head Actions run is required.
+
+### Safety and preservation
+- The ready queue is explicit, sequential, capped at 10 tasks, and does not perform automatic background inference or invoke tool handlers. Cancellation uses the existing native callback drain path.
+- Dependency cycle detection and insertion now occur in one SQLite transaction. The queue never treats a failed/cancelled prerequisite as completed.
+- No model weights, secrets, new Android permissions, cloud AI APIs, Firebase, Docker, Ollama, llama.cpp, or external Python inference server were added.
+- No force-push, merge, branch deletion, or changes to PR #1, #4, or #12 were made.
+
+### Commit / PR
+- Branch: feat/masx-core-foundation.
+- Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
+- New source and documentation commit will be recorded after GitHub accepts the commit/ref update.
+
+### Blockers and next priority
+- Require exact-head APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation to pass for this ready-queue increment before considering PR #13 merge.
+- Continue physical Pixel 6 verification of the pinned Gemma artifact, LiteRT-LM initialization, multi-turn inference, offline operation, cancellation drain, peak memory, latency, and thermal behavior.
+- After the queue increment is validated, prioritize strict-schema local-model plan proposals with explicit user review; do not enable autonomous model-generated tool execution.

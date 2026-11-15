@@ -31,6 +31,9 @@ data class MasxUiState(
     val metrics: List<MasxMetricRecord> = emptyList(),
     val evolutionProposals: List<EvolutionProposal> = emptyList(),
     val queuedMessages: Int = 0,
+    val readyQueueCount: Int = 0,
+    val queueRunSummary: String? = null,
+    val isQueueRunning: Boolean = false,
     val settings: Map<String, String> = emptyMap(),
     val modelReady: Boolean = false,
     val isBusy: Boolean = false,
@@ -54,7 +57,8 @@ private data class MasxLoadedData(
     val auditEvents: List<MasxAuditEvent>,
     val metrics: List<MasxMetricRecord>,
     val proposals: List<EvolutionProposal>,
-    val queuedMessages: Int
+    val queuedMessages: Int,
+    val readyQueueCount: Int
 )
 
 /** Society state holder. Durable operations run away from Android's main thread. */
@@ -146,7 +150,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     auditEvents = database.auditEvents(),
                     metrics = database.metrics(),
                     proposals = database.evolutionProposals(),
-                    queuedMessages = database.pendingMessages().size
+                    queuedMessages = database.pendingMessages().size,
+                    readyQueueCount = database.runnableTasks(limit = 11).size
                 )
             }
             mutableState.update {
@@ -163,6 +168,7 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     metrics = loaded.metrics,
                     evolutionProposals = loaded.proposals,
                     queuedMessages = loaded.queuedMessages,
+                    readyQueueCount = loaded.readyQueueCount,
                     settings = loaded.snapshot.settings,
                     resources = governor.snapshot()
                 )
@@ -248,7 +254,79 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
         job.start()
     }
 
+    fun runReadyQueue() {
+        val current = mutableState.value
+        if (current.isBusy || activeTaskJob?.isActive == true) return
+        if (current.readyQueueCount == 0) {
+            mutableState.update { it.copy(error = "No dependency-ready tasks are available.") }
+            return
+        }
+        if (!current.modelReady) {
+            mutableState.update { it.copy(error = "Load the local LiteRT-LM model before running the ready queue.") }
+            return
+        }
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            mutableState.update {
+                it.copy(isBusy = true, isQueueRunning = true, error = null, queueRunSummary = null)
+            }
+            try {
+                check(withContext(Dispatchers.IO) {
+                    database.setting("society.enabled", "true") == "true"
+                }) { "Micro-Agent Society is disabled in settings." }
+                check(mutableState.value.modelReady) {
+                    "The local LiteRT-LM model is no longer ready."
+                }
+                val resources = withContext(Dispatchers.IO) { governor.snapshot() }
+                mutableState.update { it.copy(resources = resources) }
+                val (allowed, reason) = governor.canStartInference(resources)
+                check(allowed) { reason }
+
+                val report = orchestrator.runReadyTasks(maxTasks = 10)
+                messageBus.dispatchBatch()
+                val summary = if (report.attemptedTaskIds.isEmpty()) {
+                    "No tasks are ready. Complete prerequisites or resume paused tasks first."
+                } else buildString {
+                    append("Processed ").append(report.attemptedTaskIds.size).append(" task(s): ")
+                    append(report.completedTaskIds.size).append(" completed, ")
+                    append(report.failedTaskIds.size).append(" failed.")
+                    if (report.remainingRunnableCount > 0) {
+                        append(" ").append(report.remainingRunnableCount)
+                            .append(" task(s) remain eligible for a later run.")
+                    }
+                    if (report.limitReached) append(" The 10-task batch limit was reached.")
+                }
+                mutableState.update { it.copy(queueRunSummary = summary) }
+            } catch (cancelled: CancellationException) {
+                mutableState.update {
+                    it.copy(queueRunSummary = "Queue cancelled. The active task was stopped through the runtime cancellation path.")
+                }
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = error.message ?: "Ready queue execution failed.") }
+            } finally {
+                activeTaskId = null
+                activeTaskJob = null
+                mutableState.update { it.copy(isBusy = false, isQueueRunning = false) }
+                refresh()
+            }
+        }
+        activeTaskId = null
+        activeTaskJob = job
+        job.start()
+    }
+
+    fun cancelReadyQueue() {
+        if (!mutableState.value.isQueueRunning) return
+        activeTaskJob?.takeIf { it.isActive }?.cancel(
+            CancellationException("Ready queue cancelled by user.")
+        )
+    }
+
     fun cancelSelectedTask() {
+        if (mutableState.value.isQueueRunning) {
+            cancelReadyQueue()
+            return
+        }
         val id = mutableState.value.selectedTaskId ?: return
         val runningJob = activeTaskJob?.takeIf { activeTaskId == id && it.isActive }
         viewModelScope.launch {

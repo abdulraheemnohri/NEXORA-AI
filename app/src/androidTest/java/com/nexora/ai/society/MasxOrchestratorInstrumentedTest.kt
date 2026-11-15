@@ -59,4 +59,82 @@ class MasxOrchestratorInstrumentedTest {
         assertEquals(0, cancelled.attempt)
     }
 
+    @Test fun readyQueueRunsPrerequisitesBeforeTheirDependents() = runBlocking {
+        val now = System.currentTimeMillis()
+        listOf(
+            MasxTask("queue-a", "A", "Task A", TaskStatus.CREATED, TaskPriority.NORMAL, now, now),
+            MasxTask("queue-b", "B", "Task B", TaskStatus.CREATED, TaskPriority.NORMAL, now + 1, now + 1),
+            MasxTask("queue-c", "C", "Task C", TaskStatus.CREATED, TaskPriority.NORMAL, now + 2, now + 2)
+        ).forEach(database::createTask)
+        database.addDependency("queue-a", "queue-b")
+        database.addDependency("queue-b", "queue-c")
+        val executionOrder = mutableListOf<String>()
+        val orchestrator = MasxOrchestrator(database, MasxInferenceGateway { _, taskId, _, _ ->
+            executionOrder += taskId
+            "Completed $taskId"
+        })
+
+        val report = orchestrator.runReadyTasks()
+
+        assertEquals(listOf("queue-c", "queue-b", "queue-a"), executionOrder)
+        assertEquals(executionOrder, report.completedTaskIds)
+        assertEquals(3, report.attemptedTaskIds.size)
+        assertEquals(0, report.remainingRunnableCount)
+    }
+
+    @Test fun readyQueueUsesPriorityAndHonorsThePerRunLimit() = runBlocking {
+        val now = System.currentTimeMillis()
+        listOf(
+            MasxTask("queue-low", "Low", "Low priority", TaskStatus.CREATED, TaskPriority.LOW, now, now),
+            MasxTask("queue-normal", "Normal", "Normal priority", TaskStatus.CREATED, TaskPriority.NORMAL, now + 1, now + 1),
+            MasxTask("queue-high", "High", "High priority", TaskStatus.CREATED, TaskPriority.HIGH, now + 2, now + 2)
+        ).forEach(database::createTask)
+        val executionOrder = mutableListOf<String>()
+        val orchestrator = MasxOrchestrator(database, MasxInferenceGateway { _, taskId, _, _ ->
+            executionOrder += taskId
+            "Completed $taskId"
+        })
+
+        val report = orchestrator.runReadyTasks(maxTasks = 2)
+
+        assertEquals(listOf("queue-high", "queue-normal"), executionOrder)
+        assertEquals(1, report.remainingRunnableCount)
+        assertEquals(true, report.limitReached)
+    }
+
+    @Test fun readyQueueAttemptsAFailedTaskOnlyOncePerBatch() = runBlocking {
+        val now = System.currentTimeMillis()
+        database.createTask(
+            MasxTask(
+                "queue-failing", "Failing", "Failure fixture",
+                TaskStatus.CREATED, TaskPriority.NORMAL, now, now, maxAttempts = 2
+            )
+        )
+        var inferenceCalls = 0
+        val orchestrator = MasxOrchestrator(database, MasxInferenceGateway { _, _, _, _ ->
+            inferenceCalls += 1
+            error("Expected deterministic test failure")
+        })
+
+        val report = orchestrator.runReadyTasks()
+
+        assertEquals(1, inferenceCalls)
+        assertEquals(listOf("queue-failing"), report.failedTaskIds)
+        assertEquals(1, report.remainingRunnableCount)
+    }
+
+    @Test fun dependencyCannotBeChangedAfterTaskIsAssigned() = runBlocking {
+        val now = System.currentTimeMillis()
+        database.createTask(MasxTask("locked-task", "Locked", "Task", TaskStatus.CREATED, TaskPriority.NORMAL, now, now))
+        database.createTask(MasxTask("prerequisite", "Prerequisite", "Task", TaskStatus.CREATED, TaskPriority.NORMAL, now, now))
+        database.transitionTask("locked-task", TaskStatus.PLANNING)
+        database.transitionTask("locked-task", TaskStatus.READY)
+        database.transitionTask("locked-task", TaskStatus.ASSIGNED, agentId = "engineering.developer")
+
+        val result = runCatching { database.addDependency("locked-task", "prerequisite") }
+
+        assertEquals(true, result.isFailure)
+        assertEquals(emptyList<String>(), database.dependencyIds("locked-task"))
+    }
+
 }

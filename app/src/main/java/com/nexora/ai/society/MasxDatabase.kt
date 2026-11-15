@@ -186,6 +186,42 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         arrayOf(limit.coerceIn(1, 500).toString())
     ).use { c -> buildList { while (c.moveToNext()) add(c.toTask()) } }
 
+    /**
+     * Returns dependency-ready tasks in deterministic priority order.
+     * Failed tasks remain eligible only while their persisted retry budget allows it.
+     * Excluded IDs keep one batch from retrying the same task repeatedly.
+     */
+    fun runnableTasks(
+        limit: Int = 10,
+        excludedTaskIds: Set<String> = emptySet()
+    ): List<MasxTask> {
+        val boundedLimit = limit.coerceIn(1, 500)
+        val excluded = excludedTaskIds.filter { it.isNotBlank() }.take(500)
+        val exclusionClause = if (excluded.isEmpty()) "" else
+            "AND t.id NOT IN (${excluded.joinToString(",") { "?" }})"
+        val sql = """
+            SELECT t.id,t.title,t.input,t.status,t.priority,t.created_at,t.updated_at,
+                   t.assigned_agent_id,t.parent_task_id,t.attempt,t.max_attempts,t.result,t.error
+            FROM tasks t
+            WHERE t.status IN ('CREATED','PLANNING','READY','REWORK','RECOVERING','FAILED')
+              AND (t.status!='FAILED' OR t.attempt<t.max_attempts)
+              AND NOT EXISTS (
+                  SELECT 1 FROM task_dependencies d
+                  JOIN tasks prerequisite ON prerequisite.id=d.depends_on_task_id
+                  WHERE d.task_id=t.id AND prerequisite.status!='COMPLETED'
+              )
+              $exclusionClause
+            ORDER BY CASE t.priority
+                WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'NORMAL' THEN 2 ELSE 3 END,
+                t.created_at ASC, t.id ASC
+            LIMIT ?
+        """.trimIndent()
+        val args = (excluded + boundedLimit.toString()).toTypedArray()
+        return readableDatabase.rawQuery(sql, args).use { c ->
+            buildList { while (c.moveToNext()) add(c.toTask()) }
+        }
+    }
+
     fun recoverableTasks(): List<MasxTask> = readableDatabase.rawQuery(
         "SELECT id,title,input,status,priority,created_at,updated_at,assigned_agent_id,parent_task_id,attempt,max_attempts,result,error FROM tasks WHERE status IN ('CREATED','PLANNING','READY','ASSIGNED','RUNNING','RECOVERING','REWORK','REVIEW','FAILED') ORDER BY priority DESC,created_at ASC",
         null
@@ -212,14 +248,39 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         return changed
     }
 
+    /**
+     * Links a prerequisite while the dependent task is still in its planning phase.
+     * The cycle check and insert share one write transaction to prevent concurrent
+     * dependency edits from creating a cycle between separate pre-checks.
+     */
     fun addDependency(taskId: String, dependsOn: String) {
         require(taskId != dependsOn) { "A task cannot depend on itself." }
-        require(task(taskId)!=null && task(dependsOn)!=null) { "Both tasks must exist before linking dependencies." }
-        check(!hasDependencyPath(dependsOn,taskId)) { "Dependency would create a cycle." }
-        writableDatabase.execSQL(
-            "INSERT OR IGNORE INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)",
-            arrayOf(taskId, dependsOn)
-        )
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val taskStatus = db.rawQuery(
+                "SELECT status FROM tasks WHERE id=?", arrayOf(taskId)
+            ).use { c -> if (c.moveToFirst()) TaskStatus.valueOf(c.getString(0)) else null }
+            val prerequisiteExists = db.rawQuery(
+                "SELECT 1 FROM tasks WHERE id=?", arrayOf(dependsOn)
+            ).use { it.moveToFirst() }
+            require(taskStatus != null && prerequisiteExists) {
+                "Both tasks must exist before linking dependencies."
+            }
+            check(taskStatus in setOf(TaskStatus.CREATED, TaskStatus.PLANNING, TaskStatus.READY)) {
+                "Dependencies cannot change after a task has been assigned."
+            }
+            check(!hasDependencyPath(db, dependsOn, taskId)) {
+                "Dependency would create a cycle."
+            }
+            db.execSQL(
+                "INSERT OR IGNORE INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)",
+                arrayOf(taskId, dependsOn)
+            )
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     fun dependencyIds(taskId: String): List<String> = readableDatabase.rawQuery(
@@ -227,14 +288,21 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         arrayOf(taskId)
     ).use { c -> buildList { while(c.moveToNext()) add(c.getString(0)) } }
 
-    private fun hasDependencyPath(from: String,target: String): Boolean {
-        val visited=mutableSetOf<String>()
-        val pending=ArrayDeque<String>()
+    private fun hasDependencyPath(db: SQLiteDatabase, from: String, target: String): Boolean {
+        val visited = mutableSetOf<String>()
+        val pending = ArrayDeque<String>()
         pending.add(from)
-        while(pending.isNotEmpty()) {
-            val current=pending.removeFirst()
-            if(current==target) return true
-            if(visited.add(current)) dependencyIds(current).forEach(pending::addLast)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (current == target) return true
+            if (visited.add(current)) {
+                db.rawQuery(
+                    "SELECT depends_on_task_id FROM task_dependencies WHERE task_id=?",
+                    arrayOf(current)
+                ).use { cursor ->
+                    while (cursor.moveToNext()) pending.addLast(cursor.getString(0))
+                }
+            }
         }
         return false
     }

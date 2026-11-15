@@ -83,7 +83,7 @@ Project source licensing must be finalized before public release. Gemma model te
 PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
 
 
-PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
+PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) merged on 2026-11-11 as [abd6670](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), adding permissioned local conversation search to main. PR [#12](https://github.com/abdulraheemnohri/NEXORA-AI/pull/12) remains a draft for explicitly approved local notes; its exact-head run #112 was still queued at the 2026-11-16 audit. PR [#13](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13) remains a draft for the MAS-X foundation; exact-head run #138 passed on 2026-11-14. These CI results do not establish physical Pixel 6 inference or offline verification.
 
 
 ## Micro-Agent Society (MAS-X)
@@ -93,6 +93,7 @@ The Android app now includes a local society control center with:
 - A separate app-private MAS-X SQLite database.
 - Versioned local LAMP messages with TTL, acknowledgement and retry/dead-letter states.
 - Persistent task state transitions, checkpoints and startup recovery.
+- User-started dependency-aware ready queue: sequentially runs up to 10 eligible tasks in priority order, waits for prerequisites to complete, and attempts each task at most once per batch.
 - A single application-scoped LiteRT-LM runtime and shared inference scheduler used by chat and MAS-X.
 - MAS-X inference admission re-samples Android memory and thermal state on IO only after the shared scheduler grants a slot, so queued work does not rely on a stale UI preflight; this is a best-effort gate, not an OOM or thermal guarantee.
 - Agent/task memory scopes, user-approved shared memory, skill validation and approval.
@@ -101,7 +102,7 @@ The Android app now includes a local society control center with:
 
 Open the **MAS-X** button in the chat header to access the society screens.
 
-Important limitations: the current task router uses deterministic keyword routing to one specialist worker; full LLM planning/debate and parallel workers are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Dynamic multi-model loading is not enabled. The actual Pixel 6 inference and thermal profile must still be verified on physical hardware.
+Important limitations: the current task router uses deterministic keyword routing to one specialist worker. The ready queue is user-started, bounded to 10 tasks, and sequential; it does not generate plans with the LLM, execute parallel workers, or perform automatic background inference. Full LLM planning/debate and parallel workers are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Dynamic multi-model loading is not enabled. The actual Pixel 6 inference and thermal profile must still be verified on physical hardware.
 
 See:
 - [MAS-X implementation](docs/MASX_IMPLEMENTATION.md)

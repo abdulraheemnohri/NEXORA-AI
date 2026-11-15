@@ -82,3 +82,14 @@ A running task is owned by a cancellable ViewModel job. User cancellation cancel
 ## User-controlled memory deletion
 
 The Memory screen exposes a per-record Delete action. The user must confirm the selected record before the ViewModel invokes the IO-bound database delete. The delete and metadata-only audit event are committed in one SQLite transaction. A stale or already-deleted ID is reported rather than silently treated as a successful deletion. This does not provide secure flash erasure or encrypted-at-rest storage.
+
+
+## Dependency-aware ready queue
+
+The Tasks screen exposes a user-started ready-queue action with a confirmation dialog. It runs at most 10 tasks sequentially through the existing single LiteRT-LM runtime and shared inference scheduler. The database selects only tasks in runnable states whose prerequisites are all COMPLETED, ordered by CRITICAL, HIGH, NORMAL, then LOW priority and stable creation order. Newly satisfied dependents can become eligible later in the same batch.
+
+Each task ID is attempted at most once per batch. A retryable failure is reported and left for a later user action rather than immediately retried in a tight loop. Paused, cancelled, dependency-blocked, and retry-exhausted tasks are not admitted. The queue can be cancelled; the active task follows the existing coroutine/native callback drain path before its cancellation state is persisted.
+
+Dependency insertion now performs existence checks, the cycle-path check, and the insert inside one SQLite write transaction. Dependencies can only be changed while the dependent task is CREATED, PLANNING, or READY; edits are rejected after assignment. This prevents concurrent pre-checks from independently passing and creating a cycle.
+
+The queue is a bounded sequential executor, not an LLM planner, parallel scheduler, or background worker. It performs local inference only and does not invoke tool handlers.

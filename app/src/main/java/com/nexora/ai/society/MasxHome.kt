@@ -173,7 +173,52 @@ private fun AgentsPanel(state: MasxUiState,viewModel: MasxViewModel) {
 
 @Composable
 private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
+    var showQueueConfirmation by remember { mutableStateOf(false) }
+    if (showQueueConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showQueueConfirmation = false },
+            title = { Text("Run ready tasks locally?") },
+            text = {
+                Text(
+                    "Up to 10 dependency-ready tasks will run sequentially using the installed local Gemma model. " +
+                        "This can use battery and keep the device busy. Tasks with unfinished prerequisites are skipped; " +
+                        "the queue does not perform external actions."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showQueueConfirmation = false
+                    viewModel.runReadyQueue()
+                }) { Text("Run locally") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQueueConfirmation = false }) { Text("Cancel") }
+            }
+        )
+    }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text("Dependency-aware ready queue",color=Color.White,fontWeight=FontWeight.SemiBold)
+                Text(
+                    if (state.readyQueueCount > 10) "10+ tasks currently eligible"
+                    else "${state.readyQueueCount} task(s) currently eligible",
+                    color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { showQueueConfirmation = true },
+                        enabled = !state.isBusy && state.modelReady && state.readyQueueCount > 0
+                    ) { Text("Run ready queue") }
+                    if (state.isQueueRunning) {
+                        TextButton(onClick = viewModel::cancelReadyQueue) { Text("Cancel queue") }
+                    }
+                }
+                state.queueRunSummary?.let {
+                    Text(it,color=MasxAccent,style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
         OutlinedTextField(value=state.taskTitle,onValueChange=viewModel::updateTaskTitle,label={Text("Task title")},modifier=Modifier.fillMaxWidth(),singleLine=true)
         OutlinedTextField(value=state.taskInput,onValueChange=viewModel::updateTaskInput,label={Text("Task instructions")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4)
         Button(onClick=viewModel::createTask,enabled=!state.isBusy && state.taskInput.isNotBlank(),modifier=Modifier.fillMaxWidth()) { Text(if(state.isBusy)"Working…" else "Create persistent task") }

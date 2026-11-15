@@ -54,3 +54,10 @@ Every displayed MAS-X memory record has an explicit Delete action and a confirma
 ## Resource admission
 
 MAS-X re-samples Android memory and thermal state after it acquires the shared inference slot, then rejects the request before calling LiteRT-LM when the OS low-memory flag is set, available memory is below 512 MiB, or an available thermal status is severe. This closes the stale-preflight window while a task waits in the queue. The check is best-effort and does not guarantee that memory or temperature will remain safe for the full generation; it is not an OS sandbox or a hard memory limit. The resource snapshot is read locally on `Dispatchers.IO` and is not sent to a service.
+
+
+## Ready-queue execution boundary
+
+The ready queue is started by an explicit user action and a Compose confirmation dialog. A single invocation is limited to 10 sequential tasks and uses the existing shared local inference scheduler; it does not run in the background, create model-generated tool calls, or invoke external/destructive handlers. The queue checks current dependency completion in SQLite before each task. Each task ID is attempted at most once in one batch, so a retryable failure cannot cause an immediate retry loop; a later user action is required to retry it.
+
+Queue cancellation propagates through the active Kotlin task and waits for the existing LiteRT-LM callback cleanup path. Dependency edits are transactional and are rejected once the dependent task has been assigned. The SQLite cycle check and insert share the same write transaction to avoid a check-then-write race.
