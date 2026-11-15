@@ -90,6 +90,6 @@ The Tasks screen exposes a user-started ready-queue action with a confirmation d
 
 Each task ID is attempted at most once per batch. A retryable failure is reported and left for a later user action rather than immediately retried in a tight loop. Paused, cancelled, dependency-blocked, and retry-exhausted tasks are not admitted. The queue can be cancelled; the active task follows the existing coroutine/native callback drain path before its cancellation state is persisted.
 
-Dependency insertion now performs existence checks, the cycle-path check, and the insert inside one SQLite write transaction. Dependencies can only be changed while the dependent task is CREATED, PLANNING, or READY; edits are rejected after assignment. This prevents concurrent pre-checks from independently passing and creating a cycle.
+Dependency insertion now performs existence checks, the cycle-path check, and the insert inside one SQLite write transaction. Dependencies can only be changed while the dependent task is CREATED. The orchestrator checks prerequisites before planning and again after transitioning into planning, before assignment. If a dependency edit wins the initial race, the second check blocks inference. This prevents a task from bypassing a newly added prerequisite.
 
 The queue is a bounded sequential executor, not an LLM planner, parallel scheduler, or background worker. It performs local inference only and does not invoke tool handlers.

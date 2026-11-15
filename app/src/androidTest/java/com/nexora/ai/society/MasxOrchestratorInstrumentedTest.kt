@@ -123,13 +123,11 @@ class MasxOrchestratorInstrumentedTest {
         assertEquals(1, report.remainingRunnableCount)
     }
 
-    @Test fun dependencyCannotBeChangedAfterTaskIsAssigned() = runBlocking {
+    @Test fun dependencyCannotBeChangedAfterPlanningStarts() = runBlocking {
         val now = System.currentTimeMillis()
         database.createTask(MasxTask("locked-task", "Locked", "Task", TaskStatus.CREATED, TaskPriority.NORMAL, now, now))
         database.createTask(MasxTask("prerequisite", "Prerequisite", "Task", TaskStatus.CREATED, TaskPriority.NORMAL, now, now))
         database.transitionTask("locked-task", TaskStatus.PLANNING)
-        database.transitionTask("locked-task", TaskStatus.READY)
-        database.transitionTask("locked-task", TaskStatus.ASSIGNED, agentId = "engineering.developer")
 
         val result = runCatching { database.addDependency("locked-task", "prerequisite") }
 

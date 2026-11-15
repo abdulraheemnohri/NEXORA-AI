@@ -91,6 +91,9 @@ class MasxOrchestrator(
                 val afterPlan = database.task(taskId) ?: error("Task disappeared.")
                 if (afterPlan.status == TaskStatus.PLANNING) database.transitionTask(taskId, TaskStatus.READY)
                 val ready = database.task(taskId) ?: error("Task disappeared.")
+                check(database.dependenciesComplete(taskId)) {
+                    "Task is waiting for unfinished dependencies."
+                }
                 if (ready.status == TaskStatus.FAILED) check(ready.attempt < ready.maxAttempts) { "Task exhausted its retry budget." }
                 val agent = chooseWorker(ready.input)
                 if (ready.status == TaskStatus.READY || ready.status == TaskStatus.REWORK || ready.status == TaskStatus.RECOVERING) {

@@ -235,11 +235,15 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
                             Text(if(state.isBusy && task?.status==TaskStatus.RUNNING) "Cancel run" else "Cancel")
                         }
                     }
-                    Text("Add prerequisite task (selected task waits until it completes)",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
-                    Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                        state.tasks.filter { it.id!=selected && it.status!=TaskStatus.COMPLETED && it.status!=TaskStatus.CANCELLED }.forEach { dependency ->
-                            FilterChip(selected=false,onClick={viewModel.addTaskDependency(selected,dependency.id)},label={Text(dependency.title.take(18))})
+                    if (task?.status == TaskStatus.CREATED) {
+                        Text("Add prerequisite task (this task has not started planning)",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
+                        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                            state.tasks.filter { it.id!=selected && it.status!=TaskStatus.COMPLETED && it.status!=TaskStatus.CANCELLED }.forEach { dependency ->
+                                FilterChip(selected=false,onClick={viewModel.addTaskDependency(selected,dependency.id)},label={Text(dependency.title.take(18))})
+                            }
                         }
+                    } else {
+                        Text("Prerequisites are locked after planning starts.",color=Color(0xFF9B9CB2),style=MaterialTheme.typography.labelSmall)
                     }
                     state.result?.let { Text(it,color=Color.White,style=MaterialTheme.typography.bodySmall) }
                 }

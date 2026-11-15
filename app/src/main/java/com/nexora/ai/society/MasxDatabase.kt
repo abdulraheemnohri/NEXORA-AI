@@ -267,8 +267,8 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             require(taskStatus != null && prerequisiteExists) {
                 "Both tasks must exist before linking dependencies."
             }
-            check(taskStatus in setOf(TaskStatus.CREATED, TaskStatus.PLANNING, TaskStatus.READY)) {
-                "Dependencies cannot change after a task has been assigned."
+            check(taskStatus == TaskStatus.CREATED) {
+                "Dependencies can only be changed before task planning starts."
             }
             check(!hasDependencyPath(db, dependsOn, taskId)) {
                 "Dependency would create a cycle."

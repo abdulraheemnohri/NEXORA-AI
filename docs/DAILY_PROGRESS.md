@@ -708,7 +708,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added a user-started ready-queue runner capped at 10 sequential tasks per invocation. It re-queries readiness after each task so a completed prerequisite can unlock its dependent later in the same batch.
 - Each task ID is attempted at most once per batch. Retryable failures are reported and left eligible for a later user action; the queue does not spin-retry the same failing task.
 - Added a Compose confirmation dialog explaining local model use and battery impact, a queue cancel action, current eligible-task count, and a completion/failure/remaining summary.
-- Made dependency mutation transactional: task existence, pre-assignment state, cycle-path check, and insertion share one SQLite write transaction. Dependency edits are rejected after assignment to avoid changing a task's prerequisites mid-execution.
+- Made dependency mutation transactional: task existence, CREATED-state check, cycle-path check, and insertion share one SQLite write transaction. Dependency edits are rejected once planning starts. The orchestrator rechecks dependency completion after its planning transition and before assignment, closing the race between the initial prerequisite check and a concurrent dependency edit.
 
 ### Files changed
 - app/src/main/java/com/nexora/ai/society/MasxDatabase.kt
@@ -734,9 +734,15 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Commit / PR
 - Branch: feat/masx-core-foundation.
 - Existing draft PR: [#13 — Offline-first Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
-- New source and documentation commit will be recorded after GitHub accepts the commit/ref update.
+- Branch commit: [0d6916a — bounded dependency-aware ready queue](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0d6916a35bba6009778d8f4811b6f812a7f7eebf). Pull request: [#13](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
 
 ### Blockers and next priority
 - Require exact-head APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation to pass for this ready-queue increment before considering PR #13 merge.
 - Continue physical Pixel 6 verification of the pinned Gemma artifact, LiteRT-LM initialization, multi-turn inference, offline operation, cancellation drain, peak memory, latency, and thermal behavior.
 - After the queue increment is validated, prioritize strict-schema local-model plan proposals with explicit user review; do not enable autonomous model-generated tool execution.
+
+### Follow-up hardening — dependency edit race
+- Tightened dependency edits to CREATED tasks only; the Tasks panel now hides the dependency editor after planning begins.
+- Added a second dependency-completion check after the task enters planning and before worker assignment, so an edit committed immediately after the initial preflight cannot be bypassed.
+- Updated the instrumentation case to verify that dependency edits are rejected as soon as planning begins.
+- This follow-up is included in the same exact-head PR #13 validation cycle; no local tests or Pixel 6 checks are claimed.
