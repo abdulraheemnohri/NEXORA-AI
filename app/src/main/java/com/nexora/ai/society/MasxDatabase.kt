@@ -36,6 +36,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             FOREIGN KEY(assigned_agent_id) REFERENCES agents(id) ON DELETE SET NULL,
             FOREIGN KEY(parent_task_id) REFERENCES tasks(id) ON DELETE SET NULL)""")
         db.execSQL("CREATE INDEX index_tasks_status_updated ON tasks(status, updated_at)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_tasks_agent ON tasks(assigned_agent_id)")
         db.execSQL("""CREATE TABLE task_dependencies(
             task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL,
             PRIMARY KEY(task_id, depends_on_task_id),
@@ -98,11 +99,28 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         db.execSQL("""CREATE TABLE model_operations(
             id TEXT PRIMARY KEY NOT NULL, model_id TEXT NOT NULL, operation TEXT NOT NULL,
             state TEXT NOT NULL, detail TEXT NOT NULL, created_at INTEGER NOT NULL)""")
+        createTaskPlansTable(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // Additive-only. This database is independent of the chat database.
-        if (oldVersion < 2) db.execSQL("CREATE INDEX IF NOT EXISTS index_tasks_agent ON tasks(assigned_agent_id)")
+        if (oldVersion < 2) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_tasks_agent ON tasks(assigned_agent_id)")
+            createTaskPlansTable(db)
+        }
+    }
+
+    private fun createTaskPlansTable(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS task_plans(
+            id TEXT PRIMARY KEY NOT NULL,
+            goal TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            steps_json TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('PENDING_REVIEW','APPROVED','REJECTED')),
+            created_at INTEGER NOT NULL,
+            reviewed_at INTEGER
+        )""")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_task_plans_status_created ON task_plans(status, created_at DESC)")
     }
 
     fun seedBuiltIns(now: Long = System.currentTimeMillis()) {
@@ -174,6 +192,133 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         }
         writableDatabase.insertOrThrow("tasks", null, values)
         appendAudit(null, "TASK_CREATED", task.id, "SUCCESS", "Task created")
+    }
+
+
+    /** Stores only a validated proposal. It never creates or executes tasks. */
+    fun savePlanProposal(
+        goal: String,
+        draft: MasxPlanDraft,
+        now: Long = System.currentTimeMillis()
+    ): String {
+        val safeGoal = goal.trim()
+        require(safeGoal.length in 8..2_000) { "Plan goal must contain 8–2,000 characters." }
+        val stepsJson = MasxPlanParser.encode(draft)
+        val id = UUID.randomUUID().toString()
+        val values = ContentValues().apply {
+            put("id", id)
+            put("goal", safeGoal)
+            put("summary", draft.summary)
+            put("steps_json", stepsJson)
+            put("status", TaskPlanStatus.PENDING_REVIEW.name)
+            put("created_at", now)
+            putNull("reviewed_at")
+        }
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.insertOrThrow("task_plans", null, values)
+            appendAudit("executive.planner", "PLAN_PROPOSED", id, "PENDING_REVIEW", "${draft.steps.size} steps saved for user review.")
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return id
+    }
+
+    fun pendingPlans(limit: Int = 10): List<StoredTaskPlan> = readableDatabase.rawQuery(
+        "SELECT id,goal,summary,steps_json,status,created_at,reviewed_at FROM task_plans WHERE status='PENDING_REVIEW' ORDER BY created_at DESC LIMIT ?",
+        arrayOf(limit.coerceIn(1, 20).toString())
+    ).use { c -> buildList { while (c.moveToNext()) add(c.toStoredPlan()) } }
+
+    /**
+     * Atomically converts a reviewed proposal into CREATED tasks and dependency edges.
+     * Approval does not run inference or execute any tool.
+     */
+    fun approvePlanAndCreateTasks(
+        planId: String,
+        now: Long = System.currentTimeMillis()
+    ): List<String> {
+        require(planId.isNotBlank())
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val plan = db.rawQuery(
+                "SELECT id,goal,summary,steps_json,status,created_at,reviewed_at FROM task_plans WHERE id=?",
+                arrayOf(planId)
+            ).use { c -> if (c.moveToFirst()) c.toStoredPlan() else null }
+                ?: error("Plan proposal not found.")
+            check(plan.status == TaskPlanStatus.PENDING_REVIEW) { "Plan proposal is no longer awaiting review." }
+
+            val maxAttempts = setting("tasks.max_attempts", "2").toIntOrNull()?.coerceIn(0, 3) ?: 2
+            val taskIdsByStep = plan.steps.associate { it.id to UUID.randomUUID().toString() }
+            val createdIds = mutableListOf<String>()
+
+            plan.steps.forEachIndexed { index, step ->
+                val taskId = taskIdsByStep.getValue(step.id)
+                val task = MasxTask(
+                    id = taskId,
+                    title = step.title,
+                    input = step.instructions,
+                    status = TaskStatus.CREATED,
+                    priority = step.priority,
+                    createdAt = now + index,
+                    updatedAt = now + index,
+                    maxAttempts = maxAttempts
+                )
+                createTask(task)
+                createdIds += taskId
+                step.dependsOn.forEach { prerequisiteStepId ->
+                    val prerequisiteTaskId = taskIdsByStep[prerequisiteStepId]
+                        ?: error("Plan contains an unknown prerequisite.")
+                    val edge = ContentValues().apply {
+                        put("task_id", taskId)
+                        put("depends_on_task_id", prerequisiteTaskId)
+                    }
+                    db.insertOrThrow("task_dependencies", null, edge)
+                }
+            }
+
+            val changed = db.update(
+                "task_plans",
+                ContentValues().apply {
+                    put("status", TaskPlanStatus.APPROVED.name)
+                    put("reviewed_at", now)
+                },
+                "id=? AND status=?",
+                arrayOf(planId, TaskPlanStatus.PENDING_REVIEW.name)
+            )
+            check(changed == 1) { "Plan proposal was already reviewed." }
+            appendAudit("user", "PLAN_APPROVED", planId, "SUCCESS", "Created ${createdIds.size} local tasks; none were executed.")
+            db.setTransactionSuccessful()
+            return createdIds
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun rejectPlan(planId: String, now: Long = System.currentTimeMillis()): Boolean {
+        require(planId.isNotBlank())
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val changed = db.update(
+                "task_plans",
+                ContentValues().apply {
+                    put("status", TaskPlanStatus.REJECTED.name)
+                    put("reviewed_at", now)
+                },
+                "id=? AND status=?",
+                arrayOf(planId, TaskPlanStatus.PENDING_REVIEW.name)
+            )
+            if (changed == 1) {
+                appendAudit("user", "PLAN_REJECTED", planId, "SUCCESS", "Plan proposal rejected; no tasks created.")
+            }
+            db.setTransactionSuccessful()
+            return changed == 1
+        } finally {
+            db.endTransaction()
+        }
     }
 
     fun task(id: String): MasxTask? = readableDatabase.rawQuery(
@@ -604,6 +749,16 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         return SocietySnapshot(agents(),allTasks,queued,allTasks.count { it.status==TaskStatus.RUNNING },settings())
     }
 
+    private fun android.database.Cursor.toStoredPlan() = StoredTaskPlan(
+        id = getString(0),
+        goal = getString(1),
+        summary = getString(2),
+        steps = MasxPlanParser.decode(getString(3)).steps,
+        status = TaskPlanStatus.valueOf(getString(4)),
+        createdAt = getLong(5),
+        reviewedAt = if (isNull(6)) null else getLong(6)
+    )
+
     private fun android.database.Cursor.toTask() = MasxTask(
         getString(0),getString(1),getString(2),TaskStatus.valueOf(getString(3)),TaskPriority.valueOf(getString(4)),
         getLong(5),getLong(6),getString(7),getString(8),getInt(9),getInt(10),getString(11),getString(12)
@@ -625,7 +780,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DB_NAME = "nexora_masx.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
         private val allowedTransitions = mapOf(
             TaskStatus.CREATED to setOf(TaskStatus.PLANNING,TaskStatus.READY,TaskStatus.CANCELLED),
             TaskStatus.PLANNING to setOf(TaskStatus.READY,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED),

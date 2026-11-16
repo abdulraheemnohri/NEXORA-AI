@@ -174,6 +174,43 @@ private fun AgentsPanel(state: MasxUiState,viewModel: MasxViewModel) {
 @Composable
 private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
     var showQueueConfirmation by remember { mutableStateOf(false) }
+    var planToApprove by remember { mutableStateOf<StoredTaskPlan?>(null) }
+    if (planToApprove != null) {
+        val plan = planToApprove!!
+        AlertDialog(
+            onDismissRequest = { planToApprove = null },
+            title = { Text("Approve local task plan?") },
+            text = {
+                Column(
+                    Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Goal: ${plan.goal}", color = Color.White)
+                    Text(plan.summary, color = Color(0xFFB9B4CA))
+                    plan.steps.forEachIndexed { index, step ->
+                        Text("${index + 1}. ${step.title} · ${step.priority}", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(step.instructions, color = Color(0xFFB9B4CA))
+                        if (step.dependsOn.isNotEmpty()) {
+                            Text("Depends on: ${step.dependsOn.joinToString()}", color = MasxAccent)
+                        }
+                    }
+                    Text(
+                        "Approval creates local tasks only. It does not execute them, call tools, or contact a service.",
+                        color = Color(0xFFFFD28A)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    planToApprove = null
+                    viewModel.approvePlan(plan.id)
+                }) { Text("Approve and create tasks") }
+            },
+            dismissButton = {
+                TextButton(onClick = { planToApprove = null }) { Text("Cancel") }
+            }
+        )
+    }
     if (showQueueConfirmation) {
         AlertDialog(
             onDismissRequest = { showQueueConfirmation = false },
@@ -197,6 +234,60 @@ private fun TasksPanel(state: MasxUiState,viewModel: MasxViewModel) {
         )
     }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text("Gemma task planner",color=Color.White,fontWeight=FontWeight.SemiBold)
+                Text(
+                    "Creates a bounded proposal with the installed local model. Review and approve it before any tasks are added.",
+                    color=Color(0xFF9B9CB2),style=MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    value=state.planGoal,
+                    onValueChange=viewModel::updatePlanGoal,
+                    label={Text("Goal to decompose")},
+                    modifier=Modifier.fillMaxWidth(),
+                    minLines=2,
+                    maxLines=4
+                )
+                Button(
+                    onClick=viewModel::generatePlan,
+                    enabled=!state.isBusy && state.modelReady && state.planGoal.trim().length in 8..2_000,
+                    modifier=Modifier.fillMaxWidth()
+                ) { Text(if(state.isPlanning) "Planning with local Gemma…" else "Generate reviewable plan") }
+                if (!state.modelReady) {
+                    Text("Load Gemma locally before requesting a plan.",color=Color(0xFFFFD28A),style=MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+        if (state.pendingPlans.isNotEmpty()) {
+            Column(
+                Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                state.pendingPlans.forEach { plan ->
+            Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text("Pending review · ${plan.steps.size} steps",color=MasxAccent,fontWeight=FontWeight.SemiBold)
+                    Text(plan.goal,color=Color.White,fontWeight=FontWeight.Medium)
+                    Text(plan.summary,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                    Column(Modifier.heightIn(max=220.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        plan.steps.forEachIndexed { index, step ->
+                            Text("${index + 1}. ${step.title} · ${step.priority}",color=Color.White,fontWeight=FontWeight.Medium)
+                            Text(step.instructions,color=Color(0xFFB9B4CA),style=MaterialTheme.typography.bodySmall)
+                            if (step.dependsOn.isNotEmpty()) {
+                                Text("Depends on: ${step.dependsOn.joinToString()}",color=MasxAccent,style=MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Button(onClick={planToApprove=plan},enabled=!state.isBusy) { Text("Review & approve") }
+                        TextButton(onClick={viewModel.rejectPlan(plan.id)},enabled=!state.isBusy) { Text("Reject") }
+                    }
+                }
+            }
+        }
+            }
+        }
         Card(colors=CardDefaults.cardColors(containerColor=MasxPanel),modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text("Dependency-aware ready queue",color=Color.White,fontWeight=FontWeight.SemiBold)

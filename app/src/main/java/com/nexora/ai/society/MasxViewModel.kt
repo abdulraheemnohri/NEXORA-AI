@@ -34,6 +34,9 @@ data class MasxUiState(
     val readyQueueCount: Int = 0,
     val queueRunSummary: String? = null,
     val isQueueRunning: Boolean = false,
+    val planGoal: String = "",
+    val pendingPlans: List<StoredTaskPlan> = emptyList(),
+    val isPlanning: Boolean = false,
     val settings: Map<String, String> = emptyMap(),
     val modelReady: Boolean = false,
     val isBusy: Boolean = false,
@@ -57,6 +60,8 @@ private data class MasxLoadedData(
     val auditEvents: List<MasxAuditEvent>,
     val metrics: List<MasxMetricRecord>,
     val proposals: List<EvolutionProposal>,
+    val plans: List<StoredTaskPlan>,
+    val resources: DeviceResourceSnapshot,
     val queuedMessages: Int,
     val readyQueueCount: Int
 )
@@ -70,10 +75,11 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     private val messageBus = MasxMessageBus(database)
     private val agentFactory = MasxAgentFactory(database)
     private val toolPolicy = MasxToolPolicy(database)
-    private val orchestrator = MasxOrchestrator(
-        database,
-        LiteRtMasxInferenceGateway(app.localModelRuntime, app.inferenceScheduler, governor)
+    private val inferenceGateway = LiteRtMasxInferenceGateway(
+        app.localModelRuntime, app.inferenceScheduler, governor
     )
+    private val planner = MasxPlanner(database, inferenceGateway)
+    private val orchestrator = MasxOrchestrator(database, inferenceGateway)
     private val mutableState = MutableStateFlow(MasxUiState())
     private var activeTaskId: String? = null
     private var activeTaskJob: Job? = null
@@ -150,6 +156,8 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     auditEvents = database.auditEvents(),
                     metrics = database.metrics(),
                     proposals = database.evolutionProposals(),
+                    plans = database.pendingPlans(limit = 3),
+                    resources = governor.snapshot(),
                     queuedMessages = database.pendingMessages().size,
                     readyQueueCount = database.runnableTasks(limit = 11).size
                 )
@@ -167,11 +175,102 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
                     auditEvents = loaded.auditEvents,
                     metrics = loaded.metrics,
                     evolutionProposals = loaded.proposals,
+                    pendingPlans = loaded.plans,
                     queuedMessages = loaded.queuedMessages,
                     readyQueueCount = loaded.readyQueueCount,
                     settings = loaded.snapshot.settings,
-                    resources = governor.snapshot()
+                    resources = loaded.resources
                 )
+            }
+        }
+    }
+
+
+    fun updatePlanGoal(value: String) {
+        mutableState.update { it.copy(planGoal = value.take(2_000), error = null) }
+    }
+
+    /** Generates a proposal through the installed local Gemma/LiteRT-LM gateway only. */
+    fun generatePlan() {
+        val current = mutableState.value
+        if (current.isBusy || current.isPlanning) return
+        if (!current.modelReady) {
+            mutableState.update { it.copy(error = "Load the local Gemma/LiteRT-LM model before generating a plan.") }
+            return
+        }
+        val goal = current.planGoal.trim()
+        if (goal.length !in 8..2_000) {
+            mutableState.update { it.copy(error = "Plan goal must contain 8–2,000 characters.") }
+            return
+        }
+        viewModelScope.launch {
+            mutableState.update { it.copy(isBusy = true, isPlanning = true, error = null, result = null) }
+            try {
+                check(withContext(Dispatchers.IO) {
+                    database.setting("society.enabled", "true") == "true"
+                }) { "Micro-Agent Society is disabled in settings." }
+                val draft = planner.propose(goal)
+                withContext(Dispatchers.IO) { database.savePlanProposal(goal, draft) }
+                mutableState.update {
+                    it.copy(
+                        planGoal = "",
+                        result = "Plan saved for review. No tasks have been created or executed."
+                    )
+                }
+                refresh()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = error.message ?: "Local plan generation failed.") }
+            } finally {
+                mutableState.update { it.copy(isBusy = false, isPlanning = false) }
+            }
+        }
+    }
+
+    /** Explicit review approval creates local CREATED tasks only; it never starts inference. */
+    fun approvePlan(planId: String) {
+        if (mutableState.value.isBusy) return
+        viewModelScope.launch {
+            mutableState.update { it.copy(isBusy = true, error = null) }
+            try {
+                check(withContext(Dispatchers.IO) {
+                    database.setting("society.enabled", "true") == "true"
+                }) { "Micro-Agent Society is disabled in settings." }
+                val taskIds = withContext(Dispatchers.IO) {
+                    database.approvePlanAndCreateTasks(planId)
+                }
+                mutableState.update {
+                    it.copy(
+                        selectedTaskId = taskIds.firstOrNull(),
+                        result = "Approved plan created ${taskIds.size} local task(s). Nothing was executed."
+                    )
+                }
+                refresh()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = error.message ?: "Unable to approve plan.") }
+            } finally {
+                mutableState.update { it.copy(isBusy = false) }
+            }
+        }
+    }
+
+    fun rejectPlan(planId: String) {
+        if (mutableState.value.isBusy) return
+        viewModelScope.launch {
+            mutableState.update { it.copy(isBusy = true, error = null) }
+            try {
+                val rejected = withContext(Dispatchers.IO) { database.rejectPlan(planId) }
+                check(rejected) { "Plan proposal is no longer awaiting review." }
+                refresh()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = error.message ?: "Unable to reject plan.") }
+            } finally {
+                mutableState.update { it.copy(isBusy = false) }
             }
         }
     }
@@ -561,6 +660,9 @@ class MasxViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshResources() {
-        mutableState.update { it.copy(resources = governor.snapshot()) }
+        viewModelScope.launch {
+            val snapshot = withContext(Dispatchers.IO) { governor.snapshot() }
+            mutableState.update { it.copy(resources = snapshot) }
+        }
     }
 }

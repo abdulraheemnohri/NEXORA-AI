@@ -102,7 +102,7 @@ The Android app now includes a local society control center with:
 
 Open the **MAS-X** button in the chat header to access the society screens.
 
-Important limitations: the current task router uses deterministic keyword routing to one specialist worker. The ready queue is user-started, bounded to 10 tasks, and sequential; it does not generate plans with the LLM, execute parallel workers, or perform automatic background inference. Full LLM planning/debate and parallel workers are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Dynamic multi-model loading is not enabled. The actual Pixel 6 inference and thermal profile must still be verified on physical hardware.
+Important limitations: the Tasks screen now generates bounded 1–8 step proposals through the installed local Gemma/LiteRT-LM runtime. The strict schema is persisted for review; explicit approval creates local CREATED tasks and dependency links only. Worker selection for individual tasks still uses deterministic keyword routing. The ready queue is user-started, bounded to 10 tasks, and sequential; it does not execute parallel workers or perform automatic background inference. Debate, independent model review, autonomous tool execution, and dynamic multi-model loading are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Real plan quality, inference, offline operation, and thermal behavior still require physical Pixel 6 verification.
 
 See:
 - [MAS-X implementation](docs/MASX_IMPLEMENTATION.md)
@@ -114,3 +114,8 @@ See:
 ### MAS-X task cancellation
 
 The MAS-X task runner treats coroutine cancellation as a user control signal, not a retryable inference failure. Cancelling a running task cancels its Kotlin request, waits for the pinned LiteRT-LM callback lifecycle to drain, then persists CANCELLED without incrementing the retry counter. The Tasks screen keeps Cancel run available while a task is running. A native request may take until its terminal callback to drain; this is not an immediate native-process kill. The behavior is covered by an API 35 instrumentation test and remains subject to the exact-head CI result in PR #13.
+
+
+## MAS-X LLM task planning
+
+The Tasks screen can ask the installed local Gemma model through the shared LiteRT-LM runtime for a bounded 1–8 step proposal. Output is accepted only when it matches the strict JSON task schema; proposals are stored as pending review. Explicit approval atomically creates local tasks and prerequisite links, but does not run them. The ready queue remains a separate user-confirmed action. Invalid model output is rejected without a deterministic or remote fallback.

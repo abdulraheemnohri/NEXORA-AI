@@ -746,3 +746,52 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added a second dependency-completion check after the task enters planning and before worker assignment, so an edit committed immediately after the initial preflight cannot be bypassed.
 - Updated the instrumentation case to verify that dependency edits are rejected as soon as planning begins.
 - This follow-up is included in the same exact-head PR #13 validation cycle; no local tests or Pixel 6 checks are claimed.
+
+
+## 2026-11-17 — Bounded local Gemma planning with explicit task review
+
+### Repository checkpoint
+- Re-inspected repository metadata, main, open issues, recent commits, all 15 branch heads, open PRs, and current Actions runs before editing.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`. No standalone open issues were returned.
+- Open PRs: #1, #4, #12, and #13. PR #1/#4 and every branch with unique commits remain preserved.
+- PR #13 head before this increment was `5af3f5e1584e7c4c72e03cf5b3b552d30f6053c8`, 105 commits ahead and zero behind main. Exact-head Actions run [#140](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43758923434) completed successfully: debug APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation all passed.
+- PR #12 remains open; exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) is still queued without jobs. It has not been treated as validated.
+
+### Delivered on `feat/masx-core-foundation`
+- Added `MasxPlanner`, which calls the existing application-scoped Gemma/LiteRT-LM inference gateway and the shared scheduler/resource gate; it has no cloud, Python, Ollama, or alternate-runtime fallback.
+- Added strict `MasxPlanParser`: maximum 12,000 output characters, 1–8 steps, exact JSON keys, sequential IDs, bounded summary/title/instructions, enumerated priority, and dependencies restricted to earlier steps. Unknown fields and tool-call fields are rejected.
+- Added durable `task_plans` storage with additive SQLite version 1→2 migration.
+- Added a Compose proposal/review surface. User approval atomically creates local tasks and dependency edges in CREATED state; it does not execute them. Running tasks remains a separate confirmed action.
+- Moved resource snapshot reads used by refresh onto Dispatchers.IO so Android system-service sampling is not performed inside the main-thread state update.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/society/MasxPlanModels.kt` (new)
+- `app/src/main/java/com/nexora/ai/society/MasxPlanner.kt` (new)
+- `app/src/main/java/com/nexora/ai/society/MasxDatabase.kt`
+- `app/src/main/java/com/nexora/ai/society/MasxViewModel.kt`
+- `app/src/main/java/com/nexora/ai/society/MasxHome.kt`
+- `app/src/androidTest/java/com/nexora/ai/society/MasxPlanParserInstrumentedTest.kt` (new)
+- `app/src/androidTest/java/com/nexora/ai/society/MasxPlanPersistenceInstrumentedTest.kt` (new)
+- `README.md`, `ROADMAP.md`, `docs/MASX_IMPLEMENTATION.md`, `docs/MASX_SECURITY.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Added five API 35 instrumentation tests for valid schema/dependencies, unknown tool fields, forward dependency rejection, step-count bounds, and instruction-size bounds.
+- Added three API 35 database instrumentation tests for atomic task/dependency creation, rejected-plan non-execution, and additive schema migration.
+- No local Gradle build/lint/test was available in this automation environment. The previous run #140 validates the parent source only; the new exact-head CI result is pending after this commit. No new planner test is claimed as passed until that workflow completes.
+- Real Gemma plan generation, offline operation, and physical Pixel 6 RAM/thermal behavior are not verified.
+
+### Safety and preservation
+- Plan output is never treated as tool authorization. No model-generated tool call or action execution is enabled.
+- Approval creates local task records only; queue execution requires a separate confirmation.
+- No new dependencies, Android permissions, model weights, secrets, cloud services, Firebase, Docker, Ollama, llama.cpp, or external inference servers were added.
+- No force-push, merge, or branch deletion was performed.
+
+### Commit / PR
+- Branch: `feat/masx-core-foundation`.
+- Pull request: [#13 — Micro-Agent Society foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13).
+- Exact-head Actions URL will be recorded after GitHub assigns the new run.
+
+### Blockers and next priority
+- Complete exact-head APK build, lint, JVM tests, and API 35 instrumentation for the new planner/migration tests.
+- Verify real Gemma-generated plan quality and the approval flow on physical Pixel 6.
+- Then address the remaining model-download/load/offline and device RAM/thermal release gates.

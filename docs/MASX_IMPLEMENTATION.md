@@ -31,7 +31,7 @@ Tasks are stored before execution and use validated state transitions. The curre
 
 Interrupted tasks are reconciled on application startup. Retry attempts are bounded by the local task setting. Task dependencies are persisted and block execution until prerequisites complete.
 
-The current planner role is registered, but full LLM-based multi-step planning, debate, independent model review, parallel worker execution, and approval-paused external actions remain future work. Do not describe this MVP as a full autonomous planner.
+The planner role now generates bounded local Gemma task-plan proposals with strict JSON validation, durable pending-review storage, and explicit approval that atomically creates CREATED tasks and prerequisite edges only. Worker selection for task execution remains deterministic keyword routing. Debate, independent model review, parallel worker execution, and approval-paused external actions remain future work. Do not describe this MVP as a full autonomous planner.
 
 ## Memory isolation
 
@@ -93,3 +93,14 @@ Each task ID is attempted at most once per batch. A retryable failure is reporte
 Dependency insertion now performs existence checks, the cycle-path check, and the insert inside one SQLite write transaction. Dependencies can only be changed while the dependent task is CREATED. The orchestrator checks prerequisites before planning and again after transitioning into planning, before assignment. If a dependency edit wins the initial race, the second check blocks inference. This prevents a task from bypassing a newly added prerequisite.
 
 The queue is a bounded sequential executor, not an LLM planner, parallel scheduler, or background worker. It performs local inference only and does not invoke tool handlers.
+
+
+## LLM task proposals and human review
+
+The Tasks screen sends the user's goal to the registered `executive.planner` profile through the same application-scoped `LiteRtMasxInferenceGateway`, shared inference scheduler, resource admission gate, and local Gemma/LiteRT-LM runtime used by workers. There is no alternate model or remote fallback.
+
+The planner output is untrusted. `MasxPlanParser` accepts only a JSON object with the exact `summary` and `steps` keys, 1–8 steps, sequential step IDs, bounded title/instruction lengths, known priority values, and dependencies that point only to earlier steps. Unknown fields (including tool-call fields), forward references, and malformed output are rejected. The validated proposal is stored in `task_plans` with `PENDING_REVIEW` status.
+
+The user reviews the goal, summary, every step, priority, and prerequisite list. Explicit approval performs one SQLite transaction that creates all tasks as `CREATED`, adds the validated dependency edges, and marks the proposal `APPROVED`. Rejection marks it `REJECTED`. Approval never starts inference; a separate confirmation is required to run the ready queue. The raw model response is not retained, and no tool handler is invoked.
+
+The worker-selection policy for executing individual tasks remains deterministic keyword routing. LLM plan generation does not select or activate agents, bypass resource admission, or execute tasks automatically. Real Gemma plan quality and the full review flow still require physical Pixel 6 verification.
