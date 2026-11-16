@@ -761,6 +761,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added `MasxPlanner`, which calls the existing application-scoped Gemma/LiteRT-LM inference gateway and the shared scheduler/resource gate; it has no cloud, Python, Ollama, or alternate-runtime fallback.
 - Added strict `MasxPlanParser`: maximum 12,000 output characters, 1–8 steps, exact JSON keys, sequential IDs, bounded summary/title/instructions, enumerated priority, and dependencies restricted to earlier steps. Unknown fields and tool-call fields are rejected.
 - Added durable `task_plans` storage with additive SQLite version 1→2 migration.
+- Enforced the MAS-X master switch again inside the SQLite save/approval transactions and capped pending proposals at 20; this prevents UI timing from bypassing the setting and bounds retained drafts.
 - Added a Compose proposal/review surface. User approval atomically creates local tasks and dependency edges in CREATED state; it does not execute them. Running tasks remains a separate confirmed action.
 - Moved resource snapshot reads used by refresh onto Dispatchers.IO so Android system-service sampling is not performed inside the main-thread state update.
 
@@ -776,7 +777,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Verification actually run
 - Added five API 35 instrumentation tests for valid schema/dependencies, unknown tool fields, forward dependency rejection, step-count bounds, and instruction-size bounds.
-- Added three API 35 database instrumentation tests for atomic task/dependency creation, rejected-plan non-execution, and additive schema migration.
+- Added five API 35 database instrumentation tests for atomic task/dependency creation, rejected-plan non-execution, additive schema migration, disabled-society enforcement, and the 20-proposal cap.
 - No local Gradle build/lint/test was available in this automation environment. The previous run #140 validates the parent source only; the new exact-head CI result is pending after this commit. No new planner test is claimed as passed until that workflow completes.
 - Real Gemma plan generation, offline operation, and physical Pixel 6 RAM/thermal behavior are not verified.
 

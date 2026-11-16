@@ -217,6 +217,16 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
         val db = writableDatabase
         db.beginTransaction()
         try {
+            check(setting("society.enabled", "true") == "true") {
+                "Micro-Agent Society is disabled in settings."
+            }
+            val pendingCount = db.rawQuery(
+                "SELECT COUNT(*) FROM task_plans WHERE status=?",
+                arrayOf(TaskPlanStatus.PENDING_REVIEW.name)
+            ).use { cursor -> cursor.moveToFirst(); cursor.getInt(0) }
+            require(pendingCount < MAX_PENDING_PLANS) {
+                "Pending plan limit reached (20). Review or reject a proposal before creating another."
+            }
             db.insertOrThrow("task_plans", null, values)
             appendAudit("executive.planner", "PLAN_PROPOSED", id, "PENDING_REVIEW", "${draft.steps.size} steps saved for user review.")
             db.setTransactionSuccessful()
@@ -249,6 +259,9 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
             ).use { c -> if (c.moveToFirst()) c.toStoredPlan() else null }
                 ?: error("Plan proposal not found.")
             check(plan.status == TaskPlanStatus.PENDING_REVIEW) { "Plan proposal is no longer awaiting review." }
+            check(setting("society.enabled", "true") == "true") {
+                "Micro-Agent Society is disabled in settings."
+            }
 
             val maxAttempts = setting("tasks.max_attempts", "2").toIntOrNull()?.coerceIn(0, 3) ?: 2
             val taskIdsByStep = plan.steps.associate { it.id to UUID.randomUUID().toString() }
@@ -781,6 +794,7 @@ class MasxDatabase(context: Context) : SQLiteOpenHelper(
     companion object {
         private const val DB_NAME = "nexora_masx.db"
         private const val DB_VERSION = 2
+        private const val MAX_PENDING_PLANS = 20
         private val allowedTransitions = mapOf(
             TaskStatus.CREATED to setOf(TaskStatus.PLANNING,TaskStatus.READY,TaskStatus.CANCELLED),
             TaskStatus.PLANNING to setOf(TaskStatus.READY,TaskStatus.FAILED,TaskStatus.CANCELLED,TaskStatus.PAUSED),

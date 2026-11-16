@@ -18,6 +18,9 @@ class MasxPlanner(
             "Plan goal must contain 8–2,000 characters."
         }
         return withContext(Dispatchers.IO) {
+            check(database.setting("society.enabled", "true") == "true") {
+                "Micro-Agent Society is disabled in settings."
+            }
             val plannerAgent = database.agents().firstOrNull {
                 it.id == "executive.planner" && it.status == AgentStatus.ACTIVE
             } ?: error("The executive planner agent is not active.")

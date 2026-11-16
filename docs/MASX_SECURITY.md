@@ -66,3 +66,6 @@ Queue cancellation propagates through the active Kotlin task and waits for the e
 ## LLM-generated task proposals
 
 Gemma output is untrusted data, not authorization. The planner accepts only a bounded declarative JSON schema (1–8 tasks, fixed fields, bounded strings, known priorities, and dependencies on earlier steps). Unknown fields such as tool calls are rejected. Proposals are persisted as pending review; the UI shows the complete goal, summary, instructions, priorities, and dependency list before approval. Approval atomically creates local tasks in CREATED state and dependency rows only. It does not execute tasks or call tools. Task execution requires the separate ready-queue confirmation and the existing resource gate. Malformed model output is rejected; there is no deterministic, remote, or executable fallback.
+
+
+The task-plan repository rechecks the MAS-X master enablement setting inside the SQLite write transaction for both proposal persistence and approval. A disabled society cannot persist a new plan or convert a pending plan into tasks. Pending proposals are capped at 20 to bound local storage. These checks are enforced at the storage boundary, not only by Compose button state.

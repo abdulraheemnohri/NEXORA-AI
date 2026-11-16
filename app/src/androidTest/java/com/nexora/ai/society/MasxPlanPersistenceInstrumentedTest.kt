@@ -60,6 +60,42 @@ class MasxPlanPersistenceInstrumentedTest {
         assertTrue(database.tasks().isEmpty())
     }
 
+    @Test fun disabledSocietyCannotSaveOrApprovePlans() {
+        val draft = MasxPlanParser.parse(
+            """{"summary":"One task.","steps":[
+                {"id":"step-1","title":"Inspect","instructions":"Inspect local source.","priority":"NORMAL","depends_on":[]}
+            ]}"""
+        )
+        database.setSetting("society.enabled", "false")
+        assertTrue(runCatching {
+            database.savePlanProposal("Inspect the local source tree.", draft)
+        }.isFailure)
+        assertTrue(database.pendingPlans().isEmpty())
+
+        database.setSetting("society.enabled", "true")
+        val planId = database.savePlanProposal("Inspect the local source tree.", draft)
+        database.setSetting("society.enabled", "false")
+        assertTrue(runCatching { database.approvePlanAndCreateTasks(planId) }.isFailure)
+        assertTrue(database.tasks().isEmpty())
+        assertEquals(TaskPlanStatus.PENDING_REVIEW, database.pendingPlans().single().status)
+    }
+
+    @Test fun pendingProposalCountIsBounded() {
+        val draft = MasxPlanParser.parse(
+            """{"summary":"One task.","steps":[
+                {"id":"step-1","title":"Inspect","instructions":"Inspect local source.","priority":"NORMAL","depends_on":[]}
+            ]}"""
+        )
+        repeat(20) { index ->
+            database.savePlanProposal("Review local planning item number $index.", draft, now = index.toLong())
+        }
+        assertEquals(20, database.pendingPlans(limit = 20).size)
+        assertTrue(runCatching {
+            database.savePlanProposal("This twenty-first proposal must be rejected.", draft)
+        }.isFailure)
+        assertEquals(20, database.pendingPlans(limit = 20).size)
+    }
+
     @Test fun versionOneDatabaseReceivesTheAdditivePlanTableMigration() {
         database.close()
         val legacy = context.openOrCreateDatabase("nexora_masx.db", Context.MODE_PRIVATE, null)

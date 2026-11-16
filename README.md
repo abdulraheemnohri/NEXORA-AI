@@ -118,4 +118,4 @@ The MAS-X task runner treats coroutine cancellation as a user control signal, no
 
 ## MAS-X LLM task planning
 
-The Tasks screen can ask the installed local Gemma model through the shared LiteRT-LM runtime for a bounded 1–8 step proposal. Output is accepted only when it matches the strict JSON task schema; proposals are stored as pending review. Explicit approval atomically creates local tasks and prerequisite links, but does not run them. The ready queue remains a separate user-confirmed action. Invalid model output is rejected without a deterministic or remote fallback.
+The Tasks screen can ask the installed local Gemma model through the shared LiteRT-LM runtime for a bounded 1–8 step proposal. Output is accepted only when it matches the strict JSON task schema; at most 20 pending proposals are retained. The storage layer rechecks the society master switch when saving and approving. Explicit approval atomically creates local tasks and prerequisite links, but does not run them. The ready queue remains a separate user-confirmed action. Invalid model output is rejected without a deterministic or remote fallback.
