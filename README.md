@@ -83,4 +83,39 @@ Project source licensing must be finalized before public release. Gemma model te
 PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
 
 
-PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
+PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) merged on 2026-11-11 as [abd6670](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), adding permissioned local conversation search to main. PR [#12](https://github.com/abdulraheemnohri/NEXORA-AI/pull/12) remains a draft for explicitly approved local notes; its exact-head run #112 was still queued at the 2026-11-16 audit. PR [#13](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13) remains a draft for the MAS-X foundation; exact-head run #138 passed on 2026-11-14. These CI results do not establish physical Pixel 6 inference or offline verification.
+
+
+## Micro-Agent Society (MAS-X)
+
+The Android app now includes a local society control center with:
+- 18 declarative agent profiles across 12 departments.
+- A separate app-private MAS-X SQLite database.
+- Versioned local LAMP messages with TTL, acknowledgement and retry/dead-letter states.
+- Persistent task state transitions, checkpoints and startup recovery.
+- User-started dependency-aware ready queue: sequentially runs up to 10 eligible tasks in priority order, waits for prerequisites to complete, and attempts each task at most once per batch.
+- A single application-scoped LiteRT-LM runtime and shared inference scheduler used by chat and MAS-X.
+- MAS-X inference admission re-samples Android memory and thermal state on IO only after the shared scheduler grants a slot, so queued work does not rely on a stale UI preflight. It blocks at Android `PowerManager.THERMAL_STATUS_SEVERE` (3) or higher and remains a best-effort gate, not an OOM or thermal guarantee.
+- Agent/task memory scopes, user-approved shared memory, skill validation and approval.
+- User-confirmed deletion of individual MAS-X memory records, with audit metadata that never copies memory values.
+- Tool risk metadata, model registry/roles, resource preflight, audit trail, performance metrics and evolution proposal review.
+
+Open the **MAS-X** button in the chat header to access the society screens.
+
+Important limitations: the Tasks screen now generates bounded 1–8 step proposals through the installed local Gemma/LiteRT-LM runtime. The strict schema is persisted for review; explicit approval creates local CREATED tasks and dependency links only. Worker selection for individual tasks still uses deterministic keyword routing. The ready queue is user-started, bounded to 10 tasks, and sequential; it does not execute parallel workers or perform automatic background inference. Debate, independent model review, autonomous tool execution, and dynamic multi-model loading are not implemented. Tool permission entries do not create tool handlers. Skills are declarative instruction bundles only. Real plan quality, inference, offline operation, and thermal behavior still require physical Pixel 6 verification.
+
+See:
+- [MAS-X implementation](docs/MASX_IMPLEMENTATION.md)
+- [Security model](docs/MASX_SECURITY.md)
+- [Settings reference](docs/MASX_SETTINGS.md)
+- [Pixel 6 validation checklist](docs/MASX_PIXEL6_VALIDATION.md)
+
+
+### MAS-X task cancellation
+
+The MAS-X task runner treats coroutine cancellation as a user control signal, not a retryable inference failure. Cancelling a running task cancels its Kotlin request, waits for the pinned LiteRT-LM callback lifecycle to drain, then persists CANCELLED without incrementing the retry counter. The Tasks screen keeps Cancel run available while a task is running. A native request may take until its terminal callback to drain; this is not an immediate native-process kill. The behavior is covered by an API 35 instrumentation test and remains subject to the exact-head CI result in PR #13.
+
+
+## MAS-X LLM task planning
+
+The Tasks screen can ask the installed local Gemma model through the shared LiteRT-LM runtime for a bounded 1–8 step proposal. Output is accepted only when it matches the strict JSON task schema; at most 20 pending proposals are retained. The storage layer rechecks the society master switch when saving and approving. Explicit approval atomically creates local tasks and prerequisite links, but does not run them. The ready queue remains a separate user-confirmed action. Invalid model output is rejected without a deterministic or remote fallback.

@@ -35,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun NexoraHome(viewModel: NexoraViewModel) {
+fun NexoraHome(viewModel: NexoraViewModel, onOpenSociety: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -112,6 +114,7 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 TextButton(onClick = viewModel::newConversation, enabled = state.conversationReady && !state.isGenerating && !state.isDeletingConversation) {
                     Text("New chat", color = Color(0xFFB9A2FF))
                 }
+                TextButton(onClick = onOpenSociety) { Text("MAS-X", color = Color(0xFF9CF0D8)) }
                 TextButton(onClick = viewModel::openTools) {
                     Text("Tools", color = Color(0xFF75D7E8))
                 }
