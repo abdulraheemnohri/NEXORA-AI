@@ -1,5 +1,6 @@
 package com.nexora.ai.society
 
+import android.os.PowerManager
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -37,8 +38,30 @@ class MasxResourcePolicyTest {
 
     @Test fun severeThermalStateBlocksButUnknownAndModerateStatesDoNot() {
         assertTrue(MasxResourcePolicy.canStartInference(snapshot(thermalStatus = null)).first)
-        assertTrue(MasxResourcePolicy.canStartInference(snapshot(thermalStatus = 3)).first)
-        assertFalse(MasxResourcePolicy.canStartInference(snapshot(thermalStatus = 4)).first)
-        assertFalse(MasxResourcePolicy.canStartInference(snapshot(thermalStatus = 5)).first)
+        assertTrue(
+            MasxResourcePolicy.canStartInference(
+                snapshot(thermalStatus = PowerManager.THERMAL_STATUS_MODERATE)
+            ).first
+        )
+        assertFalse(
+            MasxResourcePolicy.canStartInference(
+                snapshot(thermalStatus = PowerManager.THERMAL_STATUS_SEVERE)
+            ).first
+        )
+        assertFalse(
+            MasxResourcePolicy.canStartInference(
+                snapshot(thermalStatus = PowerManager.THERMAL_STATUS_CRITICAL)
+            ).first
+        )
+        assertFalse(
+            MasxResourcePolicy.canStartInference(
+                snapshot(thermalStatus = PowerManager.THERMAL_STATUS_EMERGENCY)
+            ).first
+        )
+        assertFalse(
+            MasxResourcePolicy.canStartInference(
+                snapshot(thermalStatus = PowerManager.THERMAL_STATUS_SHUTDOWN)
+            ).first
+        )
     }
 }

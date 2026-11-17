@@ -95,7 +95,7 @@ The Android app now includes a local society control center with:
 - Persistent task state transitions, checkpoints and startup recovery.
 - User-started dependency-aware ready queue: sequentially runs up to 10 eligible tasks in priority order, waits for prerequisites to complete, and attempts each task at most once per batch.
 - A single application-scoped LiteRT-LM runtime and shared inference scheduler used by chat and MAS-X.
-- MAS-X inference admission re-samples Android memory and thermal state on IO only after the shared scheduler grants a slot, so queued work does not rely on a stale UI preflight; this is a best-effort gate, not an OOM or thermal guarantee.
+- MAS-X inference admission re-samples Android memory and thermal state on IO only after the shared scheduler grants a slot, so queued work does not rely on a stale UI preflight. It blocks at Android `PowerManager.THERMAL_STATUS_SEVERE` (3) or higher and remains a best-effort gate, not an OOM or thermal guarantee.
 - Agent/task memory scopes, user-approved shared memory, skill validation and approval.
 - User-confirmed deletion of individual MAS-X memory records, with audit metadata that never copies memory values.
 - Tool risk metadata, model registry/roles, resource preflight, audit trail, performance metrics and evolution proposal review.

@@ -14,6 +14,7 @@ Do not mark any item hardware-verified until it has been run on a physical Pixel
 - [ ] Verify the queue rejects work above its configured bound.
 - [ ] Force-stop during a task and verify startup recovery.
 - [ ] Test low-memory and severe-thermal gating.
+- [ ] Confirm Android `THERMAL_STATUS_MODERATE` (2) remains eligible and `THERMAL_STATUS_SEVERE` (3) or higher blocks new inference.
 - [ ] Record model load time, time-to-first-token and output duration.
 - [ ] Record available RAM before, during and after inference.
 - [ ] Record Android thermal status before and after a sustained test.

@@ -53,7 +53,7 @@ Every displayed MAS-X memory record has an explicit Delete action and a confirma
 
 ## Resource admission
 
-MAS-X re-samples Android memory and thermal state after it acquires the shared inference slot, then rejects the request before calling LiteRT-LM when the OS low-memory flag is set, available memory is below 512 MiB, or an available thermal status is severe. This closes the stale-preflight window while a task waits in the queue. The check is best-effort and does not guarantee that memory or temperature will remain safe for the full generation; it is not an OS sandbox or a hard memory limit. The resource snapshot is read locally on `Dispatchers.IO` and is not sent to a service.
+MAS-X re-samples Android memory and thermal state after it acquires the shared inference slot, then rejects the request before calling LiteRT-LM when the OS low-memory flag is set, available memory is below 512 MiB, or an available thermal status is `PowerManager.THERMAL_STATUS_SEVERE` (3) or higher. This closes the stale-preflight window while a task waits in the queue. The check is best-effort and does not guarantee that memory or temperature will remain safe for the full generation; it is not an OS sandbox or a hard memory limit. The resource snapshot is read locally on `Dispatchers.IO` and is not sent to a service.
 
 
 ## Ready-queue execution boundary

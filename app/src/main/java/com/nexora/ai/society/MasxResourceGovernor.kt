@@ -27,7 +27,8 @@ fun interface MasxInferenceAdmission {
 /** Pure resource policy so the device thresholds can be tested without Android services. */
 object MasxResourcePolicy {
     const val MIN_AVAILABLE_MEMORY_BYTES = 512L * 1024L * 1024L
-    private const val SEVERE_THERMAL_STATUS = 4
+    // Android defines THERMAL_STATUS_SEVERE as 3; 4 is already CRITICAL.
+    private const val SEVERE_THERMAL_STATUS = PowerManager.THERMAL_STATUS_SEVERE
 
     fun canStartInference(snapshot: DeviceResourceSnapshot): Pair<Boolean, String> {
         if (snapshot.lowMemory || snapshot.availableMemoryBytes < MIN_AVAILABLE_MEMORY_BYTES) {

@@ -796,3 +796,53 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Complete exact-head APK build, lint, JVM tests, and API 35 instrumentation for the new planner/migration tests.
 - Verify real Gemma-generated plan quality and the approval flow on physical Pixel 6.
 - Then address the remaining model-download/load/offline and device RAM/thermal release gates.
+
+## 2026-11-18 — Correct MAS-X severe thermal admission threshold
+
+### Repository checkpoint
+- Re-inspected repository metadata, current `main`, standalone open issues, recent commits, open pull requests, all branch heads, branch comparisons, and relevant Actions runs before editing.
+- `main` remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`. No standalone open issues were returned. Open PRs are #1, #4, #12, and #13.
+- All 15 branch heads were enumerated and compared with main. PR #1 and #4 retain unique diverged commits and were not modified. PR #12 retains seven unique commits. PR #13 remains on `feat/masx-core-foundation`, head `4aa13c79993dbb94dd57ad3ddc9d97cffb841688` before this increment, 107 commits ahead and zero behind main. No branch was deleted or force-pushed.
+- PR #13 exact-head run [#142](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43948991174) completed successfully: debug APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation all passed for the pre-fix head.
+- PR #12 exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) remains queued with no job. Main run [#109](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43095075914) reports failure while its only build job remains queued; no source-level failure is established.
+
+### Finding
+- Reviewed the resource policy against the official Android `PowerManager` API. Android defines `THERMAL_STATUS_SEVERE = 3` and `THERMAL_STATUS_CRITICAL = 4` ([official API reference](https://developer.android.com/reference/android/os/PowerManager#THERMAL_STATUS_SEVERE)).
+- The previous MAS-X threshold was the literal `4`, so a device already reporting SEVERE (3) could still be admitted. The previous unit test repeated that incorrect boundary and therefore did not catch the API mismatch.
+
+### Delivered on feat/masx-core-foundation
+- Replaced the magic thermal threshold with `PowerManager.THERMAL_STATUS_SEVERE`.
+- Updated the pure resource-policy test to use Android's named constants: MODERATE remains allowed; SEVERE, CRITICAL, EMERGENCY, and SHUTDOWN block new inference; an unavailable thermal reading remains explicitly unknown rather than being misrepresented as safe hardware telemetry.
+- Corrected README, roadmap, MAS-X security and implementation documentation, and the physical Pixel 6 validation checklist.
+- The check remains best-effort admission control before a new inference; it cannot guarantee thermal stability once generation has started.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/society/MasxResourceGovernor.kt`
+- `app/src/test/java/com/nexora/ai/society/MasxResourcePolicyTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/DAILY_PROGRESS.md`
+- `docs/MASX_SECURITY.md`
+- `docs/MASX_IMPLEMENTATION.md`
+- `docs/MASX_PIXEL6_VALIDATION.md`
+
+### Verification actually run
+- Source and documentation changes were reviewed against the official Android API reference.
+- Existing exact-head run #142 passed before this correction; it does not validate this increment.
+- A new exact-head Android CI run is required for the changed source and tests. No local Gradle build, lint, JVM test or instrumentation test was run in this environment because Gradle and Android SDK/ADB are unavailable.
+- No real Gemma inference, offline-after-download behavior, or physical Pixel 6 thermal measurement was performed.
+
+### Safety and preservation
+- No new dependency, permission, model weight, network service, cloud AI API, Firebase, Docker, Ollama, llama.cpp, or external inference server was introduced.
+- The thermal policy reads only Android-provided local status; no temperature values or hardware capability are invented.
+- PR #1, #4 and #12 remain untouched. No merge, force-push, or branch deletion was performed.
+
+### Commit / PR
+- Updated existing draft [PR #13 — MAS-X foundation](https://github.com/abdulraheemnohri/NEXORA-AI/pull/13) on `feat/masx-core-foundation`.
+- This follow-up requires a fresh exact-head CI result before PR #13 can be considered for merge.
+
+### Blockers and next priority
+- Wait for exact-head APK assembly, lint, JVM tests, KVM preflight and API 35 instrumentation after this correction.
+- Review and merge PR #13 only after the new CI passes and the full diff/conflict review is complete.
+- Continue the physical Pixel 6 release gate: real Gemma 4 E2B load/inference, offline-after-download behavior, peak RAM, latency, callback drain and measured thermal behavior.
+
