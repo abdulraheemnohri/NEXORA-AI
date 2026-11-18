@@ -1,19 +1,39 @@
 package com.nexora.ai.data
 
-import java.io.InputStream
+import android.content.ContentResolver
+import android.net.Uri
+import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** All document parsing and SQLite work runs away from the main thread. */
+/** SAF access, document parsing, and SQLite work all run on Dispatchers.IO. */
 class KnowledgeRepository(private val database: LocalKnowledgeDatabase) {
-    suspend fun importDocument(
-        displayName: String,
-        mimeType: String?,
-        input: InputStream
+    suspend fun importFromUri(
+        resolver: ContentResolver,
+        uri: Uri
     ): KnowledgeImportOutcome = withContext(Dispatchers.IO) {
-        val document = KnowledgeDocumentImporter.read(displayName, mimeType, input)
+        val displayName = resolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
+        } ?: uri.lastPathSegment ?: "document.txt"
+        val mimeType = resolver.getType(uri)
+        val input = resolver.openInputStream(uri)
+            ?: error("Android could not open the selected document.")
+        val document = input.use {
+            KnowledgeDocumentImporter.read(displayName, mimeType, it)
+        }
+        persist(document)
+    }
+
+    private fun persist(document: ImportedKnowledgeDocument): KnowledgeImportOutcome {
         val inserted = database.insertDocument(document)
-        if (inserted) {
+        return if (inserted) {
             KnowledgeImportOutcome.Imported(
                 KnowledgeDocumentSummary(
                     id = document.id,
