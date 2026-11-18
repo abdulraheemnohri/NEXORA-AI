@@ -70,6 +70,15 @@ class KnowledgeDocumentImporterTest {
     }
 
     @Test
+    fun manyMediumLinesCannotExceedTheChunkBudget() {
+        val content = ("a".repeat(1_000) + "\n").repeat(225)
+        val chunks = KnowledgeDocumentImporter.chunk(content)
+
+        assertTrue(chunks.size <= KnowledgeDocumentImporter.MAX_CHUNKS)
+        assertTrue(chunks.all { it.length <= KnowledgeDocumentImporter.CHUNK_CHARACTERS })
+    }
+
+    @Test
     fun identicalBytesProduceTheSameContentHash() {
         val first = KnowledgeDocumentImporter.read("one.txt", "text/plain", "same content".byteInput())
         val second = KnowledgeDocumentImporter.read("two.txt", "text/plain", "same content".byteInput())
