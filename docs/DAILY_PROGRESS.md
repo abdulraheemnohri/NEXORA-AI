@@ -578,8 +578,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Verification
 - Added seven JVM tests for TXT/Markdown/JSON format handling, unsupported extensions/MIME mismatches, byte-size bounds, malformed UTF-8/control characters, chunk overlap and maximum chunk budget, and deterministic SHA-256.
-- Added three API 35 instrumentation tests for SQLite persistence/search, duplicate rejection and cascade deletion, and literal SQL wildcard handling.
-- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. Draft PR #14 exact-head Actions run #144 is in progress; its final result is the authoritative compilation/test gate.
+- Added four API 35 instrumentation tests for SQLite persistence/search, duplicate rejection and cascade deletion, literal SQL wildcard handling, and the 50-document quota.
+- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. Earlier PR #14 runs were canceled as small source and documentation fixes were pushed; the final branch head is awaiting its exact-head GitHub Actions result. The PR Checks tab is authoritative.
 - No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 - Static source review checked that no new dependency, Android permission, model weight, external inference service, or network upload path was added. Query values are bound SQL parameters; imported content is not passed to the model.
 

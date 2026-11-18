@@ -34,4 +34,4 @@ Imported content is not automatically inserted into Gemma prompts and is not reg
 
 ## Verification
 
-The branch adds seven JVM importer tests and three API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
+The branch adds seven JVM importer tests and four API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
