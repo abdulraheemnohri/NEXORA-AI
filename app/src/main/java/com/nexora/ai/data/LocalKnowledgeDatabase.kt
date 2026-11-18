@@ -49,6 +49,13 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
 
     /** Returns false for an identical SHA-256 document; quota failures throw before any commit. */
     fun insertDocument(document: ImportedKnowledgeDocument): Boolean {
+        require(document.byteSize in 1..KnowledgeDocumentImporter.MAX_DOCUMENT_BYTES)
+        require(document.displayName.isNotBlank() && document.displayName.length <= 120)
+        require(document.sha256.matches(Regex("[0-9a-f]{64}")))
+        require(document.chunks.isNotEmpty() && document.chunks.size <= KnowledgeDocumentImporter.MAX_CHUNKS)
+        require(document.chunks.all {
+            it.isNotBlank() && it.length <= KnowledgeDocumentImporter.CHUNK_CHARACTERS
+        })
         val db = writableDatabase
         db.beginTransaction()
         try {
