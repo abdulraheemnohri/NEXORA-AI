@@ -9,7 +9,7 @@ NEXORA is a native Android application. Its application backend runs in-process 
 - LLM core: LiteRT-LM runtime contract, prompt/context assembly, generation limits, and streaming events.
 - On-device task runtime: future non-LLM LiteRT Compiled Model adapters, isolated from the LLM runtime.
 - Agent: risk policy and approval boundary; broader planner/tool execution remains roadmap work.
-- Memory and knowledge: planned local retrieval and ingestion components.
+- Memory and knowledge: separate app-private nexora_knowledge.db vault for bounded TXT/Markdown/JSON ingestion and manually invoked keyword retrieval; semantic embeddings and prompt-grounded RAG remain planned.
 - Data: app-private SQLite conversation/message storage and local settings.
 - Platform: Android permissions, app-private storage, and lifecycle management.
 
@@ -59,3 +59,12 @@ Tool invocation is separate from LiteRT-LM generation. Model text is never parse
 Approval grants are one-use and tied to the exact invocation object. A grant cannot be reused for another request or replayed after consumption. The current registered capability is a user-enabled, manually invoked, read-only search over user/assistant message text in the app-private SQLite conversation store; system-role messages are excluded. It runs through the repository IO boundary, uses bound SQL parameters, limits query length, scans at most the most recent 2,000 user/assistant messages and the first 12,000 characters of each, and limits result count, and does not transmit data outside the device.
 
 No external, destructive, or local-write tool is registered. The approval primitive is infrastructure, not permission to execute arbitrary code. Any future side-effect tool must have a concrete handler, an explicit user-facing review step, immediate policy re-check, and focused tests before registration.
+
+
+## Local knowledge vault
+
+The initial vault uses Android's Storage Access Framework OpenDocument contract. The app reads the selected URI once and does not persist its URI permission. Only UTF-8 .txt, .md/.markdown, and .json content is accepted. The importer enforces a 512 KiB byte limit, 450,000 decoded-character limit, rejects malformed UTF-8 and unsupported control characters, and creates overlapping 2,000-character chunks with a 200-character overlap.
+
+Document metadata and chunks are stored in a separate app-private SQLite database (nexora_knowledge.db) so knowledge schema changes cannot alter conversation history. A transaction writes each document and all chunks together. SHA-256 prevents importing identical bytes twice. The store is limited to 50 documents and 8 MiB of source bytes. Search uses bound query parameters, a 2–128 character query, and returns at most 20 bounded excerpts. SQLite lower() is ASCII case folding; this is keyword search, not semantic retrieval.
+
+Imported content is not automatically placed in a Gemma prompt and is not registered as an agent tool. Deletion is user-confirmed and cascades to the document's chunks. It deletes NEXORA's local copy only; it does not delete the original source file or guarantee secure flash erasure. PDF parsing, OCR, embeddings, and user-selected prompt grounding remain separate roadmap work.
