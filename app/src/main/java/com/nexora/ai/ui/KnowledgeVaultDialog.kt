@@ -40,11 +40,11 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                     verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Text(
-                        "Import TXT, Markdown, or JSON files. Each file is limited to 512 KiB; the vault is limited to 50 documents and 8 MiB total.",
+                        "Import TXT, Markdown, or JSON files. Each file is limited to 512 KiB; the vault is limited to 50 documents and 8 MiB of source-file bytes (SQLite overhead is additional).",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Files are copied into app-private storage. NEXORA does not retain the selected file URI, upload content, or automatically add documents to Gemma prompts.",
+                        "Extracted text is stored in app-private SQLite. NEXORA reads the selected URI once, retains no URI permission, uploads no content, and does not automatically add documents to Gemma prompts.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Button(
@@ -73,7 +73,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("2–128 characters") },
                         singleLine = true,
-                        enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge
+                        enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument
                     )
                     Button(
                         onClick = viewModel::searchKnowledge,
