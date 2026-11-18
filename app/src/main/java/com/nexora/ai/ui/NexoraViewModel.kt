@@ -604,11 +604,6 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { runtime.unload() }
     }
 
-    override fun onCleared() {
-        knowledgeRepository.close()
-        super.onCleared()
-    }
-
     private companion object {
         const val PREFERENCES_NAME = "nexora_generation_settings"
         const val KEY_MAX_OUTPUT_TOKENS = "max_output_tokens"
