@@ -269,7 +269,12 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
             }
             try {
                 val results = knowledgeRepository.search(query, limit = 20)
-                mutableUiState.update { it.copy(knowledgeResults = results) }
+                mutableUiState.update {
+                    it.copy(
+                        knowledgeResults = results,
+                        knowledgeMessage = if (results.isEmpty()) "No matching document text." else null
+                    )
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
