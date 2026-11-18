@@ -190,7 +190,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun openKnowledgeVault() {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
         mutableUiState.update {
             it.copy(showTools = false, showKnowledgeVault = true, knowledgeError = null, knowledgeMessage = null)
         }
@@ -211,7 +211,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun importKnowledgeDocument(uri: Uri) {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
         viewModelScope.launch {
             mutableUiState.update {
                 it.copy(isImportingKnowledge = true, knowledgeError = null, knowledgeMessage = null)
@@ -255,7 +255,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun searchKnowledge() {
         val current = mutableUiState.value
-        if (current.isSearchingKnowledge || current.isImportingKnowledge) return
+        if (current.isSearchingKnowledge || current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
         val query = current.knowledgeQuery.trim()
         if (query.length !in 2..128) {
             mutableUiState.update {
@@ -297,7 +297,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun confirmDeleteKnowledgeDocument() {
         val documentId = mutableUiState.value.pendingDeleteKnowledgeDocumentId ?: return
-        if (mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge) return
+        if (mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge || mutableUiState.value.isSearchingKnowledge) return
         viewModelScope.launch {
             mutableUiState.update {
                 it.copy(isDeletingKnowledgeDocument = true, knowledgeError = null)
