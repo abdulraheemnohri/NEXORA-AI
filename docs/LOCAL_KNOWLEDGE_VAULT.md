@@ -2,7 +2,7 @@
 
 ## Supported import formats
 
-The initial implementation imports UTF-8 .txt, .md, .markdown, and .json files using Android's Storage Access Framework. The picker is user initiated. NEXORA reads the granted URI once and does not call takePersistableUriPermission; the original document is never modified.
+The initial implementation imports UTF-8 .txt, .md, .markdown, and .json files using Android's Storage Access Framework. The picker is user initiated. NEXORA reads the granted URI once and does not call takePersistableUriPermission; the original document is never modified. HTTP URIs are rejected. Cloud-backed Android providers may fetch a source before exposing its content URI, so choose an already downloaded file for offline import. JSON is indexed as raw text, not parsed into structured records.
 
 PDF, DOCX, HTML, OCR, and binary formats are not supported by this increment.
 
@@ -34,4 +34,4 @@ Imported content is not automatically inserted into Gemma prompts and is not reg
 
 ## Verification
 
-The branch adds six JVM importer tests and three API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
+The branch adds seven JVM importer tests and three API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
