@@ -117,15 +117,7 @@ object KnowledgeDocumentImporter {
         val chunks = mutableListOf<String>()
         var start = 0
         while (start < text.length) {
-            val hardEnd = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
-            var end = hardEnd
-            if (hardEnd < text.length) {
-                val lineBreak = text.lastIndexOf('\n', hardEnd - 1)
-                if (lineBreak >= start + CHUNK_CHARACTERS / 2) {
-                    end = lineBreak + 1
-                }
-            }
-
+            val end = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
             val value = text.substring(start, end).trim()
             if (value.isNotEmpty()) chunks += value
             require(chunks.size <= MAX_CHUNKS) {
