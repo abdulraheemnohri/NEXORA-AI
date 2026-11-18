@@ -12,6 +12,10 @@ class KnowledgeRepository(private val database: LocalKnowledgeDatabase) {
         resolver: ContentResolver,
         uri: Uri
     ): KnowledgeImportOutcome = withContext(Dispatchers.IO) {
+        val scheme = uri.scheme
+        require(scheme == "content" || scheme == "file" || scheme == "android.resource") {
+            "Only Android local/resource document URIs are supported; remote HTTP URIs are not read."
+        }
         val displayName = resolver.query(
             uri,
             arrayOf(OpenableColumns.DISPLAY_NAME),
