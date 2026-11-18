@@ -44,7 +44,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Extracted text is stored in app-private SQLite. NEXORA reads the selected URI once, retains no URI permission, uploads no content, and does not automatically add documents to Gemma prompts.",
+                        "Extracted text is stored in app-private SQLite. NEXORA reads the selected URI once, retains no URI permission, uploads no content, and does not automatically add documents to Gemma prompts. Choose a file already downloaded to this device; a cloud-backed Android provider may fetch it before handing it to NEXORA.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Button(
