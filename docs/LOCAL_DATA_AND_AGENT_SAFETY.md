@@ -33,7 +33,7 @@ Search reads only message bodies already stored in the app-private SQLite databa
 
 ## Local knowledge vault
 
-The initial knowledge vault stores user-selected UTF-8 TXT, Markdown, and JSON files in a separate app-private SQLite database (nexora_knowledge.db). Android's system document picker grants temporary access for the selected URI; NEXORA reads the stream once and does not retain a URI permission. No storage permission is requested.
+The initial knowledge vault stores user-selected UTF-8 TXT, Markdown, and JSON files in a separate app-private SQLite database (nexora_knowledge.db). Android's system document picker grants temporary access for the selected URI; NEXORA reads the stream once and does not retain a URI permission. Only content, file, and android.resource URI schemes are accepted; HTTP URIs are rejected. A cloud-backed Android provider can still fetch a source before exposing a content URI, so select a file already downloaded to the device for offline import. No storage permission is requested.
 
 Import bounds are 512 KiB per source file, 450,000 decoded characters, 50 documents, and 8 MiB total source bytes. Malformed UTF-8 and unsupported control characters are rejected. SHA-256 detects byte-identical duplicates. Chunk rows are written with their document metadata in one transaction and are removed through a foreign-key cascade after a separate confirmation dialog.
 
