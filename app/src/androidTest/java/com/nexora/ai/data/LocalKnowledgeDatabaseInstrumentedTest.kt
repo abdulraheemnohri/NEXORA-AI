@@ -73,6 +73,19 @@ class LocalKnowledgeDatabaseInstrumentedTest {
         assertTrue(database.search("100_").isEmpty())
     }
 
+    @Test
+    fun documentCountQuotaRejectsTheNextUniqueDocument() {
+        repeat(LocalKnowledgeDatabase.MAX_DOCUMENTS) { index ->
+            assertTrue(database.insertDocument(import("document-" + index + ".txt", "unique content " + index)))
+        }
+
+        val overflow = import("document-overflow.txt", "a different unique document")
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            database.insertDocument(overflow)
+        }
+        assertEquals(LocalKnowledgeDatabase.MAX_DOCUMENTS, database.listDocuments().size)
+    }
+
     private fun import(name: String, content: String): ImportedKnowledgeDocument =
         KnowledgeDocumentImporter.read(
             name,
