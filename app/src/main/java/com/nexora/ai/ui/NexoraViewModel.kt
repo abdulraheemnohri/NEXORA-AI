@@ -284,7 +284,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun requestDeleteKnowledgeDocument(documentId: String) {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
         mutableUiState.update {
             it.copy(pendingDeleteKnowledgeDocumentId = documentId, knowledgeError = null)
         }
