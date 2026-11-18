@@ -35,3 +35,10 @@ Imported content is not automatically inserted into Gemma prompts and is not reg
 ## Verification
 
 The branch adds seven JVM importer tests and four API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
+
+
+## Official Android API references
+
+- [ActivityResultContracts.OpenDocument](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.OpenDocument) — user-selected document URI contract and MIME filters.
+- [OpenableColumns](https://developer.android.com/reference/android/provider/OpenableColumns) — standard DISPLAY_NAME metadata for openable URIs.
+- [ContentResolver.openInputStream](https://developer.android.com/reference/android/content/ContentResolver#openInputStream(android.net.Uri)) — supports content, file, and android.resource schemes; the repository rejects HTTP and other unsupported schemes.
