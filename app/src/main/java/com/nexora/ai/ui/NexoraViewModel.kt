@@ -3,7 +3,6 @@ package com.nexora.ai.ui
 import android.app.Application
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexora.ai.agent.AgentToolExecutor
@@ -218,23 +217,10 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                 it.copy(isImportingKnowledge = true, knowledgeError = null, knowledgeMessage = null)
             }
             try {
-                val resolver = getApplication<Application>().contentResolver
-                val displayName = resolver.query(
-                    uri,
-                    arrayOf(OpenableColumns.DISPLAY_NAME),
-                    null,
-                    null,
-                    null
-                )?.use { cursor ->
-                    val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
-                } ?: uri.lastPathSegment ?: "document.txt"
-                val mimeType = resolver.getType(uri)
-                val input = resolver.openInputStream(uri)
-                    ?: error("Android could not open the selected document.")
-                val outcome = input.use {
-                    knowledgeRepository.importDocument(displayName, mimeType, it)
-                }
+                val outcome = knowledgeRepository.importFromUri(
+                    getApplication<Application>().contentResolver,
+                    uri
+                )
                 when (outcome) {
                     is KnowledgeImportOutcome.Imported -> mutableUiState.update {
                         it.copy(
