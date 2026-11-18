@@ -545,3 +545,52 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
 - Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
 - Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
+
+
+## 2026-11-19 — Bounded local knowledge ingestion
+
+### Repository checkpoint
+- Re-inspected repository metadata, current main, open standalone issues, recent commits, open pull requests, all branch heads, and recent Actions runs before editing.
+- Main remains at abd66700dd6f7e6f119d84c6cd612aff4c40b71b. No standalone open issues were returned.
+- Four draft PRs remain open: #1, #4, #12, and #13. PR #1 and #4 and their unique branch work were left untouched. PR #12 and #13 were also left untouched.
+- All 15 branch heads were enumerated. No branch was deleted and no force-push was used.
+- PR #13 exact-head run #143 completed with debug APK assembly, Android lint, and JVM tests successful, then failed its KVM preflight because the runner user could not access /dev/kvm even though the node displayed mode 0666. This is an environment/preflight failure; Android instrumentation was skipped. A rerun of the failed KVM job was requested and its result is pending.
+- Main run #109 remains failed with its only build job queued; no source failure is established.
+
+### Delivered on feat/local-knowledge-ingestion
+- Added a Storage Access Framework document picker and local vault screen for UTF-8 TXT, Markdown, and JSON files.
+- The importer reads each selected URI once, does not retain URI permissions, enforces a 512 KiB byte cap and 450,000 decoded-character cap, rejects malformed UTF-8 and unsupported control characters, and creates overlapping 2,000-character chunks with a 200-character overlap.
+- Added a separate app-private nexora_knowledge.db SQLite database to avoid changing the existing conversation database schema.
+- Document metadata and chunks are written in one transaction. SHA-256 detects byte-identical duplicates. Store quotas are 50 documents and 8 MiB of source bytes.
+- Added bounded local keyword search (2–128 character query, 20 excerpts maximum) and confirmation-gated deletion with chunk cascade.
+- Imported text is not automatically inserted into Gemma prompts and is not exposed as a model-generated tool. PDF extraction, OCR, embeddings, semantic retrieval, and prompt-grounded RAG remain pending.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt
+- app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt
+- app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt
+- app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraHome.kt
+- app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt
+- app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt
+- README.md, ROADMAP.md, docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md
+
+### Verification
+- Added six JVM tests for TXT/Markdown/JSON format handling, unsupported extensions/MIME mismatches, byte-size bounds, malformed UTF-8/control characters, chunk overlap/size bounds, and deterministic SHA-256.
+- Added three API 35 instrumentation tests for SQLite persistence/search, duplicate rejection and cascade deletion, and literal SQL wildcard handling.
+- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. GitHub Actions for the new branch is the authoritative compilation/test gate once the PR is opened.
+- No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+- Static source review checked that no new dependency, Android permission, model weight, external inference service, or network upload path was added. Query values are bound SQL parameters; imported content is not passed to the model.
+
+### Commit / PR
+- Branch feat/local-knowledge-ingestion was created from main commit abd66700dd6f7e6f119d84c6cd612aff4c40b71b.
+- Implementation and test commits are on the branch; draft PR will be linked after opening.
+- No main-branch changes, merges, force-pushes, or branch deletions.
+
+### Blockers and next priority
+- Open a draft PR and wait for exact-head APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation.
+- Review any CI failures before merge; keep the PR draft until the exact head passes.
+- Add PDF text extraction only after selecting and reviewing a maintained Android-compatible parser and license.
+- Later add user-selected prompt grounding as a separate explicit action; do not silently inject imported content into Gemma context.
+- Physical Pixel 6 verification remains a release gate for real Gemma download/load/inference, offline behavior, RAM, latency, storage, and thermal performance.
