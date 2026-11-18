@@ -29,3 +29,12 @@ The history picker lists at most 100 recently updated conversations and loads up
 ## Local conversation search boundaries
 
 Search reads only message bodies already stored in the app-private SQLite database. It does not access files, contacts, microphone, location, or network services. The setting is off by default and is persisted locally. The query is treated as literal text, limited to 2–128 characters, and the tool returns at most 20 message matches with short excerpts. SQLite's built-in `lower()` provides ASCII case folding; exact-case substring matching also works for non-ASCII text. This is bounded keyword search, not semantic or cross-language case-folded retrieval.
+
+
+## Local knowledge vault
+
+The initial knowledge vault stores user-selected UTF-8 TXT, Markdown, and JSON files in a separate app-private SQLite database (nexora_knowledge.db). Android's system document picker grants temporary access for the selected URI; NEXORA reads the stream once and does not retain a URI permission. No storage permission is requested.
+
+Import bounds are 512 KiB per source file, 450,000 decoded characters, 50 documents, and 8 MiB total source bytes. Malformed UTF-8 and unsupported control characters are rejected. SHA-256 detects byte-identical duplicates. Chunk rows are written with their document metadata in one transaction and are removed through a foreign-key cascade after a separate confirmation dialog.
+
+Search is manual, local keyword matching with bound SQL parameters, a 2–128 character query, and at most 20 excerpts. It is not semantic search. Imported content is not automatically inserted into Gemma prompts and is not exposed to automatic tool calling. PDF extraction, OCR, embeddings, and prompt-grounded retrieval are not implemented. Removing a document deletes NEXORA's indexed copy only; it does not modify the original source file and does not claim secure flash erasure.
