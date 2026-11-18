@@ -66,7 +66,7 @@ class KnowledgeDocumentImporterTest {
             chunks.first().takeLast(KnowledgeDocumentImporter.CHUNK_OVERLAP_CHARACTERS),
             chunks[1].take(KnowledgeDocumentImporter.CHUNK_OVERLAP_CHARACTERS)
         )
-        assertFalse(chunks.any(String::isBlank))
+        assertFalse(chunks.any { it.isBlank() })
     }
 
     @Test
