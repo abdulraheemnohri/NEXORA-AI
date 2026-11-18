@@ -552,13 +552,13 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Repository checkpoint
 - Re-inspected repository metadata, current main, open standalone issues, recent commits, open pull requests, all branch heads, and recent Actions runs before editing.
 - Main remains at abd66700dd6f7e6f119d84c6cd612aff4c40b71b. No standalone open issues were returned.
-- Four draft PRs remain open: #1, #4, #12, and #13. PR #1 and #4 and their unique branch work were left untouched. PR #12 and #13 were also left untouched.
-- All 15 branch heads were enumerated. No branch was deleted and no force-push was used.
-- PR #13 exact-head run #143 completed with debug APK assembly, Android lint, and JVM tests successful, then failed its KVM preflight because the runner user could not access /dev/kvm even though the node displayed mode 0666. This is an environment/preflight failure; Android instrumentation was skipped. A rerun of the failed KVM job was requested and its result is pending.
+- Four draft PRs were open at the initial audit: #1, #4, #12, and #13. PR #1 and #4 and their unique branch work were left untouched. PR #12 and #13 were also left untouched. After the new branch passed static review, draft PR #14 was opened; the current open-PR count is five.
+- All 15 pre-existing branch heads were enumerated before work. The new feature branch was created from main and is now the 16th branch. No branch was deleted and no force-push was used.
+- PR #13 exact-head run #143 attempt 1 passed debug APK assembly, Android lint, and JVM tests, then failed KVM preflight because the runner user could not access /dev/kvm despite mode 0666. The failed job was rerun; attempt 2 passed KVM preflight and all API 35 instrumentation tests. PR #13 remains draft and unmerged.
 - Main run #109 remains failed with its only build job queued; no source failure is established.
 
 ### Delivered on feat/local-knowledge-ingestion
-- Added a Storage Access Framework document picker and local vault screen for UTF-8 TXT, Markdown, and JSON files.
+- Added a Storage Access Framework document picker and local vault screen for UTF-8 TXT, Markdown, and JSON files. JSON is indexed as raw text, not parsed into structured records. HTTP URIs are rejected; cloud-backed Android providers may fetch a source before returning a content URI, so offline imports require a file already downloaded to the device.
 - The importer reads each selected URI once, does not retain URI permissions, enforces a 512 KiB byte cap and 450,000 decoded-character cap, rejects malformed UTF-8 and unsupported control characters, and creates overlapping 2,000-character chunks with a 200-character overlap.
 - Added a separate app-private nexora_knowledge.db SQLite database to avoid changing the existing conversation database schema.
 - Document metadata and chunks are written in one transaction. SHA-256 detects byte-identical duplicates. Store quotas are 50 documents and 8 MiB of source bytes.
@@ -577,15 +577,15 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - README.md, ROADMAP.md, docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md
 
 ### Verification
-- Added six JVM tests for TXT/Markdown/JSON format handling, unsupported extensions/MIME mismatches, byte-size bounds, malformed UTF-8/control characters, chunk overlap/size bounds, and deterministic SHA-256.
+- Added seven JVM tests for TXT/Markdown/JSON format handling, unsupported extensions/MIME mismatches, byte-size bounds, malformed UTF-8/control characters, chunk overlap and maximum chunk budget, and deterministic SHA-256.
 - Added three API 35 instrumentation tests for SQLite persistence/search, duplicate rejection and cascade deletion, and literal SQL wildcard handling.
-- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. GitHub Actions for the new branch is the authoritative compilation/test gate once the PR is opened.
+- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. Draft PR #14 exact-head Actions run #144 is in progress; its final result is the authoritative compilation/test gate.
 - No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
 - Static source review checked that no new dependency, Android permission, model weight, external inference service, or network upload path was added. Query values are bound SQL parameters; imported content is not passed to the model.
 
 ### Commit / PR
 - Branch feat/local-knowledge-ingestion was created from main commit abd66700dd6f7e6f119d84c6cd612aff4c40b71b.
-- Implementation and test commits are on the branch; draft PR will be linked after opening.
+- Draft PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14) is open from feat/local-knowledge-ingestion. Exact source head and CI are tracked by run [#144](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44389410391).
 - No main-branch changes, merges, force-pushes, or branch deletions.
 
 ### Blockers and next priority
