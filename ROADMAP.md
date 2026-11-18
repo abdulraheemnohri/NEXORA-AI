@@ -14,7 +14,7 @@
 | Accelerator strategy | CPU is baseline; Pixel 6 GPU path unverified; Google Tensor NPU path not enabled | Runtime residency and correctness recorded on target device; no silent fallback claims |
 | Agent tool permission system | Partial: central executor, one-shot invocation-bound approval grants, and a real user-enabled local read-only conversation search are implemented. Search is manually invoked; no model-generated tool calls or external/destructive handlers are registered. | Add a review/approval UI for a concrete side-effect tool and verify that approval is bound to its exact arguments and cannot be replayed |
 | Memory and retrieval | Pending; keyword search is not semantic memory or embeddings | Select a licensed local embedding model and evaluate retrieval quality on a private local corpus |
-| Knowledge ingestion | Pending | PDF/TXT/MD/JSON extraction tests |
+| Knowledge ingestion | Initial TXT/MD/JSON import, UTF-8 validation, overlapping chunks, SHA-256 duplicate detection, app-private SQLite storage, bounded keyword search, quotas, and confirmation-gated deletion implemented on feat/local-knowledge-ingestion. PDF extraction and prompt-grounded/semantic retrieval remain pending. | Add PDF text extraction with a reviewed Android-compatible parser; add document-grounded prompt review only behind explicit user selection; test storage and latency on Pixel 6 |
 | Agent planner | Pending | Plan, approval, and cancellation tests |
 | Skills laboratory | Pending | Schema validation and rollback |
 | Evolution engine | Pending | Evaluation, regression and rollback |
