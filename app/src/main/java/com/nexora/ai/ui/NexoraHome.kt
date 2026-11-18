@@ -325,6 +325,12 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                         color = Color(0xFF70748C),
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Button(
+                        onClick = viewModel::openKnowledgeVault,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Open local knowledge vault")
+                    }
                 }
             },
             confirmButton = {
@@ -332,6 +338,8 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             }
         )
     }
+
+    KnowledgeVaultDialog(viewModel, state)
 
     state.pendingDeleteConversationId?.let { pendingId ->
         val title = state.conversations.firstOrNull { it.id == pendingId }?.title ?: "this conversation"
