@@ -53,7 +53,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                                 arrayOf("text/*", "application/json", "application/octet-stream")
                             )
                         },
-                        enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument,
+                        enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (state.isImportingKnowledge) "Importing…" else "Choose a document")
@@ -108,7 +108,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                                     }
                                     TextButton(
                                         onClick = { viewModel.requestDeleteKnowledgeDocument(document.id) },
-                                        enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument
+                                        enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge
                                     ) {
                                         Text("Remove", color = MaterialTheme.colorScheme.error)
                                     }
