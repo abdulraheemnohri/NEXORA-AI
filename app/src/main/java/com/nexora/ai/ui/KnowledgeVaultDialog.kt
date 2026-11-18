@@ -77,7 +77,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                     )
                     Button(
                         onClick = viewModel::searchKnowledge,
-                        enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge &&
+                        enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument &&
                             state.knowledgeQuery.trim().length in 2..128,
                         modifier = Modifier.fillMaxWidth()
                     ) {
