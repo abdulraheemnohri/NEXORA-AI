@@ -31,8 +31,8 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Each file is limited to 512 KiB and 450,000 decoded characters; the app-private vault is capped at 50 documents and 8 MiB of source bytes.
 - Documents are split into overlapping 2,000-character chunks (200-character overlap, at most 256 chunks per document) and indexed in a separate nexora_knowledge.db SQLite database.
 - SHA-256 duplicate detection, transactional document/chunk writes, parameterized local keyword search (2–128 character query, 20 results maximum), and confirmation-gated document deletion are implemented.
-- The selected URI is read once; NEXORA does not retain URI permissions. The original file is not changed or deleted.
-- Imported text is **not** automatically inserted into Gemma prompts and is not exposed as a model-generated tool. Search is a manually invoked local keyword lookup, not semantic retrieval or RAG.
+- The selected URI is read once; NEXORA does not retain URI permissions. HTTP URIs are rejected. Cloud-backed Android providers may fetch their source before returning a content URI, so choose a file already downloaded to this device for offline import. The original file is not changed or deleted.
+- JSON is indexed as raw UTF-8 text, not parsed into structured records. Imported text is **not** automatically inserted into Gemma prompts and is not exposed as a model-generated tool. Search is a manually invoked local keyword lookup, not semantic retrieval or RAG.
 - PDF extraction, OCR, semantic embeddings, and prompt-grounded retrieval remain unimplemented. Deleting a vault record is not a claim of secure flash erasure.
 
 ## Google AI Edge stack
