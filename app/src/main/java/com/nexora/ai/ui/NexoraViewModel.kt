@@ -205,8 +205,16 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private suspend fun refreshKnowledgeDocuments() {
-        val documents = knowledgeRepository.documents()
-        mutableUiState.update { it.copy(knowledgeDocuments = documents) }
+        try {
+            val documents = knowledgeRepository.documents()
+            mutableUiState.update { it.copy(knowledgeDocuments = documents) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            mutableUiState.update {
+                it.copy(knowledgeError = error.message ?: "Unable to read the local knowledge vault.")
+            }
+        }
     }
 
     fun importKnowledgeDocument(uri: Uri) {
@@ -249,7 +257,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateKnowledgeQuery(value: String) {
         mutableUiState.update {
-            it.copy(knowledgeQuery = value.take(128), knowledgeError = null, knowledgeMessage = null)
+            it.copy(knowledgeQuery = value.take(128), knowledgeResults = emptyList(), knowledgeError = null, knowledgeMessage = null)
         }
     }
 
