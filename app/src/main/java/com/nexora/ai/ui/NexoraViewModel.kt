@@ -2,6 +2,8 @@ package com.nexora.ai.ui
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexora.ai.agent.AgentToolExecutor
@@ -18,6 +20,11 @@ import com.nexora.ai.ai.LiteRtLocalModelRuntime
 import com.nexora.ai.data.ChatRepository
 import com.nexora.ai.data.ConversationSearchHit
 import com.nexora.ai.data.LocalChatDatabase
+import com.nexora.ai.data.KnowledgeDocumentSummary
+import com.nexora.ai.data.KnowledgeImportOutcome
+import com.nexora.ai.data.KnowledgeRepository
+import com.nexora.ai.data.KnowledgeSearchHit
+import com.nexora.ai.data.LocalKnowledgeDatabase
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
@@ -53,6 +60,16 @@ data class NexoraUiState(
     val localSearchResults: List<ConversationSearchHit> = emptyList(),
     val isLocalSearchRunning: Boolean = false,
     val localSearchError: String? = null,
+    val showKnowledgeVault: Boolean = false,
+    val knowledgeDocuments: List<KnowledgeDocumentSummary> = emptyList(),
+    val knowledgeQuery: String = "",
+    val knowledgeResults: List<KnowledgeSearchHit> = emptyList(),
+    val isImportingKnowledge: Boolean = false,
+    val isSearchingKnowledge: Boolean = false,
+    val isDeletingKnowledgeDocument: Boolean = false,
+    val pendingDeleteKnowledgeDocumentId: String? = null,
+    val knowledgeError: String? = null,
+    val knowledgeMessage: String? = null,
     val maxOutputTokens: Int = GenerationSettings.DEFAULT_MAX_OUTPUT_TOKENS,
     val input: String = "",
     val conversationReady: Boolean = false,
@@ -67,6 +84,7 @@ data class NexoraUiState(
 /** Application state holder; no network AI service or mock response path exists. */
 class NexoraViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ChatRepository(LocalChatDatabase(application))
+    private val knowledgeRepository = KnowledgeRepository(LocalKnowledgeDatabase(application))
     private val downloader = Gemma4E2BModelDownloader(application)
     private val runtime = LiteRtLocalModelRuntime(File(application.cacheDir, "litertlm"))
     private var conversationId: String? = null
@@ -168,6 +186,161 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissTools() {
         mutableUiState.update { it.copy(showTools = false) }
+    }
+
+
+    fun openKnowledgeVault() {
+        val current = mutableUiState.value
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        mutableUiState.update {
+            it.copy(showTools = false, showKnowledgeVault = true, knowledgeError = null, knowledgeMessage = null)
+        }
+        viewModelScope.launch { refreshKnowledgeDocuments() }
+    }
+
+    fun dismissKnowledgeVault() {
+        if (mutableUiState.value.isDeletingKnowledgeDocument) return
+        mutableUiState.update {
+            it.copy(showKnowledgeVault = false, pendingDeleteKnowledgeDocumentId = null)
+        }
+    }
+
+    private suspend fun refreshKnowledgeDocuments() {
+        val documents = knowledgeRepository.documents()
+        mutableUiState.update { it.copy(knowledgeDocuments = documents) }
+    }
+
+    fun importKnowledgeDocument(uri: Uri) {
+        val current = mutableUiState.value
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isImportingKnowledge = true, knowledgeError = null, knowledgeMessage = null)
+            }
+            try {
+                val resolver = getApplication<Application>().contentResolver
+                val displayName = resolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.DISPLAY_NAME),
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
+                } ?: uri.lastPathSegment ?: "document.txt"
+                val mimeType = resolver.getType(uri)
+                val input = resolver.openInputStream(uri)
+                    ?: error("Android could not open the selected document.")
+                val outcome = input.use {
+                    knowledgeRepository.importDocument(displayName, mimeType, it)
+                }
+                when (outcome) {
+                    is KnowledgeImportOutcome.Imported -> mutableUiState.update {
+                        it.copy(
+                            knowledgeQuery = "",
+                            knowledgeResults = emptyList(),
+                            knowledgeMessage = "Imported " + outcome.document.displayName +
+                                " (" + outcome.document.chunkCount + " searchable chunks)."
+                        )
+                    }
+                    KnowledgeImportOutcome.Duplicate -> mutableUiState.update {
+                        it.copy(knowledgeMessage = "This exact document is already in the local vault.")
+                    }
+                }
+                refreshKnowledgeDocuments()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(knowledgeError = error.message ?: "Unable to import the selected document.")
+                }
+            } finally {
+                mutableUiState.update { it.copy(isImportingKnowledge = false) }
+            }
+        }
+    }
+
+    fun updateKnowledgeQuery(value: String) {
+        mutableUiState.update {
+            it.copy(knowledgeQuery = value.take(128), knowledgeError = null, knowledgeMessage = null)
+        }
+    }
+
+    fun searchKnowledge() {
+        val current = mutableUiState.value
+        if (current.isSearchingKnowledge || current.isImportingKnowledge) return
+        val query = current.knowledgeQuery.trim()
+        if (query.length !in 2..128) {
+            mutableUiState.update {
+                it.copy(knowledgeError = "Enter 2–128 characters to search the local vault.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isSearchingKnowledge = true, knowledgeError = null, knowledgeMessage = null, knowledgeResults = emptyList())
+            }
+            try {
+                val results = knowledgeRepository.search(query, limit = 20)
+                mutableUiState.update { it.copy(knowledgeResults = results) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(knowledgeError = error.message ?: "Local knowledge search failed.")
+                }
+            } finally {
+                mutableUiState.update { it.copy(isSearchingKnowledge = false) }
+            }
+        }
+    }
+
+    fun requestDeleteKnowledgeDocument(documentId: String) {
+        val current = mutableUiState.value
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        mutableUiState.update {
+            it.copy(pendingDeleteKnowledgeDocumentId = documentId, knowledgeError = null)
+        }
+    }
+
+    fun cancelDeleteKnowledgeDocument() {
+        if (mutableUiState.value.isDeletingKnowledgeDocument) return
+        mutableUiState.update { it.copy(pendingDeleteKnowledgeDocumentId = null) }
+    }
+
+    fun confirmDeleteKnowledgeDocument() {
+        val documentId = mutableUiState.value.pendingDeleteKnowledgeDocumentId ?: return
+        if (mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge) return
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isDeletingKnowledgeDocument = true, knowledgeError = null)
+            }
+            try {
+                check(knowledgeRepository.deleteDocument(documentId)) {
+                    "This document is no longer in the local vault."
+                }
+                refreshKnowledgeDocuments()
+                mutableUiState.update {
+                    it.copy(
+                        pendingDeleteKnowledgeDocumentId = null,
+                        knowledgeResults = emptyList(),
+                        knowledgeMessage = "Document and its indexed chunks were deleted from this device."
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        pendingDeleteKnowledgeDocumentId = null,
+                        knowledgeError = error.message ?: "Unable to delete this document."
+                    )
+                }
+            } finally {
+                mutableUiState.update { it.copy(isDeletingKnowledgeDocument = false) }
+            }
+        }
     }
 
     fun setLocalSearchEnabled(enabled: Boolean) {
@@ -430,6 +603,11 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun shutdown() {
         viewModelScope.launch { runtime.unload() }
+    }
+
+    override fun onCleared() {
+        knowledgeRepository.close()
+        super.onCleared()
     }
 
     private companion object {
