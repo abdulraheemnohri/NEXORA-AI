@@ -120,8 +120,8 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                                     }
                                     TextButton(
                                         onClick = { viewModel.requestDeleteKnowledgeDocument(document.id) },
-                                        enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument &&
-                                            !state.isSearchingKnowledge
+                                        enabled = !state.isGenerating && !state.isImportingKnowledge &&
+                                            !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge
                                     ) {
                                         Text("Remove", color = MaterialTheme.colorScheme.error)
                                     }

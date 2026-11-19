@@ -340,7 +340,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun requestDeleteKnowledgeDocument(documentId: String) {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
+        if (current.isGenerating || current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
         mutableUiState.update {
             it.copy(pendingDeleteKnowledgeDocumentId = documentId, knowledgeError = null)
         }
@@ -353,7 +353,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun confirmDeleteKnowledgeDocument() {
         val documentId = mutableUiState.value.pendingDeleteKnowledgeDocumentId ?: return
-        if (mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge || mutableUiState.value.isSearchingKnowledge) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge || mutableUiState.value.isSearchingKnowledge) return
         viewModelScope.launch {
             mutableUiState.update {
                 it.copy(isDeletingKnowledgeDocument = true, knowledgeError = null)
@@ -563,7 +563,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         val prompt = current.input.trim()
         val activeConversation = conversationId
         if (prompt.isEmpty() || !current.modelReady || current.isGenerating ||
-            current.isDeletingConversation || activeConversation == null
+            current.isDeletingConversation || current.isImportingKnowledge ||
+            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge || activeConversation == null
         ) return
 
         val history = current.messages

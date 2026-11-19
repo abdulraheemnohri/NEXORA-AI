@@ -648,3 +648,5 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Files: KnowledgePromptContext.kt, KnowledgePromptContextTest.kt, NexoraViewModel.kt, KnowledgeVaultDialog.kt, NexoraHome.kt, README.md, ROADMAP.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md.
 - Previous vault head 4a9768e passed run #154; the docs-only follow-up #155 was superseded by this source change. A new exact-head workflow is required before merge. No local Gradle/Android SDK run, real Gemma inference, offline verification, or physical Pixel 6 test was performed.
 - Branch feat/local-knowledge-ingestion; PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). PDF extraction, OCR, embeddings, and physical-device validation remain next priorities.
+
+- Follow-up safety hardening: message sending is blocked while knowledge import/search/deletion is active, and document deletion is blocked during generation to avoid racing a user-selected excerpt into a request while its source is being removed.
