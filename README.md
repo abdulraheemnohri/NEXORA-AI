@@ -34,6 +34,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - The selected URI is read once; NEXORA does not retain URI permissions. HTTP URIs are rejected. Cloud-backed Android providers may fetch their source before returning a content URI, so choose a file already downloaded to this device for offline import. The original file is not changed or deleted.
 - JSON is indexed as raw UTF-8 text, not parsed into structured records. Imported text is **not** automatically inserted into Gemma prompts and is not exposed as a model-generated tool. Search is a manually invoked local keyword lookup, not semantic retrieval or RAG.
 - PDF extraction, OCR, semantic embeddings, and prompt-grounded retrieval remain unimplemented. Deleting a vault record is not a claim of secure flash erasure.
+- Verification checkpoint (2026-11-20): PR #14 exact-head GitHub Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335) completed successfully on source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e`, including debug APK assembly, Android lint, JVM unit tests, KVM preflight, and all API 35 instrumentation tests. This is emulator/CI evidence only; real Gemma inference, offline-after-download behavior, and physical Pixel 6 performance remain unverified.
 
 ## Google AI Edge stack
 

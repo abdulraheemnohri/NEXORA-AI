@@ -594,3 +594,43 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Add PDF text extraction only after selecting and reviewing a maintained Android-compatible parser and license.
 - Later add user-selected prompt grounding as a separate explicit action; do not silently inject imported content into Gemma context.
 - Physical Pixel 6 verification remains a release gate for real Gemma download/load/inference, offline behavior, RAM, latency, storage, and thermal performance.
+
+
+## 2026-11-20 — Final review and exact-head verification of local knowledge vault
+
+### Repository checkpoint
+- Re-inspected repository metadata, `main`, standalone open issues, recent commits, all 16 branch heads, open PRs, and the latest relevant GitHub Actions before this follow-up.
+- `main` remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`. There are no standalone open issues; the five open PRs are #1, #4, #12, #13, and #14.
+- PR #1 and #4 remain diverged from main (42/49 and 31/38 ahead/behind respectively) and their branches are preserved. PR #12 and #13 remain open drafts. PR #14 remains open from `feat/local-knowledge-ingestion`.
+- All 16 branch heads were enumerated. No branch was deleted and no force-push was used.
+
+### Delivered and reviewed
+- Completed a focused source review of PR #14's UTF-8 importer, bounded stream reader, chunking and SHA-256 logic, separate SQLite schema, transactional writes, parameterized keyword search, cascade deletion, ContentResolver boundary, Compose picker/dialog, ViewModel state handling, and the added tests.
+- Confirmed PR #14 changes no Android manifest permissions and adds no Gradle dependency, model weights, cloud inference path, or document upload path.
+- Confirmed imported text is not automatically inserted into Gemma prompts and is not registered as a model-generated tool. Deletion is confirmation-gated and removes only NEXORA's indexed copy.
+- GitHub reports PR #14 as mergeable with zero commits behind main. There are no submitted PR reviews or inline review threads; this run's source review is recorded here rather than represented as an independent approval.
+
+### Verification actually run
+- Exact-head Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335) completed successfully for source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e`.
+- The build job passed debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all API 35 instrumentation tests.
+- The source adds seven JVM importer tests and four API 35 SQLite instrumentation tests. Run #154 confirms those configured suites passed.
+- No local Gradle/Android SDK build was run in this environment.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed. RAM, latency, battery, and thermal measurements remain outstanding.
+
+### Files reconciled
+- `README.md`
+- `ROADMAP.md`
+- `docs/DAILY_PROGRESS.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/ARCHITECTURE.md`
+
+### Commit / PR
+- Feature source head: [`4a9768e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/4a9768ecc2b00afa2b463bf2bb76ffdae63b131e).
+- Draft PR: [#14 — Bounded offline document vault](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Exact-head CI: [run #154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335), passed all configured jobs.
+- This documentation reconciliation is committed on the same feature branch; a fresh exact-head workflow must pass before merge.
+
+### Blockers and next priority
+- PDF, DOCX, OCR, semantic embeddings, and prompt-grounded RAG are not implemented. PDF work must first select a reviewed Android-compatible parser/license and bound page count, extracted characters, memory, and execution time.
+- Next product increment: bounded PDF text extraction with malformed, encrypted, empty, page-limit, and decompression/resource-limit tests; do not silently add OCR or inject document content into Gemma context.
+- Physical Pixel 6 validation of the actual Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.

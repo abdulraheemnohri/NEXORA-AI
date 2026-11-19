@@ -34,7 +34,7 @@ Imported content is not automatically inserted into Gemma prompts and is not reg
 
 ## Verification
 
-The branch adds seven JVM importer tests and four API 35 SQLite instrumentation tests. These are test cases added to source; they are not considered passing until the exact-head GitHub Actions run completes. No physical Pixel 6 or real Gemma inference result is claimed.
+The exact PR #14 source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e` passed GitHub Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335): debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all API 35 instrumentation tests. The seven importer JVM tests and four SQLite instrumentation tests therefore passed in CI. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
 
 
 ## Official Android API references

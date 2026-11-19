@@ -68,3 +68,8 @@ The initial vault uses Android's Storage Access Framework OpenDocument contract.
 Document metadata and chunks are stored in a separate app-private SQLite database (nexora_knowledge.db) so knowledge schema changes cannot alter conversation history. A transaction writes each document and all chunks together. SHA-256 prevents importing identical bytes twice. The store is limited to 50 documents and 8 MiB of source bytes. Search uses bound query parameters, a 2–128 character query, and returns at most 20 bounded excerpts. SQLite lower() is ASCII case folding; this is keyword search, not semantic retrieval.
 
 Imported content is not automatically placed in a Gemma prompt and is not registered as an agent tool. Deletion is user-confirmed and cascades to the document's chunks. It deletes NEXORA's local copy only; it does not delete the original source file or guarantee secure flash erasure. PDF parsing, OCR, embeddings, and user-selected prompt grounding remain separate roadmap work.
+
+
+## Local knowledge vault verification checkpoint
+
+The initial bounded TXT/Markdown/JSON implementation is tracked in [PR #14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). Its exact source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e` passed [Actions run #154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335), including APK assembly, lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. This is CI/emulator evidence; real Gemma inference, offline operation, and physical Pixel 6 behavior remain unverified. PDF extraction and prompt-grounded retrieval are not yet implemented.
