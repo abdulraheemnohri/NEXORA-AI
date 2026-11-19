@@ -28,11 +28,13 @@ import com.nexora.ai.data.LocalKnowledgeDatabase
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ChatBubble(
     val id: String,
@@ -582,6 +584,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                     messages = it.messages + ChatBubble(UUID.randomUUID().toString(), "user", prompt)
                 )
             }
+            var groundedSessionMayContainSources = false
             try {
                 if (current.messages.isEmpty()) {
                     repository.updateConversationTitle(activeConversation, prompt)
@@ -594,6 +597,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                     it.copy(messages = it.messages + ChatBubble(assistantId, "assistant", ""))
                 }
                 val assistantText = StringBuilder()
+                groundedSessionMayContainSources = current.selectedKnowledgeSources.isNotEmpty()
                 runtime.generate(
                     GenerationRequest(
                         conversationId = activeConversation,
@@ -637,6 +641,12 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                         messages = state.messages.filterNot { it.role == "assistant" && it.content.isBlank() },
                         error = error.message ?: "Local generation failed."
                     )
+                }
+            } finally {
+                if (groundedSessionMayContainSources) {
+                    withContext(NonCancellable) {
+                        runtime.forgetConversation(activeConversation)
+                    }
                 }
             }
         }

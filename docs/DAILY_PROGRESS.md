@@ -641,7 +641,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Added a pure Kotlin prompt-context builder for excerpts explicitly selected from local knowledge search.
 - Users can select at most three excerpts, see pending source names in the composer, and clear the selection before sending.
 - Excerpts are included only in the next LiteRT-LM request, JSON-escaped, bounded to 120 characters per source name and 240 characters per excerpt, and labeled as untrusted reference data.
-- The normal user message stored in chat history remains unchanged. Selections are consumed once when sending and are not persisted as messages.
+- The normal user message stored in durable chat history remains unchanged. Selections are consumed once when sending and are not persisted as messages. After the grounded generation completes or fails, the ViewModel discards the cached native conversation session; the next turn rebuilds from the durable transcript without the raw excerpts. This does not claim secure RAM zeroization.
 - Deleting a source document removes its pending excerpts; switching conversations clears pending selection.
 - Added four JVM tests for empty selection, source attribution, count/length bounds, and JSON escaping. They have not yet run locally.
 - No new dependency, permission, network upload, automatic RAG, or model-generated tool was added.
