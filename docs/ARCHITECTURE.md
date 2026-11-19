@@ -67,7 +67,7 @@ The initial vault uses Android's Storage Access Framework OpenDocument contract.
 
 Document metadata and chunks are stored in a separate app-private SQLite database (nexora_knowledge.db) so knowledge schema changes cannot alter conversation history. A transaction writes each document and all chunks together. SHA-256 prevents importing identical bytes twice. The store is limited to 50 documents and 8 MiB of source bytes. Search uses bound query parameters, a 2–128 character query, and returns at most 20 bounded excerpts. SQLite lower() is ASCII case folding; this is keyword search, not semantic retrieval.
 
-Imported content is not automatically placed in a Gemma prompt and is not registered as an agent tool. Deletion is user-confirmed and cascades to the document's chunks. It deletes NEXORA's local copy only; it does not delete the original source file or guarantee secure flash erasure. PDF parsing, OCR, embeddings, and user-selected prompt grounding remain separate roadmap work.
+Imported content is never automatically placed in a Gemma prompt and is not registered as an agent tool. A user may explicitly select at most three search excerpts for the next reply; the composer shows pending sources, the prompt builder JSON-escapes and bounds them as untrusted reference data, and the selection is consumed once rather than persisted in chat history. Deletion is user-confirmed and cascades to the document's chunks. It deletes NEXORA's local copy only; it does not delete the original source file or guarantee secure flash erasure. PDF parsing, OCR, and embeddings remain roadmap work.
 
 
 ## Local knowledge vault verification checkpoint

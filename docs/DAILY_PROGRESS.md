@@ -607,7 +607,7 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### Delivered and reviewed
 - Completed a focused source review of PR #14's UTF-8 importer, bounded stream reader, chunking and SHA-256 logic, separate SQLite schema, transactional writes, parameterized keyword search, cascade deletion, ContentResolver boundary, Compose picker/dialog, ViewModel state handling, and the added tests.
 - Confirmed PR #14 changes no Android manifest permissions and adds no Gradle dependency, model weights, cloud inference path, or document upload path.
-- Confirmed imported text is not automatically inserted into Gemma prompts and is not registered as a model-generated tool. Deletion is confirmation-gated and removes only NEXORA's indexed copy.
+- Confirmed imported text is never inserted into Gemma prompts automatically and is not registered as a model-generated tool. Users may explicitly select up to three excerpts for one next reply; the composer shows pending sources, and the bounded prompt builder labels them untrusted. Deletion is confirmation-gated and removes only NEXORA's indexed copy.
 - GitHub reports PR #14 as mergeable with zero commits behind main. There are no submitted PR reviews or inline review threads; this run's source review is recorded here rather than represented as an independent approval.
 
 ### Verification actually run
@@ -626,12 +626,12 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 
 ### Commit / PR
 - Feature source head: [`4a9768e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/4a9768ecc2b00afa2b463bf2bb76ffdae63b131e).
-- Draft PR: [#14 — Bounded offline document vault](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Draft PR: [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
 - Exact-head CI: [run #154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335), passed all configured jobs.
 - This documentation reconciliation is committed on the same feature branch; a fresh exact-head workflow must pass before merge.
 
 ### Blockers and next priority
-- PDF, DOCX, OCR, semantic embeddings, and prompt-grounded RAG are not implemented. PDF work must first select a reviewed Android-compatible parser/license and bound page count, extracted characters, memory, and execution time.
+- PDF, DOCX, OCR, semantic embeddings, and automatic RAG are not implemented. Explicit one-turn grounding of user-selected excerpts is implemented in the current PR. PDF work must first select a reviewed Android-compatible parser/license and bound page count, extracted characters, memory, and execution time.
 - Next product increment: bounded PDF text extraction with malformed, encrypted, empty, page-limit, and decompression/resource-limit tests; do not silently add OCR or inject document content into Gemma context.
 - Physical Pixel 6 validation of the actual Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
 
@@ -645,8 +645,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Deleting a source document removes its pending excerpts; switching conversations clears pending selection.
 - Added four JVM tests for empty selection, source attribution, count/length bounds, and JSON escaping. They have not yet run locally.
 - No new dependency, permission, network upload, automatic RAG, or model-generated tool was added.
-- Files: KnowledgePromptContext.kt, KnowledgePromptContextTest.kt, NexoraViewModel.kt, KnowledgeVaultDialog.kt, NexoraHome.kt, README.md, ROADMAP.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md.
-- Previous vault head 4a9768e passed run #154; the docs-only follow-up #155 was superseded by this source change. A new exact-head workflow is required before merge. No local Gradle/Android SDK run, real Gemma inference, offline verification, or physical Pixel 6 test was performed.
+- Files: KnowledgePromptContext.kt, KnowledgePromptContextTest.kt, NexoraViewModel.kt, KnowledgeVaultDialog.kt, NexoraHome.kt, README.md, ROADMAP.md, docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md.
+- Previous vault head 4a9768e passed run #154. Docs-only run #155 passed APK assembly, lint, and JVM tests but failed KVM preflight because the hosted runner could not access /dev/kvm after the udev rule; instrumentation was skipped. Run #156 passed APK assembly but was cancelled during lint after safety-hardening changes. Run #157 is the authoritative exact-head workflow for source head af91190; its status is linked from PR Checks. No local Gradle/Android SDK run, real Gemma inference, offline verification, or physical Pixel 6 test was performed.
 - Branch feat/local-knowledge-ingestion; PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). PDF extraction, OCR, embeddings, and physical-device validation remain next priorities.
 
 - Follow-up safety hardening: message sending is blocked while knowledge import/search/deletion is active, and document deletion is blocked during generation to avoid racing a user-selected excerpt into a request while its source is being removed.
