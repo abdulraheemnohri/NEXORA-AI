@@ -198,6 +198,13 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 }
             }
 
+            if (state.selectedKnowledgeSources.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val sourceNames = state.selectedKnowledgeSources.map { it.documentName }.distinct().joinToString(", ").take(90)
+                    Text("Next reply uses " + sourceNames, modifier = Modifier.weight(1f), color = Color(0xFF9B9CB2), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    TextButton(onClick = viewModel::clearKnowledgeSources, enabled = !state.isGenerating) { Text("Clear") }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = state.input,

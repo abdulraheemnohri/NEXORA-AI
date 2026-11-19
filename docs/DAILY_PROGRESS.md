@@ -634,3 +634,17 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - PDF, DOCX, OCR, semantic embeddings, and prompt-grounded RAG are not implemented. PDF work must first select a reviewed Android-compatible parser/license and bound page count, extracted characters, memory, and execution time.
 - Next product increment: bounded PDF text extraction with malformed, encrypted, empty, page-limit, and decompression/resource-limit tests; do not silently add OCR or inject document content into Gemma context.
 - Physical Pixel 6 validation of the actual Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-20 — Explicit one-turn local knowledge grounding
+
+- Added a pure Kotlin prompt-context builder for excerpts explicitly selected from local knowledge search.
+- Users can select at most three excerpts, see pending source names in the composer, and clear the selection before sending.
+- Excerpts are included only in the next LiteRT-LM request, JSON-escaped, bounded to 120 characters per source name and 240 characters per excerpt, and labeled as untrusted reference data.
+- The normal user message stored in chat history remains unchanged. Selections are consumed once when sending and are not persisted as messages.
+- Deleting a source document removes its pending excerpts; switching conversations clears pending selection.
+- Added four JVM tests for empty selection, source attribution, count/length bounds, and JSON escaping. They have not yet run locally.
+- No new dependency, permission, network upload, automatic RAG, or model-generated tool was added.
+- Files: KnowledgePromptContext.kt, KnowledgePromptContextTest.kt, NexoraViewModel.kt, KnowledgeVaultDialog.kt, NexoraHome.kt, README.md, ROADMAP.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md.
+- Previous vault head 4a9768e passed run #154; the docs-only follow-up #155 was superseded by this source change. A new exact-head workflow is required before merge. No local Gradle/Android SDK run, real Gemma inference, offline verification, or physical Pixel 6 test was performed.
+- Branch feat/local-knowledge-ingestion; PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). PDF extraction, OCR, embeddings, and physical-device validation remain next priorities.

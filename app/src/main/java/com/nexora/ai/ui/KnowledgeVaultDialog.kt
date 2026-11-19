@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nexora.ai.ai.KnowledgePromptContext
 import java.util.Locale
 
 @Composable
@@ -48,7 +49,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Extracted text is stored in app-private SQLite. NEXORA reads the selected URI once, retains no URI permission, uploads no content, and does not automatically add documents to Gemma prompts. Choose a file already downloaded to this device; a cloud-backed Android provider may fetch it before handing it to NEXORA.",
+                        "Extracted text is stored in app-private SQLite. NEXORA reads the selected URI once, retains no URI permission, uploads no content, and never adds documents to Gemma automatically. You may explicitly select up to three search excerpts for one next reply; the composer shows this selection, it is sent once as untrusted reference data, and then cleared. Choose a file already downloaded to this device; a cloud-backed Android provider may fetch it before handing it to NEXORA.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Button(
@@ -130,14 +131,18 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                     }
 
                     Text("Search results · " + state.knowledgeResults.size, style = MaterialTheme.typography.titleSmall)
+                    if (state.selectedKnowledgeSources.isNotEmpty()) {
+                        Text("Selected for next reply · " + state.selectedKnowledgeSources.size + "/" + KnowledgePromptContext.MAX_SOURCES, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                        Text("Only these excerpts are included once with your next message and treated as untrusted reference data.", style = MaterialTheme.typography.bodySmall)
+                    }
                     state.knowledgeResults.forEach { hit ->
+                        val selected = state.selectedKnowledgeSources.any { it.documentId == hit.documentId && it.chunkIndex == hit.chunkIndex }
                         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Text(
-                                hit.documentName + " · chunk " + (hit.chunkIndex + 1),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
+                            Text(hit.documentName + " · chunk " + (hit.chunkIndex + 1), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                             Text(hit.snippet, style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { viewModel.toggleKnowledgeSource(hit) }, enabled = !state.isGenerating && !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge) {
+                                Text(if (selected) "Remove from next reply" else "Use in next reply")
+                            }
                         }
                     }
                 }
