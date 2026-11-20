@@ -650,3 +650,50 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Branch feat/local-knowledge-ingestion; PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). PDF extraction, OCR, embeddings, and physical-device validation remain next priorities.
 
 - Follow-up safety hardening: message sending is blocked while knowledge import/search/deletion is active, and document deletion is blocked during generation to avoid racing a user-selected excerpt into a request while its source is being removed.
+
+
+## 2026-11-21 — Explicit bulk deletion for the local knowledge vault
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, open PRs, all branch heads, branch comparisons, and current Actions runs.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no main changes were made. There are zero standalone open issues and five open PRs: #1, #4, #12, #13, and #14. PRs #6 and #7 are merged; the supplied checkpoint that #7 is still open is stale.
+- Enumerated all 16 branch heads. PR #1 and #4 remain preserved with unique commits (42/49 and 31/38 ahead/behind); PR #12, #13, and #14 remain draft and open. PR #12, #13, and #14 overlap on several UI/documentation paths, so no merge or branch cleanup was attempted.
+- PR #14 was at `d37a6aa7a718a585c6bb5395af14553157c5fd99`, 45 commits ahead and zero behind main. GitHub reported it mergeable.
+- Latest relevant CI before this increment: PR #14 run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) completed successfully on attempt 4 for that exact head. Debug APK assembly, Android lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation all passed. The earlier KVM failure was transient; the successful rerun is authoritative for that head.
+- PR #13 exact-head run [#143](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44173352154) passed. PR #12 run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) remains queued. Main run [#109](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43095075914) remains failed at the workflow level while its build job is queued; no source-level failure is established.
+
+### Delivered
+- Added an explicit “Delete all” action to the local knowledge vault. It is shown only when documents exist and opens a confirmation dialog that states the count and clarifies that original files are untouched.
+- Added `LocalKnowledgeDatabase.deleteAllDocuments()`, which deletes all document rows in one SQLite transaction. Existing foreign-key cascade removes every indexed chunk.
+- Added an IO-dispatched repository operation and ViewModel lifecycle guards. Import, search, per-document deletion, source selection, and message sending cannot race with a bulk clear.
+- After success, the UI clears document metadata, search results, and pending one-turn source selections. A failed transaction reports an error and does not claim deletion.
+- Added an API 35 instrumentation test verifying multiple documents are removed, chunk search returns no rows, and clearing an already-empty vault is idempotent.
+- No new dependency, Android permission, model artifact, network path, or inference engine was added.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- No local Gradle/Android SDK build, lint, JVM tests, or instrumentation tests were run in this environment.
+- Prior exact-head CI run #159 attempt 4 passed all configured jobs for the parent head; it does not validate the new bulk-clear test.
+- A fresh exact-head workflow is triggered by this commit and is the required verification for the new source. Its result is pending at the time of this record.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed. RAM, latency, battery, and thermal measurements remain release gates.
+- Static review confirms the new delete-all path uses a transaction, relies on the already-enabled SQLite foreign-key cascade, requires explicit user confirmation, and does not touch source files.
+
+### Commit / PR
+- Updated feature branch: `feat/local-knowledge-ingestion`.
+- Draft PR [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Main remains unchanged. No force-push, merge, or branch deletion was performed.
+
+### Blockers and next priority
+- The bulk-clear change must pass exact-head APK assembly, lint, JVM tests, and API 35 instrumentation before merge.
+- PDF text extraction remains the next knowledge-ingestion item. The official AndroidX PDF processing APIs reviewed for this run are tied to AndroidX artifacts with higher minSdk/compileSdk requirements than the app's existing baseline; do not silently raise minSdk or override library requirements. Select a maintained Android-compatible parser only after its license, maintenance, security posture, and Pixel 6 memory limits are reviewed.
+- Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.

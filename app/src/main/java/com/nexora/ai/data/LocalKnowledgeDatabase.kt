@@ -174,6 +174,19 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
     fun deleteDocument(id: String): Boolean =
         writableDatabase.delete("knowledge_documents", "id=?", arrayOf(id)) > 0
 
+    /** Deletes every local document in one transaction; foreign-key cascade removes its chunks. */
+    fun deleteAllDocuments(): Int {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val deleted = db.delete("knowledge_documents", null, null)
+            db.setTransactionSuccessful()
+            return deleted
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     companion object {
         const val DATABASE_NAME = "nexora_knowledge.db"
         const val MAX_DOCUMENTS = 50

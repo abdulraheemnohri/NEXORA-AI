@@ -86,6 +86,20 @@ class LocalKnowledgeDatabaseInstrumentedTest {
         assertEquals(LocalKnowledgeDatabase.MAX_DOCUMENTS, database.listDocuments().size)
     }
 
+    @Test
+    fun deleteAllDocumentsRemovesEveryDocumentAndCascadedChunk() {
+        val first = import("first.txt", "first shared vault content")
+        val second = import("second.txt", "second shared vault content")
+        assertTrue(database.insertDocument(first))
+        assertTrue(database.insertDocument(second))
+        assertEquals(2, database.search("shared").size)
+
+        assertEquals(2, database.deleteAllDocuments())
+        assertTrue(database.listDocuments().isEmpty())
+        assertTrue(database.search("shared").isEmpty())
+        assertEquals(0, database.deleteAllDocuments())
+    }
+
     private fun import(name: String, content: String): ImportedKnowledgeDocument =
         KnowledgeDocumentImporter.read(
             name,

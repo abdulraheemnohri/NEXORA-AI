@@ -59,7 +59,7 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                             )
                         },
                         enabled = !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument &&
-                            !state.isSearchingKnowledge,
+                            !state.isSearchingKnowledge && !state.isClearingKnowledgeVault,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (state.isImportingKnowledge) "Importing…" else "Choose a document")
@@ -80,18 +80,44 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         label = { Text("2–128 characters") },
                         singleLine = true,
                         enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge &&
-                            !state.isDeletingKnowledgeDocument
+                            !state.isDeletingKnowledgeDocument && !state.isClearingKnowledgeVault
                     )
                     Button(
                         onClick = viewModel::searchKnowledge,
                         enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge &&
-                            !state.isDeletingKnowledgeDocument && state.knowledgeQuery.trim().length in 2..128,
+                            !state.isDeletingKnowledgeDocument && !state.isClearingKnowledgeVault &&
+                            state.knowledgeQuery.trim().length in 2..128,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (state.isSearchingKnowledge) "Searching…" else "Search on device")
                     }
 
-                    Text("Documents · " + state.knowledgeDocuments.size, style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Documents · " + state.knowledgeDocuments.size,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        if (state.knowledgeDocuments.isNotEmpty()) {
+                            TextButton(
+                                onClick = viewModel::requestClearKnowledgeVault,
+                                enabled = !state.isGenerating && !state.isImportingKnowledge &&
+                                    !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge &&
+                                    !state.isClearingKnowledgeVault
+                            ) {
+                                Text(
+                                    if (state.isClearingKnowledgeVault) "Deleting…" else "Delete all",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                    if (state.isClearingKnowledgeVault) {
+                        Text("Deleting local documents and indexed chunks…", style = MaterialTheme.typography.bodySmall)
+                    }
                     if (state.knowledgeDocuments.isEmpty()) {
                         Text("No documents imported yet.", style = MaterialTheme.typography.bodySmall)
                     } else {
@@ -121,7 +147,8 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                                     TextButton(
                                         onClick = { viewModel.requestDeleteKnowledgeDocument(document.id) },
                                         enabled = !state.isGenerating && !state.isImportingKnowledge &&
-                                            !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge
+                                            !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge &&
+                                            !state.isClearingKnowledgeVault
                                     ) {
                                         Text("Remove", color = MaterialTheme.colorScheme.error)
                                     }
@@ -140,7 +167,12 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Text(hit.documentName + " · chunk " + (hit.chunkIndex + 1), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                             Text(hit.snippet, style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { viewModel.toggleKnowledgeSource(hit) }, enabled = !state.isGenerating && !state.isImportingKnowledge && !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge) {
+                            TextButton(
+                                onClick = { viewModel.toggleKnowledgeSource(hit) },
+                                enabled = !state.isGenerating && !state.isImportingKnowledge &&
+                                    !state.isDeletingKnowledgeDocument && !state.isSearchingKnowledge &&
+                                    !state.isClearingKnowledgeVault
+                            ) {
                                 Text(if (selected) "Remove from next reply" else "Use in next reply")
                             }
                         }
@@ -175,6 +207,39 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                 TextButton(
                     onClick = viewModel::cancelDeleteKnowledgeDocument,
                     enabled = !state.isDeletingKnowledgeDocument
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (state.showClearKnowledgeVaultConfirmation) {
+        AlertDialog(
+            onDismissRequest = viewModel::cancelClearKnowledgeVault,
+            title = { Text("Delete the entire local vault?") },
+            text = {
+                Text(
+                    "All " + state.knowledgeDocuments.size +
+                        " documents and their indexed chunks will be deleted from NEXORA's local knowledge database. " +
+                        "The original files in their source locations will not be changed."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::confirmClearKnowledgeVault,
+                    enabled = !state.isClearingKnowledgeVault
+                ) {
+                    Text(
+                        if (state.isClearingKnowledgeVault) "Deleting…" else "Delete all",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::cancelClearKnowledgeVault,
+                    enabled = !state.isClearingKnowledgeVault
                 ) {
                     Text("Cancel")
                 }

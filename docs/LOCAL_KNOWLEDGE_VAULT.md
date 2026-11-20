@@ -22,7 +22,7 @@ UTF-8 decoding is strict. Malformed byte sequences and unsupported control chara
 
 ## Storage and deletion
 
-Metadata and chunk rows live in the separate app-private SQLite database nexora_knowledge.db. Document and chunk insertion is transactional. Foreign-key cascade removes chunks when a document is deleted. The UI requires explicit confirmation before deletion.
+Metadata and chunk rows live in the separate app-private SQLite database nexora_knowledge.db. Document and chunk insertion is transactional. Foreign-key cascade removes chunks when a document is deleted. The UI requires explicit confirmation before deleting one document or clearing the entire vault. Bulk clear deletes all document rows in one SQLite transaction; foreign-key cascade removes every indexed chunk. The UI also clears search results and pending one-turn source selections after a successful clear.
 
 Deletion removes NEXORA's local indexed copy only. It does not delete the original source file and does not claim secure flash erasure. App-private database encryption is not implemented.
 
@@ -34,7 +34,7 @@ Imported content is never automatically placed in a Gemma prompt and is not regi
 
 ## Verification
 
-The exact PR #14 source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e` passed GitHub Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335): debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all API 35 instrumentation tests. The seven importer JVM tests and four SQLite instrumentation tests therefore passed in CI. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
+The prior prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` passed GitHub Actions run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) on attempt 4: debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all configured API 35 instrumentation tests. This run predates the bulk-clear change and does not validate its new instrumentation test. The bulk-clear test is awaiting the next exact-head workflow. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
 
 
 ## Official Android API references

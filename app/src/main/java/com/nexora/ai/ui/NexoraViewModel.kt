@@ -70,6 +70,8 @@ data class NexoraUiState(
     val isImportingKnowledge: Boolean = false,
     val isSearchingKnowledge: Boolean = false,
     val isDeletingKnowledgeDocument: Boolean = false,
+    val isClearingKnowledgeVault: Boolean = false,
+    val showClearKnowledgeVaultConfirmation: Boolean = false,
     val pendingDeleteKnowledgeDocumentId: String? = null,
     val knowledgeError: String? = null,
     val knowledgeMessage: String? = null,
@@ -195,7 +197,9 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun openKnowledgeVault() {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument ||
+            current.isSearchingKnowledge || current.isClearingKnowledgeVault
+        ) return
         mutableUiState.update {
             it.copy(showTools = false, showKnowledgeVault = true, knowledgeError = null, knowledgeMessage = null)
         }
@@ -203,9 +207,15 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun dismissKnowledgeVault() {
-        if (mutableUiState.value.isDeletingKnowledgeDocument) return
+        if (mutableUiState.value.isDeletingKnowledgeDocument ||
+            mutableUiState.value.isClearingKnowledgeVault
+        ) return
         mutableUiState.update {
-            it.copy(showKnowledgeVault = false, pendingDeleteKnowledgeDocumentId = null)
+            it.copy(
+                showKnowledgeVault = false,
+                pendingDeleteKnowledgeDocumentId = null,
+                showClearKnowledgeVaultConfirmation = false
+            )
         }
     }
 
@@ -224,7 +234,9 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun importKnowledgeDocument(uri: Uri) {
         val current = mutableUiState.value
-        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
+        if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument ||
+            current.isSearchingKnowledge || current.isClearingKnowledgeVault
+        ) return
         viewModelScope.launch {
             mutableUiState.update {
                 it.copy(isImportingKnowledge = true, knowledgeError = null, knowledgeMessage = null)
@@ -268,7 +280,9 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
 
     fun searchKnowledge() {
         val current = mutableUiState.value
-        if (current.isSearchingKnowledge || current.isImportingKnowledge || current.isDeletingKnowledgeDocument) return
+        if (current.isSearchingKnowledge || current.isImportingKnowledge ||
+            current.isDeletingKnowledgeDocument || current.isClearingKnowledgeVault
+        ) return
         val query = current.knowledgeQuery.trim()
         if (query.length !in 2..128) {
             mutableUiState.update {
@@ -303,7 +317,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleKnowledgeSource(hit: KnowledgeSearchHit) {
         val current = mutableUiState.value
         if (current.isGenerating || current.isImportingKnowledge ||
-            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge
+            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge ||
+            current.isClearingKnowledgeVault
         ) return
 
         val alreadySelected = current.selectedKnowledgeSources.any {
@@ -336,13 +351,16 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun clearKnowledgeSources() {
-        if (mutableUiState.value.isGenerating) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isClearingKnowledgeVault) return
         mutableUiState.update { it.copy(selectedKnowledgeSources = emptyList()) }
     }
 
     fun requestDeleteKnowledgeDocument(documentId: String) {
         val current = mutableUiState.value
-        if (current.isGenerating || current.isImportingKnowledge || current.isDeletingKnowledgeDocument || current.isSearchingKnowledge) return
+        if (current.isGenerating || current.isImportingKnowledge || current.isDeletingKnowledgeDocument ||
+            current.isSearchingKnowledge || current.isClearingKnowledgeVault ||
+            current.showClearKnowledgeVaultConfirmation
+        ) return
         mutableUiState.update {
             it.copy(pendingDeleteKnowledgeDocumentId = documentId, knowledgeError = null)
         }
@@ -353,9 +371,71 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         mutableUiState.update { it.copy(pendingDeleteKnowledgeDocumentId = null) }
     }
 
+    fun requestClearKnowledgeVault() {
+        val current = mutableUiState.value
+        if (current.knowledgeDocuments.isEmpty() || current.isGenerating ||
+            current.isImportingKnowledge || current.isSearchingKnowledge ||
+            current.isDeletingKnowledgeDocument || current.isClearingKnowledgeVault ||
+            current.pendingDeleteKnowledgeDocumentId != null
+        ) return
+        mutableUiState.update {
+            it.copy(showClearKnowledgeVaultConfirmation = true, knowledgeError = null, knowledgeMessage = null)
+        }
+    }
+
+    fun cancelClearKnowledgeVault() {
+        if (mutableUiState.value.isClearingKnowledgeVault) return
+        mutableUiState.update { it.copy(showClearKnowledgeVaultConfirmation = false) }
+    }
+
+    fun confirmClearKnowledgeVault() {
+        val current = mutableUiState.value
+        if (!current.showClearKnowledgeVaultConfirmation || current.isGenerating ||
+            current.isImportingKnowledge || current.isSearchingKnowledge ||
+            current.isDeletingKnowledgeDocument || current.isClearingKnowledgeVault
+        ) return
+
+        viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(isClearingKnowledgeVault = true, knowledgeError = null, knowledgeMessage = null)
+            }
+            try {
+                val deleted = knowledgeRepository.deleteAllDocuments()
+                mutableUiState.update {
+                    it.copy(
+                        knowledgeDocuments = emptyList(),
+                        knowledgeResults = emptyList(),
+                        selectedKnowledgeSources = emptyList(),
+                        pendingDeleteKnowledgeDocumentId = null,
+                        showClearKnowledgeVaultConfirmation = false,
+                        knowledgeMessage = if (deleted == 0) {
+                            "The local knowledge vault was already empty."
+                        } else {
+                            "$deleted documents and all indexed chunks were deleted from this device. Original files were not changed."
+                        }
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        showClearKnowledgeVaultConfirmation = false,
+                        knowledgeError = error.message ?: "Unable to clear the local knowledge vault."
+                    )
+                }
+            } finally {
+                mutableUiState.update { it.copy(isClearingKnowledgeVault = false) }
+            }
+        }
+    }
+
     fun confirmDeleteKnowledgeDocument() {
         val documentId = mutableUiState.value.pendingDeleteKnowledgeDocumentId ?: return
-        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingKnowledgeDocument || mutableUiState.value.isImportingKnowledge || mutableUiState.value.isSearchingKnowledge) return
+        if (mutableUiState.value.isGenerating || mutableUiState.value.isDeletingKnowledgeDocument ||
+            mutableUiState.value.isImportingKnowledge || mutableUiState.value.isSearchingKnowledge ||
+            mutableUiState.value.isClearingKnowledgeVault
+        ) return
         viewModelScope.launch {
             mutableUiState.update {
                 it.copy(isDeletingKnowledgeDocument = true, knowledgeError = null)
@@ -566,7 +646,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         val activeConversation = conversationId
         if (prompt.isEmpty() || !current.modelReady || current.isGenerating ||
             current.isDeletingConversation || current.isImportingKnowledge ||
-            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge || activeConversation == null
+            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge ||
+            current.isClearingKnowledgeVault || activeConversation == null
         ) return
 
         val history = current.messages

@@ -62,5 +62,8 @@ class KnowledgeRepository(private val database: LocalKnowledgeDatabase) {
     suspend fun deleteDocument(id: String): Boolean =
         withContext(Dispatchers.IO) { database.deleteDocument(id) }
 
+    suspend fun deleteAllDocuments(): Int =
+        withContext(Dispatchers.IO) { database.deleteAllDocuments() }
+
     fun close() = database.close()
 }
