@@ -24,6 +24,20 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Verified Gradle 8.13 wrapper with official distribution SHA-256 pin, merged in [PR #5](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5) as [`0afe596`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0afe596566fb878e32f6aba4cc57aed687ffbf3f). Latest PR-head run [#80](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412475976) passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests on the exact reviewed head.
 - GitHub Actions workflow for debug APK assembly, Android lint, JVM unit tests, and API 35 emulator instrumentation. The emulator job is pinned to the stable Ubuntu 24.04 image and fails fast with explicit KVM diagnostics.
 
+
+## Local knowledge vault (initial ingestion)
+
+- Import UTF-8 TXT, Markdown (.md / .markdown), and JSON files through Android's system document picker.
+- Each file is limited to 512 KiB and 450,000 decoded characters; the app-private vault is capped at 50 documents and 8 MiB of source bytes.
+- Documents are split into overlapping 2,000-character chunks (200-character overlap, at most 256 chunks per document) and indexed in a separate nexora_knowledge.db SQLite database.
+- SHA-256 duplicate detection, transactional document/chunk writes, parameterized local keyword search (2–128 character query, 20 results maximum), and confirmation-gated per-document deletion are implemented.
+- An explicit-confirmation “Delete all” action removes every local vault record and cascades to indexed chunks; original source files are never changed.
+- The chat composer and ViewModel share a pure Kotlin availability policy; editing and sending are disabled while a knowledge import, search, per-document deletion, or vault clear is active.
+- The selected URI is read once; NEXORA does not retain URI permissions. HTTP URIs are rejected. Cloud-backed Android providers may fetch their source before returning a content URI, so choose a file already downloaded to this device for offline import. The original file is not changed or deleted.
+- JSON is indexed as raw UTF-8 text, not parsed into structured records. Documents are never inserted into Gemma prompts automatically. A user may explicitly select up to three search excerpts for the next reply; the composer shows the selected source names, the excerpts are added once as bounded JSON-escaped untrusted reference data, and the selection is cleared when sending. After that grounded turn, the cached native conversation session is discarded so the next turn replays only the durable chat transcript, without the raw excerpts. No model-generated tool is registered. Search remains keyword retrieval, not semantic retrieval or RAG.
+- PDF extraction, OCR, semantic embeddings, and prompt-grounded retrieval remain unimplemented. Deleting a vault record is not a claim of secure flash erasure.
+- Verification checkpoint (2026-11-20): PR #14 exact-head GitHub Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335) completed successfully on source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e`, including debug APK assembly, Android lint, JVM unit tests, KVM preflight, and all API 35 instrumentation tests. This is emulator/CI evidence only; real Gemma inference, offline-after-download behavior, and physical Pixel 6 performance remain unverified.
+
 ## Google AI Edge stack
 
 NEXORA follows Google's separate runtime paths by workload:

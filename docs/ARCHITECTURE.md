@@ -9,7 +9,7 @@ NEXORA is a native Android application. Its application backend runs in-process 
 - LLM core: LiteRT-LM runtime contract, prompt/context assembly, generation limits, and streaming events.
 - On-device task runtime: future non-LLM LiteRT Compiled Model adapters, isolated from the LLM runtime.
 - Agent: risk policy and approval boundary; broader planner/tool execution remains roadmap work.
-- Memory and knowledge: planned local retrieval and ingestion components.
+- Memory and knowledge: separate app-private nexora_knowledge.db vault for bounded TXT/Markdown/JSON ingestion and manually invoked keyword retrieval; semantic embeddings and prompt-grounded RAG remain planned.
 - Data: app-private SQLite conversation/message storage and local settings.
 - Platform: Android permissions, app-private storage, and lifecycle management.
 
@@ -59,3 +59,17 @@ Tool invocation is separate from LiteRT-LM generation. Model text is never parse
 Approval grants are one-use and tied to the exact invocation object. A grant cannot be reused for another request or replayed after consumption. The current registered capability is a user-enabled, manually invoked, read-only search over user/assistant message text in the app-private SQLite conversation store; system-role messages are excluded. It runs through the repository IO boundary, uses bound SQL parameters, limits query length, scans at most the most recent 2,000 user/assistant messages and the first 12,000 characters of each, and limits result count, and does not transmit data outside the device.
 
 No external, destructive, or local-write tool is registered. The approval primitive is infrastructure, not permission to execute arbitrary code. Any future side-effect tool must have a concrete handler, an explicit user-facing review step, immediate policy re-check, and focused tests before registration.
+
+
+## Local knowledge vault
+
+The initial vault uses Android's Storage Access Framework OpenDocument contract. The app reads the selected URI once and does not persist its URI permission. Only content, file, and android.resource URI schemes are accepted; HTTP URIs are rejected. A cloud-backed Android content provider may still fetch data before exposing its content URI, so users must choose an already downloaded file for offline import. Only UTF-8 .txt, .md/.markdown, and .json content is accepted; JSON is indexed as raw text rather than parsed into records. The importer enforces a 512 KiB byte limit, 450,000 decoded-character limit, rejects malformed UTF-8 and unsupported control characters, and creates overlapping 2,000-character chunks with a 200-character overlap.
+
+Document metadata and chunks are stored in a separate app-private SQLite database (nexora_knowledge.db) so knowledge schema changes cannot alter conversation history. A transaction writes each document and all chunks together. SHA-256 prevents importing identical bytes twice. The store is limited to 50 documents and 8 MiB of source bytes. Search uses bound query parameters, a 2–128 character query, and returns at most 20 bounded excerpts. SQLite lower() is ASCII case folding; this is keyword search, not semantic retrieval.
+
+Imported content is never automatically placed in a Gemma prompt and is not registered as an agent tool. A user may explicitly select at most three search excerpts for the next reply; the composer shows pending sources, the prompt builder JSON-escapes and bounds them as untrusted reference data, and the selection is consumed once rather than persisted in durable chat history. After the grounded request completes or fails, the ViewModel calls the runtime's existing forgetConversation API; the next turn reconstructs the session from the durable transcript without raw excerpts. This releases the cached session but does not claim secure RAM zeroization. Deletion is user-confirmed and cascades to the document's chunks. It deletes NEXORA's local copy only; it does not delete the original source file or guarantee secure flash erasure. PDF parsing, OCR, and embeddings remain roadmap work.
+
+
+## Local knowledge vault verification checkpoint
+
+The initial bounded TXT/Markdown/JSON implementation is tracked in [PR #14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). Its exact source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e` passed [Actions run #154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335), including APK assembly, lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. This is CI/emulator evidence; real Gemma inference, offline operation, and physical Pixel 6 behavior remain unverified. PDF extraction and prompt-grounded retrieval are not yet implemented.
