@@ -38,7 +38,7 @@ The chat composer uses the same pure Kotlin availability policy as the ViewModel
 
 ## Verification
 
-The prior prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` passed GitHub Actions run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) on attempt 4: debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all configured API 35 instrumentation tests. This run predates the bulk-clear change and does not validate its new instrumentation test. The bulk-clear test is awaiting the next exact-head workflow. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
+The prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` passed GitHub Actions run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) on attempt 4. The bulk-clear source head `56ab34f14f32c3a417b4f78b6b2c08f83a70c412` passed exact-head run [#160](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44813044902), including debug APK assembly, Android lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. A subsequent shared chat-operation policy follow-up is awaiting its own exact-head workflow; the parent run does not validate that change. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
 
 
 ## Official Android API references
