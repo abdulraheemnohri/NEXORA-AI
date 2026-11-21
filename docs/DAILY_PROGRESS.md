@@ -697,3 +697,45 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - The bulk-clear change must pass exact-head APK assembly, lint, JVM tests, and API 35 instrumentation before merge.
 - PDF text extraction remains the next knowledge-ingestion item. The official AndroidX PDF processing APIs reviewed for this run are tied to AndroidX artifacts with higher minSdk/compileSdk requirements than the app's existing baseline; do not silently raise minSdk or override library requirements. Select a maintained Android-compatible parser only after its license, maintenance, security posture, and Pixel 6 memory limits are reviewed.
 - Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-22 — Keep chat controls unavailable during local knowledge operations
+
+### Repository audit before edits
+- Re-read repository metadata, default branch, current main ref, standalone open issues, recent commits, open PRs, all branch heads, and relevant Actions runs before changing source.
+- Current main is `abd66700dd6f7e6f119d84c6cd612aff4c40b71b` (latest main commit dated 2026-11-11); main was not modified. No standalone open issues were returned.
+- Five PRs are open: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint that #7 remains open is stale. PR #1 and #4 remain open and their unique branches are preserved.
+- All 16 branch heads and SHAs were enumerated. PR #14 branch `feat/local-knowledge-ingestion` was at `56ab34f14f32c3a417b4f78b6b2c08f83a70c412`, 46 commits ahead and zero behind main. GitHub reported mergeable=true; no review submissions or inline threads were present.
+- Latest relevant PR #14 exact-head run [#160](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44813044902) completed successfully for parent commit `56ab34f`: debug APK assembly, Android lint, JVM unit tests, KVM preflight, and API 35 instrumentation all passed. PR #13 run #143 passed; PR #12 run #112 remained queued. No current main source change was made.
+
+### Delivered
+- Added a pure Kotlin `ChatInteractionPolicy` and immutable `ChatInteractionState` shared by the Compose chat screen and ViewModel.
+- The composer and Send button are now disabled while generation, conversation deletion, knowledge import, knowledge search, individual document deletion, or bulk vault clearing is active, and while the local model is not ready.
+- The ViewModel reuses the same policy immediately before accepting a send request. This preserves the backend guard; UI disabling is not treated as authorization.
+- Added focused JVM tests proving idle/ready acceptance and rejection for every conflicting operation.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ui/ChatInteractionPolicy.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/test/java/com/nexora/ai/ui/ChatInteractionPolicyTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source-level review verified the Compose enabled states and ViewModel guard call the same policy; the policy test covers model-not-ready plus all six busy flags.
+- No local Gradle/Android SDK build, lint, or tests were run because this environment has no configured Android SDK/Gradle execution.
+- Parent exact-head CI run #160 passed before this follow-up. The new head must pass a fresh exact-head Actions run before merge.
+- No real Gemma inference, offline-after-download test, or physical Pixel 6 verification was performed. RAM, latency, battery, and thermal results remain unmeasured.
+
+### Commit / PR
+- Source commit: [`0c146daa`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0c146daa07fcf0b9b5e335ddf3ceff0774a16a06).
+- Draft PR [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Main remains unchanged. No force-push, merge, or branch deletion was performed.
+
+### Blockers and next priority
+- Await exact-head APK assembly, lint, JVM tests, and API 35 instrumentation for the shared chat-operation policy.
+- PDF extraction remains the next knowledge-ingestion item. Official AndroidX PDF documentation exposes page text content APIs, but its release notes describe the read/render backport as minSdk 28 while NEXORA currently supports minSdk 26. Do not silently raise minSdk. The older Android PDFBox port is based on PDFBox 2.0.27 and has unresolved maintenance/bug reports; do not add it without a separate security and compatibility review.
+- Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.

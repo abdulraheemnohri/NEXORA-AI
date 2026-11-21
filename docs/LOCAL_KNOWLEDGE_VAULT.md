@@ -32,6 +32,10 @@ Search is a manually invoked, parameterized SQLite keyword query. It is bounded 
 
 Imported content is never automatically placed in a Gemma prompt and is not registered as a model tool. A user may explicitly select up to three search excerpts for the next reply. The composer displays the selected source names and allows clearing them before send. The selected excerpts are added only to that one generation request as bounded JSON-escaped reference data with an explicit untrusted-content instruction; the selection is cleared when sending and is not persisted in durable conversation history. After the grounded generation completes or fails, the runtime drops its cached native conversation session so the next turn replays the durable transcript without the raw excerpts. This is session disposal, not a guarantee of secure RAM zeroization. This is prompt grounding by explicit user selection, not automatic RAG. Embeddings, semantic retrieval, PDF parsing, and OCR remain future work.
 
+## Chat interaction gating
+
+The chat composer uses the same pure Kotlin availability policy as the ViewModel send guard. Text entry and Send are disabled while Gemma is generating, a conversation is being deleted, or a knowledge import, search, per-document deletion, or bulk clear is active. The ViewModel rechecks the policy before accepting a send; UI state is not treated as an authorization boundary. Focused JVM tests cover every busy state and the model-not-ready case.
+
 ## Verification
 
 The prior prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` passed GitHub Actions run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) on attempt 4: debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all configured API 35 instrumentation tests. This run predates the bulk-clear change and does not validate its new instrumentation test. The bulk-clear test is awaiting the next exact-head workflow. No local Gradle build was run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 result is claimed.
