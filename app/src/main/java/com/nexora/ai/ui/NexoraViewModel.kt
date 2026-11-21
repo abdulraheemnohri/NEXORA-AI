@@ -644,10 +644,17 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         val current = mutableUiState.value
         val prompt = current.input.trim()
         val activeConversation = conversationId
-        if (prompt.isEmpty() || !current.modelReady || current.isGenerating ||
-            current.isDeletingConversation || current.isImportingKnowledge ||
-            current.isDeletingKnowledgeDocument || current.isSearchingKnowledge ||
-            current.isClearingKnowledgeVault || activeConversation == null
+        if (prompt.isEmpty() || !ChatInteractionPolicy.canSubmitMessage(
+                ChatInteractionState(
+                    modelReady = current.modelReady,
+                    isGenerating = current.isGenerating,
+                    isDeletingConversation = current.isDeletingConversation,
+                    isImportingKnowledge = current.isImportingKnowledge,
+                    isDeletingKnowledgeDocument = current.isDeletingKnowledgeDocument,
+                    isSearchingKnowledge = current.isSearchingKnowledge,
+                    isClearingKnowledgeVault = current.isClearingKnowledgeVault
+                )
+            ) || activeConversation == null
         ) return
 
         val history = current.messages
