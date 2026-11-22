@@ -739,3 +739,62 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Await exact-head APK assembly, lint, JVM tests, and API 35 instrumentation for the shared chat-operation policy.
 - PDF extraction remains the next knowledge-ingestion item. Official AndroidX PDF documentation exposes page text content APIs, but its release notes describe the read/render backport as minSdk 28 while NEXORA currently supports minSdk 26. Do not silently raise minSdk. The older Android PDFBox port is based on PDFBox 2.0.27 and has unresolved maintenance/bug reports; do not add it without a separate security and compatibility review.
 - Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-23 — Unicode-normalized local knowledge search
+
+### Repository audit before edits
+- Re-read repository metadata, main, standalone open issues, recent commits, all branch heads, open pull requests, and latest relevant Actions runs before editing.
+- Default branch remains `main` at `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no main changes were made. The repository returned zero standalone open issues.
+- Five PRs are open: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint that #7 is still open is stale. PR #1 and #4 remain draft, diverged, and preserved.
+- Enumerated all 15 current branch heads. No branch was deleted. PR #14 branch `feat/local-knowledge-ingestion` was at `1eb5eb04ea6b93863c7c7c46c415dd4c1ab1518c`, 49 commits ahead and zero behind main. GitHub reported mergeable=true.
+- Recent commit search still places `abd66700` at the main head; other recent commits are on feature/integration branches.
+- Current PR #14 exact-head Actions run [#163](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44949033226) completed with APK assembly, Android lint, and JVM unit tests passing. KVM preflight failed even though `/dev/kvm` displayed mode `crw-rw-rw-`; the runner process could not pass the read/write access check, so API 35 instrumentation was skipped. This is a runner/device-access failure, not a Kotlin compile or unit-test failure.
+- Previous bulk-clear source head run [#160](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44813044902) passed all configured jobs, including API 35 instrumentation, but does not validate the current branch head.
+- No local Gradle/Android SDK build is available in this execution environment.
+
+### Delivered
+- Added `KnowledgeTextSearch`, a pure Kotlin bounded-corpus matcher using Unicode NFKC normalization and locale-independent lowercase.
+- Match offsets are mapped back to the original source text, so compatibility-normalized matches can be found without rewriting stored documents or displaying normalized replacement text.
+- Updated local SQLite search to stream chunk rows in deterministic newest-document/chunk order and stop after the requested result limit. The vault remains bounded to 8 MiB of source bytes and at most 20 returned excerpts; search does not materialize the whole corpus.
+- Added four JVM tests for Latin case-insensitive matching, Arabic presentation-form normalization, combining-mark normalization with original-offset mapping, and non-matching input.
+- Added an API 35 database instrumentation test that searches an Arabic presentation-form spelling using its normalized Unicode equivalent and verifies the excerpt retains the original stored characters.
+- Updated the Knowledge Vault Compose screen to explain that matching remains local and keyword-based, with stored text unchanged.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeTextSearch.kt` (new)
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeTextSearchTest.kt` (new)
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source review confirms the matcher is bounded to one stored chunk at a time, uses `Normalizer.Form.NFKC` and `Locale.ROOT`, and maps match offsets to the original string. No source document is normalized or rewritten.
+- Added four JVM tests and one API 35 instrumentation test; these tests have not yet executed on the new head.
+- The latest pre-edit exact-head run #163 passed APK assembly, lint, and JVM tests but failed KVM preflight; instrumentation did not run. A new exact-head workflow is triggered by this commit. Its result must be checked before merge.
+- No local Gradle build, lint, or tests were run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 testing was performed.
+
+### PDF parser evaluation
+- The Android PDFBox port `com.tom-roush:pdfbox-android` is based on PDFBox 2.0.27 and its latest published release is v2.0.27.0 from January 2023. Upstream Apache PDFBox has since published 2.0.37 and 3.0.8 in July 2026; the Android port is therefore not selected without a current maintenance/security review.
+- The newly surfaced KotlinPdfium project advertises API 26 support but is AGPL-3.0, arm64-v8a only, and requires a newer NDK/AGP/compile SDK toolchain. It is not added because its licensing and build/ABI constraints are not compatible with an unreviewed drop-in dependency.
+- No PDF dependency was added. PDF, OCR, embeddings, and automatic RAG remain unimplemented. A parser must pass license, maintenance, malformed/encrypted input, page-count, extracted-character, memory, and execution-time review before adoption.
+
+### Safety and preservation
+- No dependency, permission, model weight, network path, inference runtime, cloud AI API, Firebase, Docker, Ollama, llama.cpp, or external Python inference service was added.
+- No force-push, merge, or branch deletion was performed. PR #1 and #4 remain preserved; main is unchanged.
+
+### Commit / PR
+- Updated branch: `feat/local-knowledge-ingestion`.
+- Draft PR [#14 — Bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- The resulting source/documentation commit is the new exact head of PR #14; the PR checks link is the authoritative CI location for this head.
+
+### Blockers and next priority
+- Confirm exact-head APK, lint, JVM, KVM, and API 35 instrumentation status. Do not merge while instrumentation is skipped or required checks are failing.
+- Continue PDF parser evaluation only with a maintained, license-compatible option that preserves minSdk 26 and has explicit page/text/memory/time bounds.
+- Physical Pixel 6 validation of real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.

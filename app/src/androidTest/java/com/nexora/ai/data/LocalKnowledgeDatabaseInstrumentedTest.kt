@@ -74,6 +74,16 @@ class LocalKnowledgeDatabaseInstrumentedTest {
     }
 
     @Test
+    fun searchNormalizesArabicPresentationFormsAndPreservesOriginalExcerpt() {
+        val originalWord = "\uFEFB\u0632\u0645"
+        val imported = import("urdu-reference.txt", "Urdu term: " + originalWord + " appears in this note.")
+        assertTrue(database.insertDocument(imported))
+        val results = database.search("\u0644\u0627\u0632\u0645")
+        assertEquals(1, results.size)
+        assertTrue(results.single().snippet.contains(originalWord))
+    }
+
+    @Test
     fun documentCountQuotaRejectsTheNextUniqueDocument() {
         repeat(LocalKnowledgeDatabase.MAX_DOCUMENTS) { index ->
             assertTrue(database.insertDocument(import("document-" + index + ".txt", "unique content " + index)))

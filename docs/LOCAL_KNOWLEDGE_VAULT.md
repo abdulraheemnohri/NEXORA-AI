@@ -46,3 +46,8 @@ The prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` pass
 - [ActivityResultContracts.OpenDocument](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.OpenDocument) — user-selected document URI contract and MIME filters.
 - [OpenableColumns](https://developer.android.com/reference/android/provider/OpenableColumns) — standard DISPLAY_NAME metadata for openable URIs.
 - [ContentResolver.openInputStream](https://developer.android.com/reference/android/content/ContentResolver#openInputStream(android.net.Uri)) — supports content, file, and android.resource schemes; the repository rejects HTTP and other unsupported schemes.
+
+
+## Unicode search normalization
+
+Search is a manually invoked local keyword scan over the bounded SQLite chunk rows. It normalizes each Unicode grapheme cluster with NFKC and locale-independent lowercase, then maps the match back to offsets in the original source so displayed excerpts preserve stored text. The scan is bounded by the 8 MiB source quota and returns at most 20 snippets. This is compatibility-normalized substring matching, not linguistic stemming, transliteration, cross-language tokenization, or semantic search.

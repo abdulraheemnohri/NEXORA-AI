@@ -143,20 +143,24 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
             """SELECT d.id,d.display_name,d.format,c.chunk_index,c.content,d.imported_at
                 FROM knowledge_chunks c
                 INNER JOIN knowledge_documents d ON d.id=c.document_id
-                WHERE instr(c.content,?) > 0 OR instr(lower(c.content),lower(?)) > 0
-                ORDER BY d.imported_at DESC,c.chunk_index ASC
-                LIMIT ?""".trimIndent(),
-            arrayOf(normalized, normalized, safeLimit.toString())
+                ORDER BY d.imported_at DESC,d.rowid DESC,c.chunk_index ASC""".trimIndent(),
+            null
         ).use { cursor ->
-            while (cursor.moveToNext()) {
+            // The vault is capped at 8 MiB of source bytes. Stream one chunk at a
+            // time so Unicode normalization never materializes the whole corpus.
+            while (cursor.moveToNext() && result.size < safeLimit) {
                 val content = cursor.getString(4)
-                val matchIndex = content.indexOf(normalized, ignoreCase = true).coerceAtLeast(0)
-                val start = (matchIndex - SNIPPET_PREFIX_CHARACTERS).coerceAtLeast(0)
-                val end = (start + MAX_SNIPPET_CHARACTERS).coerceAtMost(content.length)
+                val match = KnowledgeTextSearch.findMatch(content, normalized) ?: continue
+                var snippetStart = (match.start - SNIPPET_PREFIX_CHARACTERS).coerceAtLeast(0)
+                var snippetEnd = (snippetStart + MAX_SNIPPET_CHARACTERS).coerceAtMost(content.length)
+                if (match.endExclusive > snippetEnd) {
+                    snippetEnd = match.endExclusive.coerceAtMost(content.length)
+                    snippetStart = (snippetEnd - MAX_SNIPPET_CHARACTERS).coerceAtLeast(0)
+                }
                 val snippet = buildString {
-                    if (start > 0) append('…')
-                    append(content.substring(start, end))
-                    if (end < content.length) append('…')
+                    if (snippetStart > 0) append('…')
+                    append(content.substring(snippetStart, snippetEnd))
+                    if (snippetEnd < content.length) append('…')
                 }.replace('\n', ' ').replace('\r', ' ').trim()
                 result += KnowledgeSearchHit(
                     documentId = cursor.getString(0),

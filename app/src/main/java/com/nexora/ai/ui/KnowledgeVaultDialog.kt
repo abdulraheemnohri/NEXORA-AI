@@ -82,6 +82,11 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                         enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge &&
                             !state.isDeletingKnowledgeDocument && !state.isClearingKnowledgeVault
                     )
+                    Text(
+                        "Search stays on this device. It normalizes Unicode compatibility forms and uses locale-independent lowercase; stored text is unchanged. This is keyword search, not semantic search.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Button(
                         onClick = viewModel::searchKnowledge,
                         enabled = !state.isSearchingKnowledge && !state.isImportingKnowledge &&

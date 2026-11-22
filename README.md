@@ -30,7 +30,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Import UTF-8 TXT, Markdown (.md / .markdown), and JSON files through Android's system document picker.
 - Each file is limited to 512 KiB and 450,000 decoded characters; the app-private vault is capped at 50 documents and 8 MiB of source bytes.
 - Documents are split into overlapping 2,000-character chunks (200-character overlap, at most 256 chunks per document) and indexed in a separate nexora_knowledge.db SQLite database.
-- SHA-256 duplicate detection, transactional document/chunk writes, parameterized local keyword search (2–128 character query, 20 results maximum), and confirmation-gated per-document deletion are implemented.
+- SHA-256 duplicate detection, transactional document/chunk writes, and parameterized local keyword search (2–128 character query, 20 results maximum) are implemented. Search applies Unicode NFKC normalization and locale-independent lowercase while returning excerpts from unchanged source text; it remains bounded keyword matching, not semantic retrieval.
 - An explicit-confirmation “Delete all” action removes every local vault record and cascades to indexed chunks; original source files are never changed.
 - The chat composer and ViewModel share a pure Kotlin availability policy; editing and sending are disabled while a knowledge import, search, per-document deletion, or vault clear is active.
 - The selected URI is read once; NEXORA does not retain URI permissions. HTTP URIs are rejected. Cloud-backed Android providers may fetch their source before returning a content URI, so choose a file already downloaded to this device for offline import. The original file is not changed or deleted.
