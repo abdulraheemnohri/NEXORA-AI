@@ -9,9 +9,9 @@ PDF, DOCX, HTML, OCR, and binary formats are not supported by this increment.
 ## Resource and storage bounds
 
 - Maximum source file: 512 KiB.
-- Maximum decoded text: 450,000 characters.
-- Chunk size: 2,000 characters.
-- Chunk overlap: 200 characters.
+- Maximum decoded text: 450,000 UTF-16 code units (Kotlin String.length units).
+- Chunk size: 2,000 UTF-16 code units.
+- Chunk overlap: 200 UTF-16 code units.
 - Maximum chunks per document: 256.
 - Maximum stored documents: 50.
 - Maximum total source bytes: 8 MiB.
@@ -51,3 +51,12 @@ The prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` pass
 ## Unicode search normalization
 
 Search is a manually invoked local keyword scan over the bounded SQLite chunk rows. It normalizes each Unicode grapheme cluster with NFKC and locale-independent lowercase, then maps the match back to offsets in the original source so displayed excerpts preserve stored text. The scan is bounded by the 8 MiB source quota and returns at most 20 snippets. This is compatibility-normalized substring matching, not linguistic stemming, transliteration, cross-language tokenization, or semantic search.
+
+
+## UTF-16-safe chunk boundaries
+
+Kotlin string indices count UTF-16 code units. The importer adjusts a chunk end and the next overlap start when either boundary would split a valid surrogate pair, preserving supplementary Unicode code points across chunks. The 2,000-unit chunk and 200-unit overlap bounds are still measured in UTF-16 code units. This does not guarantee that every extended grapheme cluster stays within one chunk; grapheme-aware chunking remains a possible future refinement.
+
+## 2026-11-24 verification
+
+The source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed exact-head GitHub Actions run [#165](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45257693789): debug APK assembly, Android lint, JVM unit tests, KVM preflight, and all 18 API 35 instrumentation tests. The new regression test covers a supplementary Unicode code point positioned across the nominal chunk boundary. No local Gradle/Android SDK build was available. Real Gemma inference, offline-after-download behavior, and physical Pixel 6 memory/thermal validation remain unverified.

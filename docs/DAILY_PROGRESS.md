@@ -798,3 +798,43 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Confirm exact-head APK, lint, JVM, KVM, and API 35 instrumentation status. Do not merge while instrumentation is skipped or required checks are failing.
 - Continue PDF parser evaluation only with a maintained, license-compatible option that preserves minSdk 26 and has explicit page/text/memory/time bounds.
 - Physical Pixel 6 validation of real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+## 2026-11-24 — Unicode-safe knowledge chunk boundaries
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, all branch heads, open pull requests, and current Actions runs.
+- Main remains at [abd66700](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), dated 2026-11-11. There are zero standalone open issues and five open PRs: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- Enumerated all 16 branch heads. PR #1 and #4 remain open, diverged, and preserved; neither branch was changed or deleted. No force-push or merge occurred during the source edit.
+- PR #1 is not mergeable and has no workflow run for its current exact head. PR #4 is not mergeable; run #76 passed APK assembly, lint, and JVM tests. PR #12 run #112 remains queued. PR #13 run #143 passed APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation.
+- PR #14 was at source head [88ba72e](https://github.com/abdulraheemnohri/NEXORA-AI/commit/88ba72e240ebc6a86472a01d3422f129eb0c725f), 50 commits ahead and zero behind main, with GitHub reporting mergeable=true. Its exact-head run #164 passed all configured jobs. The PR was draft at audit time.
+- Main reports protected=false and the repository rulesets endpoint returned an empty list. All PRs remain the preferred integration path for source changes.
+
+### Delivered on feat/local-knowledge-ingestion
+- Code review identified that Kotlin String.length and substring indices count UTF-16 code units. The previous fixed-size chunk boundaries could split a supplementary Unicode code point into an unmatched high/low surrogate pair.
+- Updated KnowledgeDocumentImporter.chunk() to move chunk-end and next-overlap boundaries when they would split a valid surrogate pair. The 2,000-unit chunk and 200-unit overlap bounds remain unchanged.
+- Added chunkingDoesNotSplitUtf16SurrogatePairs, which places an emoji exactly across the nominal boundary and asserts every resulting chunk has well-formed surrogate pairs.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt
+- app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt
+- README.md
+- ROADMAP.md
+- docs/LOCAL_KNOWLEDGE_VAULT.md
+- docs/DAILY_PROGRESS.md
+
+### Verification actually run
+- Source commit [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed exact-head Actions run [#165](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45257693789): debug APK assembly, Android lint, JVM tests, KVM preflight, and all 18 API 35 instrumentation tests.
+- A standalone kotlinc smoke harness for the same boundary-adjustment algorithm passed. This is not a substitute for the repository Gradle suite; the exact-head GitHub Actions run is the authoritative project test result.
+- No local Gradle executable or Android SDK was configured, so no local Android build/lint/test command was run.
+- A static secret-pattern scan over the 20 PR #14 changed files returned no matches for private-key blocks, GitHub token patterns, AWS access keys, or quoted API-key/client-secret/password assignments. The PR adds no Gradle dependency, Android permission, manifest change, or model artifact.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed.
+
+### Commit / PR
+- Source commit: [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325).
+- Feature PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Documentation follow-up is committed on the same feature branch; its workflow is the final exact-head gate before merge.
+
+### Blockers and next priority
+- PDF extraction remains pending: no parser has yet passed maintenance, license, minSdk 26, malformed/encrypted input, page-count, memory, and time-bound review.
+- Complete the documentation follow-up's exact-head CI and final PR #14 merge review. Keep PR #12 and #13 open until their overlapping UI/ViewModel changes are reconciled; preserve all unique commits.
+- Physical Pixel 6 validation of the live Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermals remains a release gate.
