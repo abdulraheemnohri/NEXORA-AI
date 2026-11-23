@@ -117,14 +117,33 @@ object KnowledgeDocumentImporter {
         val chunks = mutableListOf<String>()
         var start = 0
         while (start < text.length) {
-            val end = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
+            val candidateEnd = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
+            // Kotlin String indices are UTF-16 code units. Move a boundary back
+            // when it would separate a valid supplementary Unicode code point.
+            val end = if (
+                candidateEnd < text.length &&
+                Character.isHighSurrogate(text[candidateEnd - 1]) &&
+                Character.isLowSurrogate(text[candidateEnd])
+            ) {
+                candidateEnd - 1
+            } else {
+                candidateEnd
+            }
             val value = text.substring(start, end).trim()
             if (value.isNotEmpty()) chunks += value
             require(chunks.size <= MAX_CHUNKS) {
                 "The document would create more than " + MAX_CHUNKS + " searchable chunks."
             }
             if (end >= text.length) break
-            start = (end - CHUNK_OVERLAP_CHARACTERS).coerceAtLeast(start + 1)
+            var nextStart = (end - CHUNK_OVERLAP_CHARACTERS).coerceAtLeast(start + 1)
+            if (
+                nextStart < text.length &&
+                Character.isLowSurrogate(text[nextStart]) &&
+                Character.isHighSurrogate(text[nextStart - 1])
+            ) {
+                nextStart -= 1
+            }
+            start = nextStart
         }
         require(chunks.isNotEmpty()) { "The selected document contains no searchable text." }
         return chunks

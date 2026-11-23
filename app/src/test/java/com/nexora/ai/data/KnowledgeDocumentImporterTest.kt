@@ -70,6 +70,25 @@ class KnowledgeDocumentImporterTest {
     }
 
     @Test
+    fun chunkingDoesNotSplitUtf16SurrogatePairs() {
+        val content = "a".repeat(KnowledgeDocumentImporter.CHUNK_CHARACTERS - 1) +
+            "\uD83D\uDE00" + "b".repeat(KnowledgeDocumentImporter.CHUNK_CHARACTERS)
+
+        val chunks = KnowledgeDocumentImporter.chunk(content)
+
+        assertTrue(chunks.any { it.contains("\uD83D\uDE00") })
+        assertTrue(chunks.all { chunk ->
+            chunk.indices.all { index ->
+                val character = chunk[index]
+                (!Character.isHighSurrogate(character) ||
+                    (index + 1 < chunk.length && Character.isLowSurrogate(chunk[index + 1]))) &&
+                    (!Character.isLowSurrogate(character) ||
+                        (index > 0 && Character.isHighSurrogate(chunk[index - 1])))
+            }
+        })
+    }
+
+    @Test
     fun manyMediumLinesCannotExceedTheChunkBudget() {
         val content = ("a".repeat(1_000) + "\n").repeat(225)
         val chunks = KnowledgeDocumentImporter.chunk(content)
