@@ -845,3 +845,48 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Runner logs show /dev/kvm mode 0666, but the runner process still failed the read/write access check. This is a hosted-runner capability failure; it is not evidence of an application compile or JVM test failure.
 - The preceding application-source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed all configured checks, including 18 API 35 instrumentation tests, in run #165.
 - PR #14 remains draft and unmerged. No force-push, merge, or branch deletion was performed. Retry the exact-head CI before merge.
+
+
+## 2026-11-24 — Grapheme-aware knowledge chunk boundaries
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, all branch heads, open PRs, and current GitHub Actions.
+- Main remains at [abd66700](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b). The repository reports five open issue entries, all of which are pull requests; there are zero standalone open issues.
+- Enumerated all 16 branch heads. The five open PRs are #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- PR #1 and #4 remain divergent/unmergeable and their branches are preserved. PR #12 and #13 remain draft and unmerged. PR #14 is draft, based on main, 53 commits ahead and zero behind at the start of this increment.
+- Before editing, PR #14 documentation head [751b6dd](https://github.com/abdulraheemnohri/NEXORA-AI/commit/751b6dd53097a091218b16dc845f93824ca5d5cd) passed exact-head Actions run [#167](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45260085730), including APK assembly, lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. This result applies only to that earlier head.
+
+### Delivered on feat/local-knowledge-ingestion
+- Code review identified that surrogate-pair safety alone can still split a visible character cluster at either a 2,000-unit chunk end or the 200-unit overlap start (for example a regional-indicator flag, skin-tone sequence, combining sequence, or emoji ZWJ family).
+- Updated `KnowledgeDocumentImporter.chunk()` to use `java.text.BreakIterator.getCharacterInstance(Locale.ROOT)` for chunk-end and overlap-start selection.
+- The 2,000 UTF-16-unit chunk cap and 256-chunk budget remain hard limits. The overlap is a 200-unit target and may be shortened or omitted to keep recognized clusters intact.
+- If a single cluster itself exceeds the hard chunk cap, the importer falls back to a code-point-safe boundary. That pathological grapheme may be split, but a valid surrogate pair is not.
+- Added tests for family emoji ZWJ sequences, skin-tone modifiers, regional-indicator flags, decomposed combining marks at both chunk and overlap edges, and a combining cluster longer than the hard cap.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Compiled the full importer source with the available Kotlin/JVM compiler (Kotlin 1.9.0 on JDK 21).
+- Ran a standalone smoke harness covering nine scenarios: four grapheme types at both chunk and overlap boundaries, plus a pathological cluster exceeding the 2,000-unit cap. All passed; the long-cluster case remained within the hard chunk limit.
+- Added two repository JVM tests for the same boundaries and pathological-cluster limit. The Gradle test suite has not been run locally.
+- The preceding exact-head run #167 passed all configured jobs, but it predates source commit [ef255a3](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248). The new exact-head workflow is linked from PR #14 and is the required validation for this increment.
+- No Gradle executable or Android SDK is configured locally. No physical Pixel 6 test, Gemma inference, offline verification, or device performance measurement was performed.
+
+### Security and preservation
+- No new dependency, permission, manifest entry, model artifact, inference runtime, cloud endpoint, or external service was introduced.
+- No secrets were added. No force-push, merge, or branch deletion was performed. Main, PR #1, PR #4, PR #12, and PR #13 remain untouched.
+
+### Commit / PR
+- Source commit: [ef255a3](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248).
+- Feature PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+
+### Blockers and next priority
+- Confirm exact-head APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation for the new source/test head before considering PR #14 merge.
+- Continue PDF parser selection only with a maintained, license-compatible option that preserves minSdk 26 and has bounded page count, extracted text, memory, and execution time.
+- Real Gemma 4 E2B inference, offline-after-download behavior, and physical Pixel 6 storage/RAM/thermal verification remain release gates.

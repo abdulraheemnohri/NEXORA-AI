@@ -112,7 +112,7 @@ class KnowledgeDocumentImporterTest {
             "👨‍👩‍👧‍👦",
             "👍🏽",
             "🇵🇰",
-            "e\\u0301"
+            "e\u0301"
         )
         clusters.forEach { cluster ->
             listOf(
@@ -139,7 +139,7 @@ class KnowledgeDocumentImporterTest {
 
     @Test
     fun pathologicalGraphemeLongerThanChunkLimitStillRespectsHardBounds() {
-        val content = "x" + "\\u0301".repeat(
+        val content = "x" + "\u0301".repeat(
             KnowledgeDocumentImporter.CHUNK_CHARACTERS + 100
         ) + "z"
 

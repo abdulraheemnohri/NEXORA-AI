@@ -28,7 +28,7 @@ Deletion removes NEXORA's local indexed copy only. It does not delete the origin
 
 ## Retrieval boundary
 
-Search is a manually invoked, parameterized SQLite keyword query. It is bounded by the vault's 8 MiB source quota and returns at most 20 snippets. SQLite's built-in lower() provides ASCII case folding; this is not semantic search or cross-language case folding.
+Search is a manually invoked local scan over bounded SQLite chunk rows. It applies Unicode NFKC normalization and locale-independent lowercase per `BreakIterator` character cluster, then maps a match back to the original stored offsets so excerpts preserve source text. The scan is bounded by the vault's 8 MiB source quota and returns at most 20 snippets. This is compatibility-normalized substring matching, not linguistic stemming, transliteration, or semantic retrieval.
 
 Imported content is never automatically placed in a Gemma prompt and is not registered as a model tool. A user may explicitly select up to three search excerpts for the next reply. The composer displays the selected source names and allows clearing them before send. The selected excerpts are added only to that one generation request as bounded JSON-escaped reference data with an explicit untrusted-content instruction; the selection is cleared when sending and is not persisted in durable conversation history. After the grounded generation completes or fails, the runtime drops its cached native conversation session so the next turn replays the durable transcript without the raw excerpts. This is session disposal, not a guarantee of secure RAM zeroization. This is prompt grounding by explicit user selection, not automatic RAG. Embeddings, semantic retrieval, PDF parsing, and OCR remain future work.
 
@@ -53,9 +53,11 @@ The prompt-grounding source head `d37a6aa7a718a585c6bb5395af14553157c5fd99` pass
 Search is a manually invoked local keyword scan over the bounded SQLite chunk rows. It normalizes each Unicode grapheme cluster with NFKC and locale-independent lowercase, then maps the match back to offsets in the original source so displayed excerpts preserve stored text. The scan is bounded by the 8 MiB source quota and returns at most 20 snippets. This is compatibility-normalized substring matching, not linguistic stemming, transliteration, cross-language tokenization, or semantic search.
 
 
-## UTF-16-safe chunk boundaries
+## Unicode character-safe chunk boundaries
 
-Kotlin string indices count UTF-16 code units. The importer adjusts a chunk end and the next overlap start when either boundary would split a valid surrogate pair, preserving supplementary Unicode code points across chunks. The 2,000-unit chunk and 200-unit overlap bounds are still measured in UTF-16 code units. This does not guarantee that every extended grapheme cluster stays within one chunk; grapheme-aware chunking remains a possible future refinement.
+Kotlin string indices and the resource limits are measured in UTF-16 code units. The importer uses `java.text.BreakIterator.getCharacterInstance(Locale.ROOT)` to choose chunk-end and overlap-start boundaries. This keeps character clusters recognized by the platform iterator (including common combining sequences, regional-indicator flags, emoji modifiers, and emoji ZWJ sequences) together when they fit within the 2,000-unit hard chunk limit. The overlap is a 200-unit target; moving to a safe character boundary can make it shorter or, in a pathological case, eliminate it for that boundary.
+
+If one character cluster itself exceeds the 2,000-unit limit, the hard memory/resource bound takes precedence. The importer falls back to a UTF-16 code-point-safe boundary, so it may split that pathological grapheme cluster but never splits a valid surrogate pair. The maximum of 256 chunks per document remains enforced.
 
 ## 2026-11-24 verification
 
@@ -65,3 +67,7 @@ The source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6
 ## Latest CI note — 2026-11-24
 
 The documentation follow-up head [42c9ea5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/42c9ea54b3edca29f7c2b39f1fa4a49dfd97dc87) was checked in Actions run [#166](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45258794122), attempt 3. Debug APK assembly, lint, and JVM tests passed, but KVM preflight failed because the runner process could not read/write /dev/kvm despite mode 0666; API 35 instrumentation was skipped. The preceding application-source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed all 18 API 35 instrumentation tests in run #165. Do not merge until the latest exact-head workflow passes all configured checks.
+
+## 2026-11-24 grapheme-aware chunking
+
+Source commit [`ef255a3`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248) updates the importer to use `BreakIterator` character boundaries for both chunk ends and overlap starts. Tests cover family emoji ZWJ sequences, skin-tone modifiers, regional-indicator flags, decomposed combining marks, and a single combining cluster longer than the hard chunk cap. A standalone Kotlin compile/smoke harness passed; the repository's exact-head Gradle/Android CI is still required. The preceding documentation head `751b6dd` passed run [#167](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45260085730), including all configured instrumentation tests; that run predates `ef255a3`.
