@@ -60,3 +60,8 @@ Kotlin string indices count UTF-16 code units. The importer adjusts a chunk end 
 ## 2026-11-24 verification
 
 The source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed exact-head GitHub Actions run [#165](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45257693789): debug APK assembly, Android lint, JVM unit tests, KVM preflight, and all 18 API 35 instrumentation tests. The new regression test covers a supplementary Unicode code point positioned across the nominal chunk boundary. No local Gradle/Android SDK build was available. Real Gemma inference, offline-after-download behavior, and physical Pixel 6 memory/thermal validation remain unverified.
+
+
+## Latest CI note — 2026-11-24
+
+The documentation follow-up head [42c9ea5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/42c9ea54b3edca29f7c2b39f1fa4a49dfd97dc87) was checked in Actions run [#166](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45258794122), attempt 3. Debug APK assembly, lint, and JVM tests passed, but KVM preflight failed because the runner process could not read/write /dev/kvm despite mode 0666; API 35 instrumentation was skipped. The preceding application-source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed all 18 API 35 instrumentation tests in run #165. Do not merge until the latest exact-head workflow passes all configured checks.

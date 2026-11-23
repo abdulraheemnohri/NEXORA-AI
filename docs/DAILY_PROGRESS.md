@@ -838,3 +838,10 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - PDF extraction remains pending: no parser has yet passed maintenance, license, minSdk 26, malformed/encrypted input, page-count, memory, and time-bound review.
 - Complete the documentation follow-up's exact-head CI and final PR #14 merge review. Keep PR #12 and #13 open until their overlapping UI/ViewModel changes are reconciled; preserve all unique commits.
 - Physical Pixel 6 validation of the live Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermals remains a release gate.
+
+
+### Follow-up — documentation-head CI retry (2026-11-24)
+- Documentation-only head [42c9ea5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/42c9ea54b3edca29f7c2b39f1fa4a49dfd97dc87) run [#166](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45258794122), attempt 3: APK assembly, lint, and JVM tests passed; KVM preflight failed and instrumentation was skipped.
+- Runner logs show /dev/kvm mode 0666, but the runner process still failed the read/write access check. This is a hosted-runner capability failure; it is not evidence of an application compile or JVM test failure.
+- The preceding application-source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed all configured checks, including 18 API 35 instrumentation tests, in run #165.
+- PR #14 remains draft and unmerged. No force-push, merge, or branch deletion was performed. Retry the exact-head CI before merge.
