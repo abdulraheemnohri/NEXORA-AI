@@ -106,6 +106,52 @@ class KnowledgeDocumentImporterTest {
         assertEquals(64, first.sha256.length)
     }
 
+    @Test
+    fun chunkingKeepsExtendedCharacterClustersTogetherAtChunkAndOverlapBoundaries() {
+        val clusters = listOf(
+            "👨‍👩‍👧‍👦",
+            "👍🏽",
+            "🇵🇰",
+            "e\\u0301"
+        )
+        clusters.forEach { cluster ->
+            listOf(
+                KnowledgeDocumentImporter.CHUNK_CHARACTERS -
+                    KnowledgeDocumentImporter.CHUNK_OVERLAP_CHARACTERS - 1,
+                KnowledgeDocumentImporter.CHUNK_CHARACTERS - 1
+            ).forEach { position ->
+                val content = "a".repeat(position) + cluster + "b".repeat(2_500)
+                val chunks = KnowledgeDocumentImporter.chunk(content)
+                assertTrue(chunks.all {
+                    it.length <= KnowledgeDocumentImporter.CHUNK_CHARACTERS
+                })
+
+                val codePoints = cluster.codePoints().toArray()
+                    .map { codePoint -> String(Character.toChars(codePoint)) }
+                val chunksContainingAnyPart = chunks.filter { chunk ->
+                    codePoints.any { part -> chunk.contains(part) }
+                }
+                assertTrue(chunksContainingAnyPart.isNotEmpty())
+                assertTrue(chunksContainingAnyPart.all { it.contains(cluster) })
+            }
+        }
+    }
+
+    @Test
+    fun pathologicalGraphemeLongerThanChunkLimitStillRespectsHardBounds() {
+        val content = "x" + "\\u0301".repeat(
+            KnowledgeDocumentImporter.CHUNK_CHARACTERS + 100
+        ) + "z"
+
+        val chunks = KnowledgeDocumentImporter.chunk(content)
+
+        assertTrue(chunks.isNotEmpty())
+        assertTrue(chunks.size <= KnowledgeDocumentImporter.MAX_CHUNKS)
+        assertTrue(chunks.all {
+            it.length <= KnowledgeDocumentImporter.CHUNK_CHARACTERS
+        })
+    }
+
     private fun String.byteInput() = ByteArrayInputStream(toByteArray(Charsets.UTF_8))
     private fun ByteArray.input() = ByteArrayInputStream(this)
 }

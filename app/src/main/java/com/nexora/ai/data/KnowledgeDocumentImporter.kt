@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.text.BreakIterator
 import java.util.Locale
 import java.util.UUID
 
@@ -115,39 +116,64 @@ object KnowledgeDocumentImporter {
         require(text.length <= MAX_DOCUMENT_CHARACTERS) { "Document text exceeds the ingestion limit." }
 
         val chunks = mutableListOf<String>()
+        val boundaries = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
         var start = 0
         while (start < text.length) {
-            val candidateEnd = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
-            // Kotlin String indices are UTF-16 code units. Move a boundary back
-            // when it would separate a valid supplementary Unicode code point.
-            val end = if (
-                candidateEnd < text.length &&
-                Character.isHighSurrogate(text[candidateEnd - 1]) &&
-                Character.isLowSurrogate(text[candidateEnd])
-            ) {
-                candidateEnd - 1
-            } else {
-                candidateEnd
-            }
+            val targetEnd = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
+            val end = findChunkEnd(boundaries, text, start, targetEnd)
             val value = text.substring(start, end).trim()
             if (value.isNotEmpty()) chunks += value
             require(chunks.size <= MAX_CHUNKS) {
                 "The document would create more than " + MAX_CHUNKS + " searchable chunks."
             }
             if (end >= text.length) break
-            var nextStart = (end - CHUNK_OVERLAP_CHARACTERS).coerceAtLeast(start + 1)
-            if (
-                nextStart < text.length &&
-                Character.isLowSurrogate(text[nextStart]) &&
-                Character.isHighSurrogate(text[nextStart - 1])
-            ) {
-                nextStart -= 1
-            }
-            start = nextStart
+            start = findOverlapStart(boundaries, text, start, end)
         }
         require(chunks.isNotEmpty()) { "The selected document contains no searchable text." }
         return chunks
     }
+
+    /** Prefer a BreakIterator character boundary without exceeding the hard UTF-16 chunk cap. */
+    private fun findChunkEnd(
+        iterator: BreakIterator,
+        text: String,
+        start: Int,
+        targetEnd: Int
+    ): Int {
+        if (targetEnd >= text.length) return text.length
+        val boundary = iterator.preceding(targetEnd + 1)
+        return if (boundary > start) boundary else codePointBoundaryBefore(text, targetEnd, start)
+    }
+
+    /** Move the overlap start forward to a character boundary; fall back only for an overlong cluster. */
+    private fun findOverlapStart(
+        iterator: BreakIterator,
+        text: String,
+        start: Int,
+        end: Int
+    ): Int {
+        val target = (end - CHUNK_OVERLAP_CHARACTERS).coerceAtLeast(start + 1)
+        if (target >= end) return end
+        val boundary = if (iterator.isBoundary(target)) target else iterator.following(target)
+        return if (boundary != BreakIterator.DONE && boundary <= end) {
+            boundary
+        } else {
+            codePointBoundaryAfter(text, target, end)
+        }
+    }
+
+    /** Keep a valid UTF-16 surrogate pair intact if a single cluster exceeds the chunk cap. */
+    private fun codePointBoundaryBefore(text: String, offset: Int, lowerBound: Int): Int =
+        if (offset > lowerBound && offset < text.length &&
+            Character.isHighSurrogate(text[offset - 1]) && Character.isLowSurrogate(text[offset])) {
+            offset - 1
+        } else offset
+
+    private fun codePointBoundaryAfter(text: String, offset: Int, upperBound: Int): Int =
+        if (offset > 0 && offset < upperBound &&
+            Character.isHighSurrogate(text[offset - 1]) && Character.isLowSurrogate(text[offset])) {
+            offset + 1
+        } else offset
 
     private fun readBounded(input: InputStream): ByteArray {
         val output = ByteArrayOutputStream()
