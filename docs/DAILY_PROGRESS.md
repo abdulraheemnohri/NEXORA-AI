@@ -946,3 +946,12 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 ### 2026-11-25 test precision follow-up
 - Tightened `chunkingChecksCancellationBetweenChunks` to cancel on the second chunk-loop checkpoint (after the first chunk has been processed), rather than cancelling before the first chunk. The expected checkpoint count is now three: initial check, first chunk, second chunk.
 - This is a test-only correction to make the regression prove the stated boundary behavior. The earlier run #170 is superseded by the new exact-head workflow; no result from #170 is used to claim this corrected test passed.
+
+
+### 2026-11-25 exact-head CI follow-up
+- Cancellable-import source/test head [`e8baa9f`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/e8baa9fd1372159cd404d78f6b90d5801ca3153f) passed debug APK assembly, Android lint, and JVM unit tests in exact-head Actions run [#171](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45479987807), attempts 1 and 2.
+- Both attempts failed only at KVM preflight: the hosted runner's `/dev/kvm` node showed mode `0666`, but the runner process still could not read/write it. API 35 instrumentation was skipped; no instrumentation pass is claimed.
+- Attempt 3 was in progress when this documentation follow-up was pushed and is superseded by the new exact-head workflow. The latest workflow must pass KVM preflight and API 35 instrumentation before PR #14 can be considered for merge.
+- The failure is runner capability, not a reported APK compilation, lint, or JVM test failure. No workflow bypass or software-emulator fallback was introduced.
+- Physical Pixel 6 Gemma inference, offline-after-download, RAM, latency, and thermal verification remain outstanding.
+- PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14) remains draft. PR #12 and #13 still overlap `NexoraHome.kt` and `NexoraViewModel.kt`; no merge was attempted.
