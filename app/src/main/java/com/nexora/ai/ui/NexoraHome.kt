@@ -47,6 +47,17 @@ import androidx.compose.ui.unit.dp
 fun NexoraHome(viewModel: NexoraViewModel) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val chatCanSubmit = ChatInteractionPolicy.canSubmitMessage(
+        ChatInteractionState(
+            modelReady = state.modelReady,
+            isGenerating = state.isGenerating,
+            isDeletingConversation = state.isDeletingConversation,
+            isImportingKnowledge = state.isImportingKnowledge,
+            isDeletingKnowledgeDocument = state.isDeletingKnowledgeDocument,
+            isSearchingKnowledge = state.isSearchingKnowledge,
+            isClearingKnowledgeVault = state.isClearingKnowledgeVault
+        )
+    )
 
     Scaffold(
         containerColor = Color(0xFF0B0D16),
@@ -198,18 +209,25 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                 }
             }
 
+            if (state.selectedKnowledgeSources.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val sourceNames = state.selectedKnowledgeSources.map { it.documentName }.distinct().joinToString(", ").take(90)
+                    Text("Next reply uses " + sourceNames, modifier = Modifier.weight(1f), color = Color(0xFF9B9CB2), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    TextButton(onClick = viewModel::clearKnowledgeSources, enabled = !state.isGenerating) { Text("Clear") }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = state.input,
                     onValueChange = viewModel::updateInput,
                     modifier = Modifier.weight(1f),
-                    enabled = state.modelReady && !state.isGenerating && !state.isDeletingConversation,
+                    enabled = chatCanSubmit,
                     placeholder = { Text("Message NEXORA…") },
                     maxLines = 4
                 )
                 Button(
                     onClick = viewModel::sendMessage,
-                    enabled = state.modelReady && !state.isGenerating && !state.isDeletingConversation && state.input.isNotBlank()
+                    enabled = chatCanSubmit && state.input.isNotBlank()
                 ) {
                     Text(if (state.isGenerating) "…" else "Send")
                 }
@@ -325,6 +343,12 @@ fun NexoraHome(viewModel: NexoraViewModel) {
                         color = Color(0xFF70748C),
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Button(
+                        onClick = viewModel::openKnowledgeVault,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Open local knowledge vault")
+                    }
                 }
             },
             confirmButton = {
@@ -332,6 +356,8 @@ fun NexoraHome(viewModel: NexoraViewModel) {
             }
         )
     }
+
+    KnowledgeVaultDialog(viewModel, state)
 
     state.pendingDeleteConversationId?.let { pendingId ->
         val title = state.conversations.firstOrNull { it.id == pendingId }?.title ?: "this conversation"

@@ -545,3 +545,413 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
 - Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
 - Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
+
+
+## 2026-11-19 — Bounded local knowledge ingestion
+
+### Repository checkpoint
+- Re-inspected repository metadata, current main, open standalone issues, recent commits, open pull requests, all branch heads, and recent Actions runs before editing.
+- Main remains at abd66700dd6f7e6f119d84c6cd612aff4c40b71b. No standalone open issues were returned.
+- Four draft PRs were open at the initial audit: #1, #4, #12, and #13. PR #1 and #4 and their unique branch work were left untouched. PR #12 and #13 were also left untouched. After the new branch passed static review, draft PR #14 was opened; the current open-PR count is five.
+- All 15 pre-existing branch heads were enumerated before work. The new feature branch was created from main and is now the 16th branch. No branch was deleted and no force-push was used.
+- PR #13 exact-head run #143 attempt 1 passed debug APK assembly, Android lint, and JVM tests, then failed KVM preflight because the runner user could not access /dev/kvm despite mode 0666. The failed job was rerun; attempt 2 passed KVM preflight and all API 35 instrumentation tests. PR #13 remains draft and unmerged.
+- Main run #109 remains failed with its only build job queued; no source failure is established.
+
+### Delivered on feat/local-knowledge-ingestion
+- Added a Storage Access Framework document picker and local vault screen for UTF-8 TXT, Markdown, and JSON files. JSON is indexed as raw text, not parsed into structured records. HTTP URIs are rejected; cloud-backed Android providers may fetch a source before returning a content URI, so offline imports require a file already downloaded to the device.
+- The importer reads each selected URI once, does not retain URI permissions, enforces a 512 KiB byte cap and 450,000 decoded-character cap, rejects malformed UTF-8 and unsupported control characters, and creates overlapping 2,000-character chunks with a 200-character overlap.
+- Added a separate app-private nexora_knowledge.db SQLite database to avoid changing the existing conversation database schema.
+- Document metadata and chunks are written in one transaction. SHA-256 detects byte-identical duplicates. Store quotas are 50 documents and 8 MiB of source bytes.
+- Added bounded local keyword search (2–128 character query, 20 excerpts maximum) and confirmation-gated deletion with chunk cascade.
+- Imported text is not automatically inserted into Gemma prompts and is not exposed as a model-generated tool. PDF extraction, OCR, embeddings, semantic retrieval, and prompt-grounded RAG remain pending.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt
+- app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt
+- app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt
+- app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt
+- app/src/main/java/com/nexora/ai/ui/NexoraHome.kt
+- app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt
+- app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt
+- README.md, ROADMAP.md, docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md
+
+### Verification
+- Added seven JVM tests for TXT/Markdown/JSON format handling, unsupported extensions/MIME mismatches, byte-size bounds, malformed UTF-8/control characters, chunk overlap and maximum chunk budget, and deterministic SHA-256.
+- Added four API 35 instrumentation tests for SQLite persistence/search, duplicate rejection and cascade deletion, literal SQL wildcard handling, and the 50-document quota.
+- No local Gradle build, lint, JVM tests, or instrumentation tests were run in this environment. Earlier PR #14 runs were canceled as small source and documentation fixes were pushed; the final branch head is awaiting its exact-head GitHub Actions result. The PR Checks tab is authoritative.
+- No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+- Static source review checked that no new dependency, Android permission, model weight, external inference service, or network upload path was added. Query values are bound SQL parameters; imported content is not passed to the model.
+
+### Commit / PR
+- Branch feat/local-knowledge-ingestion was created from main commit abd66700dd6f7e6f119d84c6cd612aff4c40b71b.
+- Draft PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14) is open from feat/local-knowledge-ingestion. Exact source head and CI are tracked by run [#144](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44389410391).
+- No main-branch changes, merges, force-pushes, or branch deletions.
+
+### Blockers and next priority
+- Open a draft PR and wait for exact-head APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation.
+- Review any CI failures before merge; keep the PR draft until the exact head passes.
+- Add PDF text extraction only after selecting and reviewing a maintained Android-compatible parser and license.
+- Later add user-selected prompt grounding as a separate explicit action; do not silently inject imported content into Gemma context.
+- Physical Pixel 6 verification remains a release gate for real Gemma download/load/inference, offline behavior, RAM, latency, storage, and thermal performance.
+
+
+## 2026-11-20 — Final review and exact-head verification of local knowledge vault
+
+### Repository checkpoint
+- Re-inspected repository metadata, `main`, standalone open issues, recent commits, all 16 branch heads, open PRs, and the latest relevant GitHub Actions before this follow-up.
+- `main` remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`. There are no standalone open issues; the five open PRs are #1, #4, #12, #13, and #14.
+- PR #1 and #4 remain diverged from main (42/49 and 31/38 ahead/behind respectively) and their branches are preserved. PR #12 and #13 remain open drafts. PR #14 remains open from `feat/local-knowledge-ingestion`.
+- All 16 branch heads were enumerated. No branch was deleted and no force-push was used.
+
+### Delivered and reviewed
+- Completed a focused source review of PR #14's UTF-8 importer, bounded stream reader, chunking and SHA-256 logic, separate SQLite schema, transactional writes, parameterized keyword search, cascade deletion, ContentResolver boundary, Compose picker/dialog, ViewModel state handling, and the added tests.
+- Confirmed PR #14 changes no Android manifest permissions and adds no Gradle dependency, model weights, cloud inference path, or document upload path.
+- Confirmed imported text is never inserted into Gemma prompts automatically and is not registered as a model-generated tool. Users may explicitly select up to three excerpts for one next reply; the composer shows pending sources, and the bounded prompt builder labels them untrusted. Deletion is confirmation-gated and removes only NEXORA's indexed copy.
+- GitHub reports PR #14 as mergeable with zero commits behind main. There are no submitted PR reviews or inline review threads; this run's source review is recorded here rather than represented as an independent approval.
+
+### Verification actually run
+- Exact-head Actions run [#154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335) completed successfully for source head `4a9768ecc2b00afa2b463bf2bb76ffdae63b131e`.
+- The build job passed debug APK assembly, Android lint, JVM unit tests, KVM preflight, emulator boot, and all API 35 instrumentation tests.
+- The source adds seven JVM importer tests and four API 35 SQLite instrumentation tests. Run #154 confirms those configured suites passed.
+- No local Gradle/Android SDK build was run in this environment.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed. RAM, latency, battery, and thermal measurements remain outstanding.
+
+### Files reconciled
+- `README.md`
+- `ROADMAP.md`
+- `docs/DAILY_PROGRESS.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/ARCHITECTURE.md`
+
+### Commit / PR
+- Feature source head: [`4a9768e`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/4a9768ecc2b00afa2b463bf2bb76ffdae63b131e).
+- Draft PR: [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Exact-head CI: [run #154](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44390375335), passed all configured jobs.
+- This documentation reconciliation is committed on the same feature branch; a fresh exact-head workflow must pass before merge.
+
+### Blockers and next priority
+- PDF, DOCX, OCR, semantic embeddings, and automatic RAG are not implemented. Explicit one-turn grounding of user-selected excerpts is implemented in the current PR. PDF work must first select a reviewed Android-compatible parser/license and bound page count, extracted characters, memory, and execution time.
+- Next product increment: bounded PDF text extraction with malformed, encrypted, empty, page-limit, and decompression/resource-limit tests; do not silently add OCR or inject document content into Gemma context.
+- Physical Pixel 6 validation of the actual Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-20 — Explicit one-turn local knowledge grounding
+
+- Added a pure Kotlin prompt-context builder for excerpts explicitly selected from local knowledge search.
+- Users can select at most three excerpts, see pending source names in the composer, and clear the selection before sending.
+- Excerpts are included only in the next LiteRT-LM request, JSON-escaped, bounded to 120 characters per source name and 240 characters per excerpt, and labeled as untrusted reference data.
+- The normal user message stored in durable chat history remains unchanged. Selections are consumed once when sending and are not persisted as messages. After the grounded generation completes or fails, the ViewModel discards the cached native conversation session; the next turn rebuilds from the durable transcript without the raw excerpts. This does not claim secure RAM zeroization.
+- Deleting a source document removes its pending excerpts; switching conversations clears pending selection.
+- Added four JVM tests for empty selection, source attribution, count/length bounds, and JSON escaping. They have not yet run locally.
+- No new dependency, permission, network upload, automatic RAG, or model-generated tool was added.
+- Files: KnowledgePromptContext.kt, KnowledgePromptContextTest.kt, NexoraViewModel.kt, KnowledgeVaultDialog.kt, NexoraHome.kt, README.md, ROADMAP.md, docs/ARCHITECTURE.md, docs/LOCAL_DATA_AND_AGENT_SAFETY.md, docs/LOCAL_KNOWLEDGE_VAULT.md, docs/DAILY_PROGRESS.md.
+- Previous vault head 4a9768e passed run #154. Docs-only run #155 passed APK assembly, lint, and JVM tests but failed KVM preflight because the hosted runner could not access /dev/kvm after the udev rule; instrumentation was skipped. Run #156 passed APK assembly but was cancelled during lint after safety-hardening changes. Run #157 is the authoritative exact-head workflow for source head af91190; its status is linked from PR Checks. No local Gradle/Android SDK run, real Gemma inference, offline verification, or physical Pixel 6 test was performed.
+- Branch feat/local-knowledge-ingestion; PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14). PDF extraction, OCR, embeddings, and physical-device validation remain next priorities.
+
+- Follow-up safety hardening: message sending is blocked while knowledge import/search/deletion is active, and document deletion is blocked during generation to avoid racing a user-selected excerpt into a request while its source is being removed.
+
+
+## 2026-11-21 — Explicit bulk deletion for the local knowledge vault
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, open PRs, all branch heads, branch comparisons, and current Actions runs.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no main changes were made. There are zero standalone open issues and five open PRs: #1, #4, #12, #13, and #14. PRs #6 and #7 are merged; the supplied checkpoint that #7 is still open is stale.
+- Enumerated all 16 branch heads. PR #1 and #4 remain preserved with unique commits (42/49 and 31/38 ahead/behind); PR #12, #13, and #14 remain draft and open. PR #12, #13, and #14 overlap on several UI/documentation paths, so no merge or branch cleanup was attempted.
+- PR #14 was at `d37a6aa7a718a585c6bb5395af14553157c5fd99`, 45 commits ahead and zero behind main. GitHub reported it mergeable.
+- Latest relevant CI before this increment: PR #14 run [#159](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44608802099) completed successfully on attempt 4 for that exact head. Debug APK assembly, Android lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation all passed. The earlier KVM failure was transient; the successful rerun is authoritative for that head.
+- PR #13 exact-head run [#143](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44173352154) passed. PR #12 run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) remains queued. Main run [#109](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43095075914) remains failed at the workflow level while its build job is queued; no source-level failure is established.
+
+### Delivered
+- Added an explicit “Delete all” action to the local knowledge vault. It is shown only when documents exist and opens a confirmation dialog that states the count and clarifies that original files are untouched.
+- Added `LocalKnowledgeDatabase.deleteAllDocuments()`, which deletes all document rows in one SQLite transaction. Existing foreign-key cascade removes every indexed chunk.
+- Added an IO-dispatched repository operation and ViewModel lifecycle guards. Import, search, per-document deletion, source selection, and message sending cannot race with a bulk clear.
+- After success, the UI clears document metadata, search results, and pending one-turn source selections. A failed transaction reports an error and does not claim deletion.
+- Added an API 35 instrumentation test verifying multiple documents are removed, chunk search returns no rows, and clearing an already-empty vault is idempotent.
+- No new dependency, Android permission, model artifact, network path, or inference engine was added.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- No local Gradle/Android SDK build, lint, JVM tests, or instrumentation tests were run in this environment.
+- Prior exact-head CI run #159 attempt 4 passed all configured jobs for the parent head; it does not validate the new bulk-clear test.
+- A fresh exact-head workflow is triggered by this commit and is the required verification for the new source. Its result is pending at the time of this record.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed. RAM, latency, battery, and thermal measurements remain release gates.
+- Static review confirms the new delete-all path uses a transaction, relies on the already-enabled SQLite foreign-key cascade, requires explicit user confirmation, and does not touch source files.
+
+### Commit / PR
+- Updated feature branch: `feat/local-knowledge-ingestion`.
+- Draft PR [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Main remains unchanged. No force-push, merge, or branch deletion was performed.
+
+### Blockers and next priority
+- The bulk-clear change must pass exact-head APK assembly, lint, JVM tests, and API 35 instrumentation before merge.
+- PDF text extraction remains the next knowledge-ingestion item. The official AndroidX PDF processing APIs reviewed for this run are tied to AndroidX artifacts with higher minSdk/compileSdk requirements than the app's existing baseline; do not silently raise minSdk or override library requirements. Select a maintained Android-compatible parser only after its license, maintenance, security posture, and Pixel 6 memory limits are reviewed.
+- Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-22 — Keep chat controls unavailable during local knowledge operations
+
+### Repository audit before edits
+- Re-read repository metadata, default branch, current main ref, standalone open issues, recent commits, open PRs, all branch heads, and relevant Actions runs before changing source.
+- Current main is `abd66700dd6f7e6f119d84c6cd612aff4c40b71b` (latest main commit dated 2026-11-11); main was not modified. No standalone open issues were returned.
+- Five PRs are open: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint that #7 remains open is stale. PR #1 and #4 remain open and their unique branches are preserved.
+- All 16 branch heads and SHAs were enumerated. PR #14 branch `feat/local-knowledge-ingestion` was at `56ab34f14f32c3a417b4f78b6b2c08f83a70c412`, 46 commits ahead and zero behind main. GitHub reported mergeable=true; no review submissions or inline threads were present.
+- Latest relevant PR #14 exact-head run [#160](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44813044902) completed successfully for parent commit `56ab34f`: debug APK assembly, Android lint, JVM unit tests, KVM preflight, and API 35 instrumentation all passed. PR #13 run #143 passed; PR #12 run #112 remained queued. No current main source change was made.
+
+### Delivered
+- Added a pure Kotlin `ChatInteractionPolicy` and immutable `ChatInteractionState` shared by the Compose chat screen and ViewModel.
+- The composer and Send button are now disabled while generation, conversation deletion, knowledge import, knowledge search, individual document deletion, or bulk vault clearing is active, and while the local model is not ready.
+- The ViewModel reuses the same policy immediately before accepting a send request. This preserves the backend guard; UI disabling is not treated as authorization.
+- Added focused JVM tests proving idle/ready acceptance and rejection for every conflicting operation.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/ui/ChatInteractionPolicy.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraHome.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/test/java/com/nexora/ai/ui/ChatInteractionPolicyTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source-level review verified the Compose enabled states and ViewModel guard call the same policy; the policy test covers model-not-ready plus all six busy flags.
+- No local Gradle/Android SDK build, lint, or tests were run because this environment has no configured Android SDK/Gradle execution.
+- Parent exact-head CI run #160 passed before this follow-up. The new head must pass a fresh exact-head Actions run before merge.
+- No real Gemma inference, offline-after-download test, or physical Pixel 6 verification was performed. RAM, latency, battery, and thermal results remain unmeasured.
+
+### Commit / PR
+- Source commit: [`0c146daa`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0c146daa07fcf0b9b5e335ddf3ceff0774a16a06).
+- Draft PR [#14 — Bounded offline document vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Main remains unchanged. No force-push, merge, or branch deletion was performed.
+
+### Blockers and next priority
+- Await exact-head APK assembly, lint, JVM tests, and API 35 instrumentation for the shared chat-operation policy.
+- PDF extraction remains the next knowledge-ingestion item. Official AndroidX PDF documentation exposes page text content APIs, but its release notes describe the read/render backport as minSdk 28 while NEXORA currently supports minSdk 26. Do not silently raise minSdk. The older Android PDFBox port is based on PDFBox 2.0.27 and has unresolved maintenance/bug reports; do not add it without a separate security and compatibility review.
+- Physical Pixel 6 verification of the real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+
+## 2026-11-23 — Unicode-normalized local knowledge search
+
+### Repository audit before edits
+- Re-read repository metadata, main, standalone open issues, recent commits, all branch heads, open pull requests, and latest relevant Actions runs before editing.
+- Default branch remains `main` at `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no main changes were made. The repository returned zero standalone open issues.
+- Five PRs are open: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint that #7 is still open is stale. PR #1 and #4 remain draft, diverged, and preserved.
+- Enumerated all 15 current branch heads. No branch was deleted. PR #14 branch `feat/local-knowledge-ingestion` was at `1eb5eb04ea6b93863c7c7c46c415dd4c1ab1518c`, 49 commits ahead and zero behind main. GitHub reported mergeable=true.
+- Recent commit search still places `abd66700` at the main head; other recent commits are on feature/integration branches.
+- Current PR #14 exact-head Actions run [#163](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44949033226) completed with APK assembly, Android lint, and JVM unit tests passing. KVM preflight failed even though `/dev/kvm` displayed mode `crw-rw-rw-`; the runner process could not pass the read/write access check, so API 35 instrumentation was skipped. This is a runner/device-access failure, not a Kotlin compile or unit-test failure.
+- Previous bulk-clear source head run [#160](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44813044902) passed all configured jobs, including API 35 instrumentation, but does not validate the current branch head.
+- No local Gradle/Android SDK build is available in this execution environment.
+
+### Delivered
+- Added `KnowledgeTextSearch`, a pure Kotlin bounded-corpus matcher using Unicode NFKC normalization and locale-independent lowercase.
+- Match offsets are mapped back to the original source text, so compatibility-normalized matches can be found without rewriting stored documents or displaying normalized replacement text.
+- Updated local SQLite search to stream chunk rows in deterministic newest-document/chunk order and stop after the requested result limit. The vault remains bounded to 8 MiB of source bytes and at most 20 returned excerpts; search does not materialize the whole corpus.
+- Added four JVM tests for Latin case-insensitive matching, Arabic presentation-form normalization, combining-mark normalization with original-offset mapping, and non-matching input.
+- Added an API 35 database instrumentation test that searches an Arabic presentation-form spelling using its normalized Unicode equivalent and verifies the excerpt retains the original stored characters.
+- Updated the Knowledge Vault Compose screen to explain that matching remains local and keyword-based, with stored text unchanged.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeTextSearch.kt` (new)
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeTextSearchTest.kt` (new)
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/LOCAL_DATA_AND_AGENT_SAFETY.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source review confirms the matcher is bounded to one stored chunk at a time, uses `Normalizer.Form.NFKC` and `Locale.ROOT`, and maps match offsets to the original string. No source document is normalized or rewritten.
+- Added four JVM tests and one API 35 instrumentation test; these tests have not yet executed on the new head.
+- The latest pre-edit exact-head run #163 passed APK assembly, lint, and JVM tests but failed KVM preflight; instrumentation did not run. A new exact-head workflow is triggered by this commit. Its result must be checked before merge.
+- No local Gradle build, lint, or tests were run. No real Gemma inference, offline-after-download verification, or physical Pixel 6 testing was performed.
+
+### PDF parser evaluation
+- The Android PDFBox port `com.tom-roush:pdfbox-android` is based on PDFBox 2.0.27 and its latest published release is v2.0.27.0 from January 2023. Upstream Apache PDFBox has since published 2.0.37 and 3.0.8 in July 2026; the Android port is therefore not selected without a current maintenance/security review.
+- The newly surfaced KotlinPdfium project advertises API 26 support but is AGPL-3.0, arm64-v8a only, and requires a newer NDK/AGP/compile SDK toolchain. It is not added because its licensing and build/ABI constraints are not compatible with an unreviewed drop-in dependency.
+- No PDF dependency was added. PDF, OCR, embeddings, and automatic RAG remain unimplemented. A parser must pass license, maintenance, malformed/encrypted input, page-count, extracted-character, memory, and execution-time review before adoption.
+
+### Safety and preservation
+- No dependency, permission, model weight, network path, inference runtime, cloud AI API, Firebase, Docker, Ollama, llama.cpp, or external Python inference service was added.
+- No force-push, merge, or branch deletion was performed. PR #1 and #4 remain preserved; main is unchanged.
+
+### Commit / PR
+- Updated branch: `feat/local-knowledge-ingestion`.
+- Draft PR [#14 — Bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- The resulting source/documentation commit is the new exact head of PR #14; the PR checks link is the authoritative CI location for this head.
+
+### Blockers and next priority
+- Confirm exact-head APK, lint, JVM, KVM, and API 35 instrumentation status. Do not merge while instrumentation is skipped or required checks are failing.
+- Continue PDF parser evaluation only with a maintained, license-compatible option that preserves minSdk 26 and has explicit page/text/memory/time bounds.
+- Physical Pixel 6 validation of real Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermal behavior remains a release gate.
+
+## 2026-11-24 — Unicode-safe knowledge chunk boundaries
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, all branch heads, open pull requests, and current Actions runs.
+- Main remains at [abd66700](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), dated 2026-11-11. There are zero standalone open issues and five open PRs: #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- Enumerated all 16 branch heads. PR #1 and #4 remain open, diverged, and preserved; neither branch was changed or deleted. No force-push or merge occurred during the source edit.
+- PR #1 is not mergeable and has no workflow run for its current exact head. PR #4 is not mergeable; run #76 passed APK assembly, lint, and JVM tests. PR #12 run #112 remains queued. PR #13 run #143 passed APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation.
+- PR #14 was at source head [88ba72e](https://github.com/abdulraheemnohri/NEXORA-AI/commit/88ba72e240ebc6a86472a01d3422f129eb0c725f), 50 commits ahead and zero behind main, with GitHub reporting mergeable=true. Its exact-head run #164 passed all configured jobs. The PR was draft at audit time.
+- Main reports protected=false and the repository rulesets endpoint returned an empty list. All PRs remain the preferred integration path for source changes.
+
+### Delivered on feat/local-knowledge-ingestion
+- Code review identified that Kotlin String.length and substring indices count UTF-16 code units. The previous fixed-size chunk boundaries could split a supplementary Unicode code point into an unmatched high/low surrogate pair.
+- Updated KnowledgeDocumentImporter.chunk() to move chunk-end and next-overlap boundaries when they would split a valid surrogate pair. The 2,000-unit chunk and 200-unit overlap bounds remain unchanged.
+- Added chunkingDoesNotSplitUtf16SurrogatePairs, which places an emoji exactly across the nominal boundary and asserts every resulting chunk has well-formed surrogate pairs.
+
+### Files changed
+- app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt
+- app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt
+- README.md
+- ROADMAP.md
+- docs/LOCAL_KNOWLEDGE_VAULT.md
+- docs/DAILY_PROGRESS.md
+
+### Verification actually run
+- Source commit [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed exact-head Actions run [#165](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45257693789): debug APK assembly, Android lint, JVM tests, KVM preflight, and all 18 API 35 instrumentation tests.
+- A standalone kotlinc smoke harness for the same boundary-adjustment algorithm passed. This is not a substitute for the repository Gradle suite; the exact-head GitHub Actions run is the authoritative project test result.
+- No local Gradle executable or Android SDK was configured, so no local Android build/lint/test command was run.
+- A static secret-pattern scan over the 20 PR #14 changed files returned no matches for private-key blocks, GitHub token patterns, AWS access keys, or quoted API-key/client-secret/password assignments. The PR adds no Gradle dependency, Android permission, manifest change, or model artifact.
+- No real Gemma inference, offline-after-download verification, or physical Pixel 6 test was performed.
+
+### Commit / PR
+- Source commit: [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325).
+- Feature PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- Documentation follow-up is committed on the same feature branch; its workflow is the final exact-head gate before merge.
+
+### Blockers and next priority
+- PDF extraction remains pending: no parser has yet passed maintenance, license, minSdk 26, malformed/encrypted input, page-count, memory, and time-bound review.
+- Complete the documentation follow-up's exact-head CI and final PR #14 merge review. Keep PR #12 and #13 open until their overlapping UI/ViewModel changes are reconciled; preserve all unique commits.
+- Physical Pixel 6 validation of the live Gemma 4 E2B download/load/inference, offline behavior, memory, latency, and thermals remains a release gate.
+
+
+### Follow-up — documentation-head CI retry (2026-11-24)
+- Documentation-only head [42c9ea5](https://github.com/abdulraheemnohri/NEXORA-AI/commit/42c9ea54b3edca29f7c2b39f1fa4a49dfd97dc87) run [#166](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45258794122), attempt 3: APK assembly, lint, and JVM tests passed; KVM preflight failed and instrumentation was skipped.
+- Runner logs show /dev/kvm mode 0666, but the runner process still failed the read/write access check. This is a hosted-runner capability failure; it is not evidence of an application compile or JVM test failure.
+- The preceding application-source head [6945d86](https://github.com/abdulraheemnohri/NEXORA-AI/commit/6945d86f67d28ef57e05cee43921e1a6ed06b325) passed all configured checks, including 18 API 35 instrumentation tests, in run #165.
+- PR #14 remains draft and unmerged. No force-push, merge, or branch deletion was performed. Retry the exact-head CI before merge.
+
+
+## 2026-11-24 — Grapheme-aware knowledge chunk boundaries
+
+### Repository audit before edits
+- Re-inspected repository metadata, main, standalone open issues, recent commits, all branch heads, open PRs, and current GitHub Actions.
+- Main remains at [abd66700](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b). The repository reports five open issue entries, all of which are pull requests; there are zero standalone open issues.
+- Enumerated all 16 branch heads. The five open PRs are #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- PR #1 and #4 remain divergent/unmergeable and their branches are preserved. PR #12 and #13 remain draft and unmerged. PR #14 is draft, based on main, 53 commits ahead and zero behind at the start of this increment.
+- Before editing, PR #14 documentation head [751b6dd](https://github.com/abdulraheemnohri/NEXORA-AI/commit/751b6dd53097a091218b16dc845f93824ca5d5cd) passed exact-head Actions run [#167](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45260085730), including APK assembly, lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. This result applies only to that earlier head.
+
+### Delivered on feat/local-knowledge-ingestion
+- Code review identified that surrogate-pair safety alone can still split a visible character cluster at either a 2,000-unit chunk end or the 200-unit overlap start (for example a regional-indicator flag, skin-tone sequence, combining sequence, or emoji ZWJ family).
+- Updated `KnowledgeDocumentImporter.chunk()` to use `java.text.BreakIterator.getCharacterInstance(Locale.ROOT)` for chunk-end and overlap-start selection.
+- The 2,000 UTF-16-unit chunk cap and 256-chunk budget remain hard limits. The overlap is a 200-unit target and may be shortened or omitted to keep recognized clusters intact.
+- If a single cluster itself exceeds the hard chunk cap, the importer falls back to a code-point-safe boundary. That pathological grapheme may be split, but a valid surrogate pair is not.
+- Added tests for family emoji ZWJ sequences, skin-tone modifiers, regional-indicator flags, decomposed combining marks at both chunk and overlap edges, and a combining cluster longer than the hard cap.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt`
+- `README.md`
+- `ROADMAP.md`
+- `docs/LOCAL_KNOWLEDGE_VAULT.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Compiled the full importer source with the available Kotlin/JVM compiler (Kotlin 1.9.0 on JDK 21).
+- Ran a standalone smoke harness covering nine scenarios: four grapheme types at both chunk and overlap boundaries, plus a pathological cluster exceeding the 2,000-unit cap. All passed; the long-cluster case remained within the hard chunk limit.
+- Added two repository JVM tests for the same boundaries and pathological-cluster limit. The Gradle test suite has not been run locally.
+- The preceding exact-head run #167 passed all configured jobs, but it predates source commit [ef255a3](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248). The new exact-head workflow is linked from PR #14 and is the required validation for this increment.
+- No Gradle executable or Android SDK is configured locally. No physical Pixel 6 test, Gemma inference, offline verification, or device performance measurement was performed.
+
+### Security and preservation
+- No new dependency, permission, manifest entry, model artifact, inference runtime, cloud endpoint, or external service was introduced.
+- No secrets were added. No force-push, merge, or branch deletion was performed. Main, PR #1, PR #4, PR #12, and PR #13 remain untouched.
+
+### Commit / PR
+- Source commit: [ef255a3](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248).
+- Feature PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+
+### Blockers and next priority
+- Confirm exact-head APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation for the new source/test head before considering PR #14 merge.
+- Continue PDF parser selection only with a maintained, license-compatible option that preserves minSdk 26 and has bounded page count, extracted text, memory, and execution time.
+- Real Gemma 4 E2B inference, offline-after-download behavior, and physical Pixel 6 storage/RAM/thermal verification remain release gates.
+
+
+## 2026-11-25 — Cancellable local knowledge import
+
+### Repository audit before edits
+- Re-inspected repository metadata, current `main`, open standalone issues, recent commits, all branch heads, open PRs, and latest relevant Actions.
+- Current `main` is [`abd66700`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), containing the permissioned local conversation-search merge. No standalone open issues were returned.
+- Enumerated 16 branch heads. Open PRs are #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- PR #1 and #4 remain open, divergent, and preserved. PR #12 remains draft with exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) queued. PR #13 exact-head run [#143](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44173352154) passed. PR #14 prior head `a755728` passed exact-head run [#169](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45261834553), including APK assembly, Android lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. No branch was deleted or force-pushed.
+
+### Delivered on `feat/local-knowledge-ingestion`
+- Added cooperative cancellation checkpoints to bounded UTF-8 stream reading and grapheme-aware chunk generation.
+- Propagated the active coroutine context from `KnowledgeRepository` into importer and SQLite insertion.
+- Added cancellation checkpoints within the SQLite transaction. If cancellation is observed after a document or chunk row has been inserted but before transaction success, `endTransaction()` rolls back the partial document and chunk set.
+- Added a Cancel import action to the Compose vault. The dialog remains open while import cleanup is active; the control changes to “Cancelling…” until the job unwinds.
+- The ViewModel reloads the vault after user cancellation so the UI reflects the actual transaction outcome. This avoids claiming that cancellation always means no row was committed if it races the final atomic commit.
+- Cancellation is cooperative: a provider blocked inside one synchronous `InputStream.read()` cannot be interrupted until that call returns.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt`
+- `app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`, `ROADMAP.md`, `docs/LOCAL_KNOWLEDGE_VAULT.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source-level replacement anchors and updated file contents were checked before creating the commit.
+- Added two JVM tests for cancellation during bounded stream reading and between chunk iterations.
+- Added one API 35 instrumentation test that cancels after the first chunk row is inserted and verifies the SQLite transaction leaves neither the document nor any chunk.
+- No local Gradle/Android SDK build was available in this environment. The previous exact-head run #169 validates the parent head only; the new exact-head workflow is required for this change.
+- Real Gemma inference, offline-after-download verification, and physical Pixel 6 memory/thermal validation remain unverified.
+
+### Security and preservation
+- No new dependencies, Android permissions, manifest changes, model artifacts, network endpoints, or inference runtimes.
+- No Ollama, llama.cpp, external Python inference server, mandatory cloud AI API, Firebase, or Docker.
+- Cancellation never deletes the original selected file. Existing explicit confirmation requirements for document deletion and vault clearing are unchanged.
+- No force-push, merge, or branch deletion. PR #1 and #4 remain preserved.
+
+### Commit / PR
+- Branch: `feat/local-knowledge-ingestion`.
+- Parent: [`a755728`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/a755728690432aba40c78ceff659c6a2d8bdd1c3).
+- PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- New exact-head CI is pending; do not merge until APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation pass.
+
+### Blockers and next priority
+- Complete exact-head CI and review the cancellation/rollback instrumentation result.
+- Continue PDF parser selection only after maintenance, license, minSdk 26, malformed/encrypted-input, page-count, memory, and time-bound review.
+- Real Gemma 4 E2B LiteRT-LM inference, offline-after-download behavior, and physical Pixel 6 RAM/latency/thermal validation remain release gates.
+
+
+### 2026-11-25 test precision follow-up
+- Tightened `chunkingChecksCancellationBetweenChunks` to cancel on the second chunk-loop checkpoint (after the first chunk has been processed), rather than cancelling before the first chunk. The expected checkpoint count is now three: initial check, first chunk, second chunk.
+- This is a test-only correction to make the regression prove the stated boundary behavior. The earlier run #170 is superseded by the new exact-head workflow; no result from #170 is used to claim this corrected test passed.
+
+
+### 2026-11-25 exact-head CI follow-up
+- Cancellable-import source/test head [`e8baa9f`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/e8baa9fd1372159cd404d78f6b90d5801ca3153f) passed debug APK assembly, Android lint, and JVM unit tests in exact-head Actions run [#171](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45479987807), attempts 1 and 2.
+- Both attempts failed only at KVM preflight: the hosted runner's `/dev/kvm` node showed mode `0666`, but the runner process still could not read/write it. API 35 instrumentation was skipped; no instrumentation pass is claimed.
+- Attempt 3 was in progress when this documentation follow-up was pushed and is superseded by the new exact-head workflow. The latest workflow must pass KVM preflight and API 35 instrumentation before PR #14 can be considered for merge.
+- The failure is runner capability, not a reported APK compilation, lint, or JVM test failure. No workflow bypass or software-emulator fallback was introduced.
+- Physical Pixel 6 Gemma inference, offline-after-download, RAM, latency, and thermal verification remain outstanding.
+- PR [#14](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14) remains draft. PR #12 and #13 still overlap `NexoraHome.kt` and `NexoraViewModel.kt`; no merge was attempted.
