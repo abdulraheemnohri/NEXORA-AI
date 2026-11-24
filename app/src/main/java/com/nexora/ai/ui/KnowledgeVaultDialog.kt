@@ -62,7 +62,21 @@ fun KnowledgeVaultDialog(viewModel: NexoraViewModel, state: NexoraUiState) {
                             !state.isSearchingKnowledge && !state.isClearingKnowledgeVault,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (state.isImportingKnowledge) "Importing…" else "Choose a document")
+                        Text("Choose a document")
+                    }
+                    if (state.isImportingKnowledge) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = viewModel::cancelKnowledgeImport,
+                                enabled = !state.isCancellingKnowledgeImport
+                            ) {
+                                Text(if (state.isCancellingKnowledgeImport) "Cancelling…" else "Cancel import")
+                            }
+                        }
                     }
 
                     state.knowledgeMessage?.let {

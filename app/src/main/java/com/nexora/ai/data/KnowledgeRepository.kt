@@ -4,6 +4,8 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /** SAF access, document parsing, and SQLite work all run on Dispatchers.IO. */
@@ -12,6 +14,8 @@ class KnowledgeRepository(private val database: LocalKnowledgeDatabase) {
         resolver: ContentResolver,
         uri: Uri
     ): KnowledgeImportOutcome = withContext(Dispatchers.IO) {
+        val coroutineContext = currentCoroutineContext()
+        coroutineContext.ensureActive()
         val scheme = uri.scheme
         require(scheme == "content" || scheme == "file" || scheme == "android.resource") {
             "Only Android local/resource document URIs are supported; remote HTTP URIs are not read."
@@ -30,13 +34,22 @@ class KnowledgeRepository(private val database: LocalKnowledgeDatabase) {
         val input = resolver.openInputStream(uri)
             ?: error("Android could not open the selected document.")
         val document = input.use {
-            KnowledgeDocumentImporter.read(displayName, mimeType, it)
+            KnowledgeDocumentImporter.read(
+                displayName,
+                mimeType,
+                it,
+                checkActive = { coroutineContext.ensureActive() }
+            )
         }
-        persist(document)
+        coroutineContext.ensureActive()
+        persist(document) { coroutineContext.ensureActive() }
     }
 
-    private fun persist(document: ImportedKnowledgeDocument): KnowledgeImportOutcome {
-        val inserted = database.insertDocument(document)
+    private fun persist(
+        document: ImportedKnowledgeDocument,
+        checkActive: () -> Unit
+    ): KnowledgeImportOutcome {
+        val inserted = database.insertDocument(document, checkActive)
         return if (inserted) {
             KnowledgeImportOutcome.Imported(
                 KnowledgeDocumentSummary(

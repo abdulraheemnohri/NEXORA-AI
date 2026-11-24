@@ -65,11 +65,14 @@ object KnowledgeDocumentImporter {
         fileName: String,
         mimeType: String?,
         input: InputStream,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        checkActive: () -> Unit = {}
     ): ImportedKnowledgeDocument {
+        checkActive()
         val safeName = normalizeDisplayName(fileName)
         val format = resolveFormat(safeName, mimeType)
-        val bytes = readBounded(input)
+        val bytes = readBounded(input, checkActive)
+        checkActive()
         require(bytes.isNotEmpty()) { "The selected document is empty." }
 
         val decoded = try {
@@ -94,7 +97,7 @@ object KnowledgeDocumentImporter {
 
         val normalized = decoded.replace("\r\n", "\n").replace('\r', '\n').trim()
         require(normalized.isNotEmpty()) { "The selected document contains no searchable text." }
-        val chunks = chunk(normalized)
+        val chunks = chunk(normalized, checkActive)
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(bytes)
             .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
@@ -111,7 +114,8 @@ object KnowledgeDocumentImporter {
         )
     }
 
-    fun chunk(text: String): List<String> {
+    fun chunk(text: String, checkActive: () -> Unit = {}): List<String> {
+        checkActive()
         require(text.isNotBlank()) { "Document text cannot be blank." }
         require(text.length <= MAX_DOCUMENT_CHARACTERS) { "Document text exceeds the ingestion limit." }
 
@@ -119,6 +123,7 @@ object KnowledgeDocumentImporter {
         val boundaries = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
         var start = 0
         while (start < text.length) {
+            checkActive()
             val targetEnd = (start + CHUNK_CHARACTERS).coerceAtMost(text.length)
             val end = findChunkEnd(boundaries, text, start, targetEnd)
             val value = text.substring(start, end).trim()
@@ -175,15 +180,18 @@ object KnowledgeDocumentImporter {
             offset + 1
         } else offset
 
-    private fun readBounded(input: InputStream): ByteArray {
+    private fun readBounded(input: InputStream, checkActive: () -> Unit): ByteArray {
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(8_192)
         var total = 0
         while (true) {
+            checkActive()
             val count = input.read(buffer)
+            checkActive()
             if (count < 0) break
             if (count == 0) {
                 val single = input.read()
+                checkActive()
                 if (single < 0) break
                 total += 1
                 require(total <= MAX_DOCUMENT_BYTES) {

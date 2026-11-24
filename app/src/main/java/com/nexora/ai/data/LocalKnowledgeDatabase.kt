@@ -48,7 +48,11 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     /** Returns false for an identical SHA-256 document; quota failures throw before any commit. */
-    fun insertDocument(document: ImportedKnowledgeDocument): Boolean {
+    fun insertDocument(
+        document: ImportedKnowledgeDocument,
+        checkActive: () -> Unit = {}
+    ): Boolean {
+        checkActive()
         require(document.byteSize in 1..KnowledgeDocumentImporter.MAX_DOCUMENT_BYTES)
         require(document.displayName.isNotBlank() && document.displayName.length <= 120)
         require(document.sha256.matches(Regex("[0-9a-f]{64}")))
@@ -59,11 +63,13 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
         val db = writableDatabase
         db.beginTransaction()
         try {
+            checkActive()
             val duplicate = db.rawQuery(
                 "SELECT 1 FROM knowledge_documents WHERE sha256=? LIMIT 1",
                 arrayOf(document.sha256)
             ).use { it.moveToFirst() }
             if (duplicate) return false
+            checkActive()
 
             db.rawQuery(
                 "SELECT COUNT(*), COALESCE(SUM(byte_size),0) FROM knowledge_documents",
@@ -79,6 +85,7 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
                     "The local vault has reached its " + (MAX_TOTAL_BYTES / (1024 * 1024)) + "-MiB storage limit."
                 }
             }
+            checkActive()
 
             val values = ContentValues().apply {
                 put("id", document.id)
@@ -92,6 +99,7 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
             db.insertOrThrow("knowledge_documents", null, values)
 
             document.chunks.forEachIndexed { index, chunk ->
+                checkActive()
                 val chunkValues = ContentValues().apply {
                     put("id", document.id + "-" + index)
                     put("document_id", document.id)
@@ -99,7 +107,9 @@ class LocalKnowledgeDatabase(context: Context) : SQLiteOpenHelper(
                     put("content", chunk)
                 }
                 db.insertOrThrow("knowledge_chunks", null, chunkValues)
+                checkActive()
             }
+            checkActive()
             db.setTransactionSuccessful()
             return true
         } finally {

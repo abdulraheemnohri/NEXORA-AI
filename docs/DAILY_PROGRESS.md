@@ -890,3 +890,54 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Confirm exact-head APK assembly, Android lint, JVM tests, KVM preflight, and API 35 instrumentation for the new source/test head before considering PR #14 merge.
 - Continue PDF parser selection only with a maintained, license-compatible option that preserves minSdk 26 and has bounded page count, extracted text, memory, and execution time.
 - Real Gemma 4 E2B inference, offline-after-download behavior, and physical Pixel 6 storage/RAM/thermal verification remain release gates.
+
+
+## 2026-11-25 — Cancellable local knowledge import
+
+### Repository audit before edits
+- Re-inspected repository metadata, current `main`, open standalone issues, recent commits, all branch heads, open PRs, and latest relevant Actions.
+- Current `main` is [`abd66700`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/abd66700dd6f7e6f119d84c6cd612aff4c40b71b), containing the permissioned local conversation-search merge. No standalone open issues were returned.
+- Enumerated 16 branch heads. Open PRs are #1, #4, #12, #13, and #14. PR #6 and #7 are merged; the supplied checkpoint describing #7 as open is stale.
+- PR #1 and #4 remain open, divergent, and preserved. PR #12 remains draft with exact-head run [#112](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/43096409834) queued. PR #13 exact-head run [#143](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/44173352154) passed. PR #14 prior head `a755728` passed exact-head run [#169](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45261834553), including APK assembly, Android lint, JVM tests, KVM preflight, emulator boot, and API 35 instrumentation. No branch was deleted or force-pushed.
+
+### Delivered on `feat/local-knowledge-ingestion`
+- Added cooperative cancellation checkpoints to bounded UTF-8 stream reading and grapheme-aware chunk generation.
+- Propagated the active coroutine context from `KnowledgeRepository` into importer and SQLite insertion.
+- Added cancellation checkpoints within the SQLite transaction. If cancellation is observed after a document or chunk row has been inserted but before transaction success, `endTransaction()` rolls back the partial document and chunk set.
+- Added a Cancel import action to the Compose vault. The dialog remains open while import cleanup is active; the control changes to “Cancelling…” until the job unwinds.
+- The ViewModel reloads the vault after user cancellation so the UI reflects the actual transaction outcome. This avoids claiming that cancellation always means no row was committed if it races the final atomic commit.
+- Cancellation is cooperative: a provider blocked inside one synchronous `InputStream.read()` cannot be interrupted until that call returns.
+
+### Files changed
+- `app/src/main/java/com/nexora/ai/data/KnowledgeDocumentImporter.kt`
+- `app/src/main/java/com/nexora/ai/data/KnowledgeRepository.kt`
+- `app/src/main/java/com/nexora/ai/data/LocalKnowledgeDatabase.kt`
+- `app/src/main/java/com/nexora/ai/ui/NexoraViewModel.kt`
+- `app/src/main/java/com/nexora/ai/ui/KnowledgeVaultDialog.kt`
+- `app/src/test/java/com/nexora/ai/data/KnowledgeDocumentImporterTest.kt`
+- `app/src/androidTest/java/com/nexora/ai/data/LocalKnowledgeDatabaseInstrumentedTest.kt`
+- `README.md`, `ROADMAP.md`, `docs/LOCAL_KNOWLEDGE_VAULT.md`, `docs/DAILY_PROGRESS.md`
+
+### Verification actually run
+- Source-level replacement anchors and updated file contents were checked before creating the commit.
+- Added two JVM tests for cancellation during bounded stream reading and between chunk iterations.
+- Added one API 35 instrumentation test that cancels after the first chunk row is inserted and verifies the SQLite transaction leaves neither the document nor any chunk.
+- No local Gradle/Android SDK build was available in this environment. The previous exact-head run #169 validates the parent head only; the new exact-head workflow is required for this change.
+- Real Gemma inference, offline-after-download verification, and physical Pixel 6 memory/thermal validation remain unverified.
+
+### Security and preservation
+- No new dependencies, Android permissions, manifest changes, model artifacts, network endpoints, or inference runtimes.
+- No Ollama, llama.cpp, external Python inference server, mandatory cloud AI API, Firebase, or Docker.
+- Cancellation never deletes the original selected file. Existing explicit confirmation requirements for document deletion and vault clearing are unchanged.
+- No force-push, merge, or branch deletion. PR #1 and #4 remain preserved.
+
+### Commit / PR
+- Branch: `feat/local-knowledge-ingestion`.
+- Parent: [`a755728`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/a755728690432aba40c78ceff659c6a2d8bdd1c3).
+- PR: [#14 — bounded local knowledge vault and explicit prompt grounding](https://github.com/abdulraheemnohri/NEXORA-AI/pull/14).
+- New exact-head CI is pending; do not merge until APK assembly, lint, JVM tests, KVM preflight, and API 35 instrumentation pass.
+
+### Blockers and next priority
+- Complete exact-head CI and review the cancellation/rollback instrumentation result.
+- Continue PDF parser selection only after maintenance, license, minSdk 26, malformed/encrypted-input, page-count, memory, and time-bound review.
+- Real Gemma 4 E2B LiteRT-LM inference, offline-after-download behavior, and physical Pixel 6 RAM/latency/thermal validation remain release gates.

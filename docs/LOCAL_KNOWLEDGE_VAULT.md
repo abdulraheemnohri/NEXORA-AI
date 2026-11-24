@@ -71,3 +71,10 @@ The documentation follow-up head [42c9ea5](https://github.com/abdulraheemnohri/N
 ## 2026-11-24 grapheme-aware chunking
 
 Source commit [`ef255a3`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/ef255a371dc3d0bdf6dd8a38378383e3d2eb0248) updates the importer to use `BreakIterator` character boundaries for both chunk ends and overlap starts. Tests cover family emoji ZWJ sequences, skin-tone modifiers, regional-indicator flags, decomposed combining marks, and a single combining cluster longer than the hard chunk cap. A standalone Kotlin compile/smoke harness passed; the repository's exact-head Gradle/Android CI is still required. The preceding documentation head `751b6dd` passed run [#167](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45260085730), including all configured instrumentation tests; that run predates `ef255a3`.
+
+
+## Import cancellation
+
+The vault exposes a user-controlled Cancel import action while a document is being read and indexed. The importer checks coroutine cancellation between bounded stream reads and chunk-boundary iterations. The repository propagates the active coroutine context into the importer and SQLite insertion. SQLite checks cancellation before and during chunk insertion; if cancellation is observed before the transaction is marked successful, the document row and any chunk rows already inserted are rolled back together.
+
+Cancellation is cooperative. A content provider blocked inside one synchronous `InputStream.read()` cannot be interrupted by the coroutine until that read returns. Cancellation can also race the final transaction commit; after a user cancellation, the ViewModel reloads the vault so the UI reflects the actual committed state rather than promising that no document was saved. The original source file is never changed.

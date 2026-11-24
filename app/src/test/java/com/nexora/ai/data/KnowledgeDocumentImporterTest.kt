@@ -1,6 +1,7 @@
 package com.nexora.ai.data
 
 import java.io.ByteArrayInputStream
+import java.util.concurrent.CancellationException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -95,6 +96,35 @@ class KnowledgeDocumentImporterTest {
 
         assertTrue(chunks.size <= KnowledgeDocumentImporter.MAX_CHUNKS)
         assertTrue(chunks.all { it.length <= KnowledgeDocumentImporter.CHUNK_CHARACTERS })
+    }
+
+    @Test
+    fun boundedReaderChecksCancellationBetweenStreamReads() {
+        var checks = 0
+        assertThrows(CancellationException::class.java) {
+            KnowledgeDocumentImporter.read(
+                "large.txt",
+                "text/plain",
+                ByteArrayInputStream(ByteArray(32 * 1024) { 'a'.code.toByte() }),
+                checkActive = {
+                    checks++
+                    if (checks == 3) throw CancellationException("cancelled")
+                }
+            )
+        }
+        assertTrue(checks >= 3)
+    }
+
+    @Test
+    fun chunkingChecksCancellationBetweenChunks() {
+        var checks = 0
+        assertThrows(CancellationException::class.java) {
+            KnowledgeDocumentImporter.chunk("a".repeat(5_000)) {
+                checks++
+                if (checks == 2) throw CancellationException("cancelled")
+            }
+        }
+        assertEquals(2, checks)
     }
 
     @Test

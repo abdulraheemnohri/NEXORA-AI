@@ -28,6 +28,7 @@ import com.nexora.ai.data.LocalKnowledgeDatabase
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,6 +69,7 @@ data class NexoraUiState(
     val knowledgeResults: List<KnowledgeSearchHit> = emptyList(),
     val selectedKnowledgeSources: List<KnowledgeSearchHit> = emptyList(),
     val isImportingKnowledge: Boolean = false,
+    val isCancellingKnowledgeImport: Boolean = false,
     val isSearchingKnowledge: Boolean = false,
     val isDeletingKnowledgeDocument: Boolean = false,
     val isClearingKnowledgeVault: Boolean = false,
@@ -93,6 +95,7 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     private val downloader = Gemma4E2BModelDownloader(application)
     private val runtime = LiteRtLocalModelRuntime(File(application.cacheDir, "litertlm"))
     private var conversationId: String? = null
+    private var knowledgeImportJob: Job? = null
     private val settingsPreferences = application.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val initialMaxOutputTokens = runCatching {
         GenerationSettings.requireSupportedOutputLimit(
@@ -207,7 +210,8 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun dismissKnowledgeVault() {
-        if (mutableUiState.value.isDeletingKnowledgeDocument ||
+        if (mutableUiState.value.isImportingKnowledge ||
+            mutableUiState.value.isDeletingKnowledgeDocument ||
             mutableUiState.value.isClearingKnowledgeVault
         ) return
         mutableUiState.update {
@@ -235,12 +239,19 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
     fun importKnowledgeDocument(uri: Uri) {
         val current = mutableUiState.value
         if (current.isImportingKnowledge || current.isDeletingKnowledgeDocument ||
-            current.isSearchingKnowledge || current.isClearingKnowledgeVault
+            current.isSearchingKnowledge || current.isClearingKnowledgeVault ||
+            knowledgeImportJob?.isActive == true
         ) return
-        viewModelScope.launch {
-            mutableUiState.update {
-                it.copy(isImportingKnowledge = true, knowledgeError = null, knowledgeMessage = null)
-            }
+        mutableUiState.update {
+            it.copy(
+                isImportingKnowledge = true,
+                isCancellingKnowledgeImport = false,
+                knowledgeError = null,
+                knowledgeMessage = null
+            )
+        }
+        val job = viewModelScope.launch {
+            var cancelledByUser = false
             try {
                 val outcome = knowledgeRepository.importFromUri(
                     getApplication<Application>().contentResolver,
@@ -261,15 +272,48 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 refreshKnowledgeDocuments()
             } catch (cancelled: CancellationException) {
+                cancelledByUser = cancelled.message == USER_IMPORT_CANCEL_MESSAGE
                 throw cancelled
             } catch (error: Exception) {
                 mutableUiState.update {
                     it.copy(knowledgeError = error.message ?: "Unable to import the selected document.")
                 }
             } finally {
-                mutableUiState.update { it.copy(isImportingKnowledge = false) }
+                mutableUiState.update { state ->
+                    state.copy(
+                        isImportingKnowledge = false,
+                        isCancellingKnowledgeImport = false,
+                        knowledgeMessage = if (cancelledByUser) {
+                            "Import stopped. Refreshing the local vault…"
+                        } else {
+                            state.knowledgeMessage
+                        }
+                    )
+                }
+                knowledgeImportJob = null
+                if (cancelledByUser) {
+                    viewModelScope.launch {
+                        refreshKnowledgeDocuments()
+                        mutableUiState.update {
+                            it.copy(knowledgeMessage = "Import stopped. Local vault contents were refreshed.")
+                        }
+                    }
+                }
             }
         }
+        knowledgeImportJob = job.takeIf { it.isActive }
+    }
+
+    fun cancelKnowledgeImport() {
+        val job = knowledgeImportJob ?: return
+        if (!job.isActive) return
+        mutableUiState.update {
+            it.copy(
+                isCancellingKnowledgeImport = true,
+                knowledgeMessage = "Cancelling import…"
+            )
+        }
+        job.cancel(CancellationException(USER_IMPORT_CANCEL_MESSAGE))
     }
 
     fun updateKnowledgeQuery(value: String) {
@@ -753,5 +797,6 @@ class NexoraViewModel(application: Application) : AndroidViewModel(application) 
         const val PREFERENCES_NAME = "nexora_generation_settings"
         const val KEY_MAX_OUTPUT_TOKENS = "max_output_tokens"
         const val KEY_LOCAL_SEARCH_ENABLED = "local_conversation_search_enabled"
+        const val USER_IMPORT_CANCEL_MESSAGE = "Knowledge import cancelled by user"
     }
 }

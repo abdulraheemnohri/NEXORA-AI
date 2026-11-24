@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.ByteArrayInputStream
+import java.util.concurrent.CancellationException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,6 +95,23 @@ class LocalKnowledgeDatabaseInstrumentedTest {
             database.insertDocument(overflow)
         }
         assertEquals(LocalKnowledgeDatabase.MAX_DOCUMENTS, database.listDocuments().size)
+    }
+
+    @Test
+    fun cancelledInsertRollsBackDocumentAndAlreadyInsertedChunks() {
+        val imported = import("cancelled.txt", "a".repeat(3_000))
+        assertEquals(2, imported.chunks.size)
+        var checkpoints = 0
+
+        org.junit.Assert.assertThrows(CancellationException::class.java) {
+            database.insertDocument(imported) {
+                checkpoints++
+                if (checkpoints == 6) throw CancellationException("cancelled")
+            }
+        }
+
+        assertTrue(database.listDocuments().isEmpty())
+        assertTrue(database.search("aa").isEmpty())
     }
 
     @Test
