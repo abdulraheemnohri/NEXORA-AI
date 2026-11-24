@@ -121,10 +121,10 @@ class KnowledgeDocumentImporterTest {
         assertThrows(CancellationException::class.java) {
             KnowledgeDocumentImporter.chunk("a".repeat(5_000)) {
                 checks++
-                if (checks == 2) throw CancellationException("cancelled")
+                if (checks == 3) throw CancellationException("cancelled")
             }
         }
-        assertEquals(2, checks)
+        assertEquals(3, checks)
     }
 
     @Test

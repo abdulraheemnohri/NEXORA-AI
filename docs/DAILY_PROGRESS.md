@@ -941,3 +941,8 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Complete exact-head CI and review the cancellation/rollback instrumentation result.
 - Continue PDF parser selection only after maintenance, license, minSdk 26, malformed/encrypted-input, page-count, memory, and time-bound review.
 - Real Gemma 4 E2B LiteRT-LM inference, offline-after-download behavior, and physical Pixel 6 RAM/latency/thermal validation remain release gates.
+
+
+### 2026-11-25 test precision follow-up
+- Tightened `chunkingChecksCancellationBetweenChunks` to cancel on the second chunk-loop checkpoint (after the first chunk has been processed), rather than cancelling before the first chunk. The expected checkpoint count is now three: initial check, first chunk, second chunk.
+- This is a test-only correction to make the regression prove the stated boundary behavior. The earlier run #170 is superseded by the new exact-head workflow; no result from #170 is used to claim this corrected test passed.
