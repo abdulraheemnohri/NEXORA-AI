@@ -545,3 +545,46 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Review the exact-head CI results and fix any compile, lint, JVM, or emulator instrumentation failures from their logs.
 - Add a concrete user-reviewed side-effect tool only after a separate approval UI and exact-argument confirmation tests exist.
 - Continue the physical Pixel 6 gates for live Gemma download/load/inference, offline operation, memory, latency, and thermal behavior.
+
+
+## 2026-11-26 — Android CI KVM fallback and runner diagnostics
+
+### Repository audit
+- Re-inspected current main, recent commits, standalone open issues, open PRs, all branch heads, and recent Actions before editing.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no standalone open issues were returned.
+- Open PRs: #1, #4, #12, #13, and #14. PR #1/#4 remain divergent and preserved. PR #12 and #13 are drafts; PR #14 is a draft and mergeable, but its exact-head run #172 failed at KVM preflight after APK assembly, lint, and JVM tests passed. No PR was merged or branch deleted.
+- PR #6 and #7 are merged; PR #7's current state is closed/merged, so the supplied open-PR checkpoint is outdated.
+- Enumerated all 16 branch heads; no force-push or branch deletion occurred.
+
+### Delivered on `fix/android-ci-kvm-fallback`
+- KVM setup now logs device presence and access without making a runner KVM permission failure a hard job failure.
+- When `/dev/kvm` exists, the step applies a best-effort permission update and prints diagnostics; absent/inaccessible KVM emits a warning.
+- `reactivecircus/android-emulator-runner@v2` is configured with `disable-linux-hw-accel: auto`, so the action's own access check chooses hardware acceleration when accessible and software acceleration otherwise.
+- The emulator boot timeout is raised to 900 seconds to allow a slower software-accelerated boot.
+- Added `docs/ANDROID_CI.md` explaining the gate, fallback, and troubleshooting.
+- Corrected the README's stale PR #11 status and linked Android CI documentation.
+- Updated the roadmap to mark this CI fallback proposal as pending validation.
+
+### Files
+- `.github/workflows/android-ci.yml`
+- `README.md`
+- `ROADMAP.md`
+- `docs/ANDROID_CI.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification and blockers
+- Source audit: completed. The official ReactiveCircus action source confirms `disable-linux-hw-accel: auto` performs a read/write access check on `/dev/kvm` and selects software acceleration when that check fails.
+- Run #172: debug APK assembly, Android lint, and JVM tests passed; KVM preflight failed despite `/dev/kvm` showing mode `0666`; instrumentation was skipped. This failure is the reason for the increment.
+- Main run #109 remains failed with its build job reported queued; no application compilation failure was established.
+- No local Gradle/Android SDK build was run in this environment. The new workflow change is not yet CI-verified; PR #15 is the validation gate.
+- No app source, dependency, permission, model artifact, or inference runtime changed. No secret-like content was added.
+
+### Commit / PR
+- Base: `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`.
+- Branch: `fix/android-ci-kvm-fallback`.
+- Draft PR #15: created for review and exact-head CI. Do not merge until the CI fallback and API 35 instrumentation pass.
+
+### Next priority
+- Complete PR #15 exact-head CI and confirm API 35 instrumentation can boot using KVM or software fallback.
+- Once PR #15 is merged, rerun exact-head CI for PR #14 and review its overlap with PR #12/#13 before integration.
+- Physical Pixel 6 Gemma download/load/inference, offline behavior, RAM, latency, and thermal validation remain release gates.
