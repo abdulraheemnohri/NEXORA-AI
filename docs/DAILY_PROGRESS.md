@@ -588,3 +588,25 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - Complete PR #15 exact-head CI and confirm API 35 instrumentation can boot using KVM or software fallback.
 - Once PR #15 is merged, rerun exact-head CI for PR #14 and review its overlap with PR #12/#13 before integration.
 - Physical Pixel 6 Gemma download/load/inference, offline behavior, RAM, latency, and thermal validation remain release gates.
+
+
+## 2026-11-27 — Android CI fallback verified
+
+### Repository checkpoint
+- Re-inspected main, recent commits, open issues, open PRs, branch enumeration, and latest Actions before this merge decision.
+- Main remained at `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no standalone open issues were returned. The main commit list returned no newer main commit than November 11.
+- Open PRs at the checkpoint: #1, #4, #12, #13, #14, and #15. PR #1 and #4 remain divergent and preserved; #12, #13, and #14 remain draft workstreams. PR #6 and #7 are merged. All 16 branch names were enumerated; this connector exposes branch names but not the raw ref SHA for non-PR branches.
+- PR #15 was mergeable against main and had no review submissions or inline review threads. The diff was reviewed: workflow fallback plus README, ROADMAP, daily-progress, and CI documentation; no app source, dependencies, permissions, model artifacts, secrets, or inference runtime changes.
+
+### Verification
+- Exact-head GitHub Actions run [#173](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45699655051) completed successfully on head `194196c8d42da48e36c1edf45596f6226824678e`.
+- Debug APK assembly, Android lint, JVM unit tests, KVM diagnostics, emulator boot, and API 35 instrumentation all passed.
+- The logs confirmed `/dev/kvm` was accessible and `disable-linux-hw-accel: auto` selected hardware acceleration (the emulator action reported hardware acceleration not disabled).
+- Instrumentation log: `Starting 12 tests` and `Finished 12 tests`; Gradle reported `BUILD SUCCESSFUL`.
+- This is CI emulator verification, not physical Pixel 6 testing. No local Gradle build was performed in this environment.
+- Previous run [#172](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45480889644) on PR #14 failed at its hard KVM preflight after APK, lint, and JVM tests passed. Run #173 validates the fallback workflow branch; it does not validate PR #14's current head.
+
+### Decision
+- PR #15's exact-head CI and conflict review are complete; it is ready for merge.
+- No force-push or branch deletion occurred. PR #1 and #4 remain preserved.
+- Real Gemma download/load/inference, offline operation, and physical Pixel 6 RAM/latency/thermal verification remain release gates.
