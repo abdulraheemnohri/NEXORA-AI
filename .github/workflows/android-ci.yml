@@ -48,6 +48,15 @@ jobs:
           else
             echo "::warning::/dev/kvm is not exposed; emulator auto mode will select software acceleration and the next step enables the Android Emulator 37.3+ TCG opt-in."
           fi
+      - name: Temporarily simulate unavailable KVM for TCG fallback validation
+        run: |
+          if [ -c /dev/kvm ]; then
+            sudo chmod 0000 /dev/kvm
+          fi
+          if [ -r /dev/kvm ] || [ -w /dev/kvm ]; then
+            echo "::error::Unable to make /dev/kvm inaccessible for the fallback validation run."
+            exit 1
+          fi
       - name: Test KVM-to-TCG environment policy
         run: .github/scripts/test-emulator-tcg-opt-in.sh
       - name: Enable TCG opt-in when KVM is unavailable
