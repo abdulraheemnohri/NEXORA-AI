@@ -22,7 +22,7 @@ NEXORA AI is a native Android, local-first assistant built with Kotlin and Jetpa
 - Gemma 4 E2B downloader with app-private storage, free-space checks, pinned model revision, HTTPS redirect enforcement, exact byte-count and SHA-256 verification, and atomic finalization.
 - New API 35 instrumentation coverage exercises downloader success, checksum rejection, truncated/oversized responses, corrupt-file replacement, and HTTPS downgrade rejection using small deterministic fixtures; this does not substitute for a live 2.58 GB download.
 - Verified Gradle 8.13 wrapper with official distribution SHA-256 pin, merged in [PR #5](https://github.com/abdulraheemnohri/NEXORA-AI/pull/5) as [`0afe596`](https://github.com/abdulraheemnohri/NEXORA-AI/commit/0afe596566fb878e32f6aba4cc57aed687ffbf3f). Latest PR-head run [#80](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42412475976) passed wrapper validation, debug APK assembly, Android lint, and JVM unit tests on the exact reviewed head.
-- GitHub Actions workflow for debug APK assembly, Android lint, JVM unit tests, and API 35 emulator instrumentation. The emulator job is pinned to the stable Ubuntu 24.04 image and fails fast with explicit KVM diagnostics.
+- GitHub Actions workflow for debug APK assembly, Android lint, JVM unit tests, and API 35 emulator instrumentation. The emulator job is pinned to Ubuntu 24.04 and uses the runner's `auto` acceleration selection. When KVM is unavailable, a tested helper exports `ANDROID_I_WANT_MY_TCG=yes` for Android Emulator 37.3+ before software TCG startup. The KVM-accessible path passed run #174; a no-KVM emulator boot remains an explicit verification gate. See [Android CI](docs/ANDROID_CI.md).
 
 ## Google AI Edge stack
 
@@ -66,6 +66,7 @@ See [Model Setup](docs/MODEL_SETUP.md). The pinned model artifact is approximate
 ## Documentation
 
 - [Building NEXORA](docs/BUILDING.md)
+- [Android CI](docs/ANDROID_CI.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Google AI Edge integration](docs/GOOGLE_AI_EDGE_INTEGRATION.md)
 - [Model setup](docs/MODEL_SETUP.md)
@@ -83,4 +84,4 @@ Project source licensing must be finalized before public release. Gemma model te
 PR [#10](https://github.com/abdulraheemnohri/NEXORA-AI/pull/10) adds downloader integrity hardening and six API 35 instrumentation tests. Exact-head run [#97](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/42806338931) passed debug APK assembly, lint, JVM tests, KVM preflight, emulator boot, and all nine combined SQLite/downloader instrumentation tests. The six downloader cases use small in-memory fixtures; they do not verify a live 2.58 GB transfer or Gemma inference.
 
 
-PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) is open as a draft for the permissioned local conversation-search increment. Its exact-head CI and review are release gates; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
+PR [#11](https://github.com/abdulraheemnohri/NEXORA-AI/pull/11) merged into `main` as `abd66700` for permissioned local conversation search. It remains a manually invoked, user-enabled, read-only capability; this does not enable model-generated tool calls or establish physical Pixel 6 verification.
