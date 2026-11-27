@@ -35,6 +35,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm || true
+          sudo udevadm settle || true
           if [ -c /dev/kvm ]; then
             sudo chmod 0666 /dev/kvm || true
             id
@@ -42,11 +43,15 @@ jobs:
             if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
               echo "::notice::KVM access is available; emulator runner auto mode can use hardware acceleration."
             else
-              echo "::warning::KVM exists but is not accessible to this process; emulator runner auto mode will use software acceleration."
+              echo "::warning::KVM exists but is not accessible; emulator auto mode will select software acceleration and the next step enables the Android Emulator 37.3+ TCG opt-in."
             fi
           else
-            echo "::warning::/dev/kvm is not exposed; emulator runner auto mode will use software acceleration."
+            echo "::warning::/dev/kvm is not exposed; emulator auto mode will select software acceleration and the next step enables the Android Emulator 37.3+ TCG opt-in."
           fi
+      - name: Test KVM-to-TCG environment policy
+        run: .github/scripts/test-emulator-tcg-opt-in.sh
+      - name: Enable TCG opt-in when KVM is unavailable
+        run: .github/scripts/set-emulator-tcg-opt-in.sh /dev/kvm
       - name: Run Android instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:

@@ -27,3 +27,14 @@ Instrumentation is still a required validation gate. A KVM warning does not coun
 - A missing or inaccessible `/dev/kvm` is a runner capability limitation, not proof of an app source failure.
 - CI/emulator success does not replace live Gemma inference, offline-after-download, or physical Pixel 6 validation.
 - The CI workflow does not download or install Gemma model weights and does not use any external inference server.
+
+
+## Android Emulator 37.3+ software-acceleration opt-in
+
+The emulator runner's `disable-linux-hw-accel: auto` checks whether the runner process can read and write `/dev/kvm`. When unavailable, it selects `-accel off`. A recent report from another Android CI consumer identifies that Android Emulator 37.3.10.0 rejects `-accel off` unless `ANDROID_I_WANT_MY_TCG=yes` is present. NEXORA therefore runs `.github/scripts/set-emulator-tcg-opt-in.sh` immediately before the emulator action; it exports that variable only when the KVM character device is missing or inaccessible.
+
+The helper is covered by `.github/scripts/test-emulator-tcg-opt-in.sh`, which tests both an accessible character-device decision and a missing-device decision. This is a shell policy test, not proof that the emulator successfully boots under TCG. The latest exact-head run #174 used Android Emulator 37.3.10.0 with KVM available, so it validates the hardware-accelerated path only. A no-KVM TCG emulator boot remains a separate gate.
+
+References:
+- [ReactiveCircus emulator runner implementation](https://github.com/ReactiveCircus/android-emulator-runner/blob/main/src/main.ts) — `auto` checks read/write access to `/dev/kvm`.
+- [ExecuTorch CI change for Emulator 37.3.10.0](https://github.com/pytorch/executorch/commit/a73bcb5ada28292a72e29517aeb83bd0b2396296) — documents the TCG opt-in required when `-accel off` is selected.

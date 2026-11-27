@@ -610,3 +610,54 @@ Run the Android CI workflow and resolve compiler/test failures before expanding 
 - PR #15's exact-head CI and conflict review are complete; it is ready for merge.
 - No force-push or branch deletion occurred. PR #1 and #4 remain preserved.
 - Real Gemma download/load/inference, offline operation, and physical Pixel 6 RAM/latency/thermal verification remain release gates.
+
+
+## 2026-11-28 — Android Emulator 37.3+ TCG fallback hardening
+
+### Repository audit
+- Re-inspected repository metadata, current main, open standalone issues, recent commits, open PRs, every branch ref SHA, and exact-head Actions before editing.
+- Main remains `abd66700dd6f7e6f119d84c6cd612aff4c40b71b`; no standalone open issues were returned.
+- Open PRs: #1, #4, #12, #13, #14, and #15. PR #1 and #4 remain open and their divergent branches are preserved. PR #6 and #7 are merged; the supplied checkpoint that PR #7 is open is stale.
+- Enumerated all 17 branch heads and retrieved each exact ref SHA. No branch was deleted and no force-push was used.
+- PR #15 head before this increment was `ab973b6bce1164e11f7acb06612a8bf42c7756e2`; it was mergeable, had no review submissions or inline review threads, and exact-head run #174 was successful.
+- Main branch protection could not be read because the GitHub App integration returned HTTP 403 for the protection endpoint. The branch listing reports `protected: false` for main; no protection assumptions are made.
+
+### New finding
+- Inspected exact-head run [#174](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45892179396) logs. It ran Android Emulator `37.3.10.0`, found `/dev/kvm` readable/writable, selected hardware acceleration, booted, and completed all 12 API 35 instrumentation tests.
+- Important correction: run #174 did **not** exercise the no-KVM software fallback because KVM was available.
+- The ReactiveCircus action source confirms `disable-linux-hw-accel: auto` selects `-accel off` when KVM is inaccessible. A recent ExecuTorch CI change reports that Emulator 37.3.10.0 rejects `-accel off` unless `ANDROID_I_WANT_MY_TCG=yes` is set. References: [action source](https://github.com/ReactiveCircus/android-emulator-runner/blob/main/src/main.ts) and [ExecuTorch CI fix](https://github.com/pytorch/executorch/commit/a73bcb5ada28292a72e29517aeb83bd0b2396296).
+
+### Delivered on `fix/android-ci-kvm-fallback`
+- Added `.github/scripts/set-emulator-tcg-opt-in.sh`. It exports `ANDROID_I_WANT_MY_TCG=yes` to `GITHUB_ENV` only when the KVM character device is missing or unreadable/unwritable.
+- Added `.github/scripts/test-emulator-tcg-opt-in.sh` to exercise both the accessible-character-device and missing-device decisions.
+- Added udev settle before the KVM permission check and wired the policy test/helper into Android CI before emulator startup.
+- Updated README, ROADMAP, and Android CI documentation to distinguish a passing KVM-enabled run from an unverified no-KVM TCG boot.
+- Local shell verification: helper policy tests passed using `/dev/null` as an accessible character device and a missing path as the no-KVM case. This does not simulate an actual emulator boot.
+
+### Files
+- `.github/workflows/android-ci.yml`
+- `.github/scripts/set-emulator-tcg-opt-in.sh` (new)
+- `.github/scripts/test-emulator-tcg-opt-in.sh` (new)
+- `README.md`
+- `ROADMAP.md`
+- `docs/ANDROID_CI.md`
+- `docs/DAILY_PROGRESS.md`
+
+### Verification and limitations
+- Previous exact-head run [#174](https://github.com/abdulraheemnohri/NEXORA-AI/actions/runs/45892179396) passed debug APK assembly, Android lint, JVM tests, KVM diagnostics, emulator boot, and 12 API 35 instrumentation tests. It used KVM hardware acceleration.
+- Local helper tests passed. No Gradle build was run locally; the current source changes are awaiting exact-head CI.
+- No no-KVM TCG emulator boot is claimed. The next CI run must exercise the new helper and the regular hardware-available path; a separate forced-TCG run is still needed to verify actual software boot.
+- No app source, dependencies, Android permissions, model weights, LiteRT-LM integration, or cloud services were changed. No secrets were introduced.
+- No real Gemma inference, offline-after-download, or physical Pixel 6 verification was performed.
+- PR #15 remains draft and unmerged pending exact-head CI and a no-KVM TCG boot verification. PR #1 and #4 remain preserved.
+
+### Commit / PR
+- PR: [#15](https://github.com/abdulraheemnohri/NEXORA-AI/pull/15).
+- Existing branch: `fix/android-ci-kvm-fallback`.
+- This commit is appended with a non-force fast-forward update guarded by the previously inspected head SHA.
+
+### Next priority
+- Verify an actual Android Emulator 37.3.10.0 TCG boot when KVM is inaccessible, with `ANDROID_I_WANT_MY_TCG=yes`, then rerun exact-head CI.
+- Only then consider PR #15 ready to merge.
+- After CI stabilization, rerun PR #14 against the updated workflow and coordinate PR #12/#13/#14 overlap before any integration.
+- Physical Pixel 6 Gemma download/load/inference, offline operation, RAM, latency, and thermal verification remain release gates.
